@@ -7,10 +7,9 @@ import serial
 import RPi.GPIO as GPIO
 
 
-# write from GPIO
-## disable GPIO console login, and be as a serial port
+# write from
 TXRX = serial.Serial(    
-    port='/dev/ttyUSB0', # check GPIO with $ dmesg | grep tty
+    port='/dev/ttyUSB0',
     baudrate = 9600,
     parity=serial.PARITY_NONE,
     stopbits=serial.STOPBITS_ONE,
