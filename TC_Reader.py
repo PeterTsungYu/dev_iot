@@ -33,7 +33,7 @@ ser.writeTimeout = 0.5     #timeout for write 0.5s
 ##for slave 1: 01H 03H 008AH 0001H A5E0H
 ##for slave 2: 02H 03H 008AH 0001H A5E0H
 slave_1 = '01 03 00 8A 00 01 A5 E0'
-slave_2 = '02 03 00 9A 00 01 A5 E0'
+slave_2 = '02 03 00 8A 00 01 A5 D3'
 #slave_1 = '01 04 00 01 00 01 60 0A'
 #slave_2 = '02 04 00 01 00 03 E1 F8'
 #------------------------------------------------------------------
