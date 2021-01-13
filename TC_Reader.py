@@ -44,7 +44,7 @@ class Slave:
         self.time_readings = [] # record time
         self.arr_readings = np.array([]) # for all data 
 
-slave_1 = Slave(1, '01 03 00 8A 00 01 A5 E0') #Body Temp
+slave_1 = Slave(1, '01 03 00 8A 00 01 A5 E0') #Body Temp with PID controller
 slave_2 = Slave(2, '02 03 00 8A 00 01 A5 D3') #Output Temp
 
 slaves = [slave_1, slave_2]
@@ -61,8 +61,13 @@ except Exception as ex:
     exit()
 
 start_w = 0
-start_r = 0  
-for i in range(5):
+start_r = 0
+# T_set = input(), from user input
+flow_rate = 18 # [g/min]
+# write to slave 
+# steady-state recording
+# user input to terminate the program 
+for i in range(300):
     try:
         for slave in slaves:
 
@@ -113,6 +118,6 @@ for slave in slaves:
         np.array(slave.lst_readings).reshape(-1, 1)),
         axis=1
         )
-    np.save(f'slave_{slave.id}_readings.npy', slave.arr_readings)
+    np.save(f'slave_{slave.id}_readings_{flow_rate}.npy', slave.arr_readings)
 
 print("Write to *.npy")
