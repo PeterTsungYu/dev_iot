@@ -77,7 +77,7 @@ flow_rate = 18 # [g/min]
 # write to slave 
 # steady-state recording
 # user input to terminate the program 
-for i in range(3):
+while:
     try:
         for slave in slaves:
             for value in ['r_PV', 'r_SV']:
