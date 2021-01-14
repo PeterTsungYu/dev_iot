@@ -4,7 +4,7 @@ import numpy as np
 import time
 import subprocess
 
-display('succeed')
+#display('succeed')
 
 # %%
 #-----------------Master(RPi) setting------------------------------
@@ -58,7 +58,7 @@ slave_2 = Slave(2, {
 
 slaves = [slave_1, slave_2]
 
-display('succeed')
+#display('succeed')
 #------------------------------------------------------------------
 
 # %%
@@ -72,12 +72,12 @@ except Exception as ex:
     exit()
 
 start_w = 0
-# T_set = input(), from user input
-flow_rate = 18 # [g/min]
+slave_1_SV = input("SV of slave_1: ")
+#flow_rate = 18 # [g/min]
 # write to slave 
 # steady-state recording
 # user input to terminate the program 
-while:
+while slave_1_SV != 0:
     try:
         for slave in slaves:
             for value in ['r_PV', 'r_SV']:
@@ -106,7 +106,11 @@ while:
                     reading_value = int(return_data[-8:-4], 16)
                     print(f"reading {value} from slave_{slave.id}: {reading_value}")
                     slave.lst_readings[value].append(reading_value)
-        
+                
+                # end condition
+                if (slave is slave_1) and (value is 'r_SV'):
+                    slave_1_SV = int(reading_value)
+
     except Exception as e1:
         print ("communicating error " + str(e1))
 
@@ -114,7 +118,7 @@ while:
 ser.close()
 print("Port closed")
 
-display('succeed')
+#display('succeed')
 # %%
 # export to files
 for slave in slaves:
@@ -127,7 +131,7 @@ for slave in slaves:
 
 print("Write to *.npy")
 
-display('succeed')
+#display('succeed')
 # %%
 # verify the exported file
 np.load('./slave_1_readings.npy')
