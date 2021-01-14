@@ -4,7 +4,7 @@ import numpy as np
 import time
 import subprocess
 
-#display('succeed')
+display('succeed')
 
 # %%
 #-----------------Master(RPi) setting------------------------------
@@ -47,18 +47,21 @@ class Slave:
         self.time_readings = {'r_PV':[], 'r_SV':[]} # record time
         self.arr_readings = np.array([]) # for all data 
 
-slave_1 = Slave(1, {
-    'r_PV':'01 03 00 8A 00 01 A5 E0', 
-    'r_SV':'01 03 00 00 00 01 84 0A'
-    }) #Body Temp with PID controller and SSD relay
-slave_2 = Slave(2, {
-    'r_PV':'02 03 00 8A 00 01 A5 D3',
-    'r_SV':'02 03 00 00 00 01 84 39'
-    }) #Output Temp 
+def gen_Slave():
+    slave_1 = Slave(1, {
+        'r_PV':'01 03 00 8A 00 01 A5 E0', 
+        'r_SV':'01 03 00 00 00 01 84 0A'
+        }) #Body Temp with PID controller and SSD relay
+    slave_2 = Slave(2, {
+        'r_PV':'02 03 00 8A 00 01 A5 D3',
+        'r_SV':'02 03 00 00 00 01 84 39'
+        }) #Output Temp 
+        
+    slaves = [slave_1, slave_2]
+    return slaves
 
-slaves = [slave_1, slave_2]
-
-#display('succeed')
+slaves = gen_Slave()
+display('succeed')
 #------------------------------------------------------------------
 
 # %%
@@ -73,11 +76,16 @@ except Exception as ex:
 
 start_w = 0
 slave_1_SV = input("SV of slave_1: ")
+count = 0
+chunk = 10
+nap = 1
 #flow_rate = 18 # [g/min]
 # write to slave 
 # steady-state recording
 # user input to terminate the program 
-while slave_1_SV != 0:
+
+#while slave_1_SV != 0:
+for i in range(30):
     try:
         for slave in slaves:
             for value in ['r_PV', 'r_SV']:
@@ -92,7 +100,7 @@ while slave_1_SV != 0:
                 print(f"writing {value} to slave_{slave.id}")
 
                 #wait[s] for reading from slave
-                time.sleep(0.1)
+                time.sleep(nap)
 
                 #read 8 byte data
                 if ser.inWaiting(): # look up the buffer for reading
@@ -110,6 +118,19 @@ while slave_1_SV != 0:
                 # end condition
                 if (slave is slave_1) and (value is 'r_SV'):
                     slave_1_SV = int(reading_value)
+        
+        count += 1
+        if count % chunk == 0:
+            # export to files
+            for slave in slaves:
+                slave.arr_readings = np.concatenate(
+                    (np.array(slave.time_readings).reshape(-1, 1), 
+                    np.array(slave.lst_readings).reshape(-1, 1)),
+                    axis=1).squeeze()
+                np.save(f'slave_{slave.id}_readings_{count}.npy', slave.arr_readings)
+            
+            # flush all data in attributes in slave 
+            slaves = gen_Slave()
 
     except Exception as e1:
         print ("communicating error " + str(e1))
@@ -117,21 +138,7 @@ while slave_1_SV != 0:
 # close the port
 ser.close()
 print("Port closed")
-
-#display('succeed')
-# %%
-# export to files
-for slave in slaves:
-    slave.arr_readings = np.concatenate(
-        (np.array(slave.time_readings).reshape(-1, 1), 
-        np.array(slave.lst_readings).reshape(-1, 1)),
-        axis=1
-        ).squeeze()
-    np.save(f'slave_{slave.id}_readings.npy', slave.arr_readings)
-
-print("Write to *.npy")
-
-#display('succeed')
+display('succeed')
 # %%
 # verify the exported file
 np.load('./slave_1_readings.npy')
