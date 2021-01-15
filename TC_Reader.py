@@ -4,7 +4,7 @@ import numpy as np
 import time
 import subprocess
 
-display('succeed')
+print('succeed')
 
 # %%
 #-----------------Master(RPi) setting------------------------------
@@ -56,12 +56,11 @@ def gen_Slave():
         'r_PV':'02 03 00 8A 00 01 A5 D3',
         'r_SV':'02 03 00 00 00 01 84 39'
         }) #Output Temp 
-        
-    slaves = [slave_1, slave_2]
-    return slaves
+    return slave_1, slave_2
 
-slaves = gen_Slave()
-display('succeed')
+slave_1, slave_2 = gen_Slave()
+slaves = [slave_1, slave_2]
+print('succeed')
 #------------------------------------------------------------------
 
 # %%
@@ -77,15 +76,15 @@ except Exception as ex:
 start_w = 0
 slave_1_SV = input("SV of slave_1: ")
 count = 0
-chunk = 10
+chunk = 300
 nap = 1
 #flow_rate = 18 # [g/min]
 # write to slave 
 # steady-state recording
 # user input to terminate the program 
 
-#while slave_1_SV != 0:
-for i in range(30):
+while slave_1_SV != 0:
+#for i in range(30):
     try:
         for slave in slaves:
             for value in ['r_PV', 'r_SV']:
@@ -115,7 +114,9 @@ for i in range(30):
                     print(f"reading {value} from slave_{slave.id}: {reading_value}")
                     slave.lst_readings[value].append(reading_value)
                 
-                # end condition
+                #! end condition
+                # code here, modify to be a variable in the for loop
+                # Otherwise, when the machine shutdown, SV = none. Then infinite loop.
                 if (slave is slave_1) and (value is 'r_SV'):
                     slave_1_SV = int(reading_value)
         
@@ -131,14 +132,16 @@ for i in range(30):
             
             # flush all data in attributes in slave 
             slaves = gen_Slave()
-
+        #! add line to make sure you get the last small chunk
+        # code here
+        #  
     except Exception as e1:
         print ("communicating error " + str(e1))
 
 # close the port
 ser.close()
 print("Port closed")
-display('succeed')
+print('succeed')
 # %%
 # verify the exported file
 np.load('./slave_1_readings.npy')
