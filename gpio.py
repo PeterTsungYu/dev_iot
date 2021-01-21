@@ -5,37 +5,48 @@ import time
 print('Succeed')
 
 # %%
-# GPIO nymbering 
-GPIO.setmode(GPIO.BCM)
+interval = 5
+lastsend = 0
+pulse_time = {
+    'rising' : [],
+    'falling' : []
+}
 
-print('Succeed')
-
-# %%
 # read High as 3.3V
 channel_DGM = 18
 
+def func_callback(channel):
+    # while a >=1.6V(3.3/2) input to the pin, it will detect as 1
+    #processpulse(channel_DGM, GPIO.input(channel))
+    print('sth')
+    
+# %%
 try:
+    GPIO.setmode(GPIO.BCM)
     # make sure it is not a float port
     GPIO.setup(channel_DGM, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-    #GPIO.setup(channel_DGM, GPIO.IN) 
-    print(GPIO.input(channel_DGM)) # while a >=1.6V(3.3/2) input to the pin, it will detect as 1
+    # Edge detection
+    GPIO.add_event_detect(channel_DGM, GPIO.BOTH)
+    print('Port setup')
 
-except Exception as ex:
-    print ("Input port is not High" + str(ex))
-    exit()
+    while True:
+        if GPIO.event_detected(channel_DGM):
+            edge_time = time.time()
+            print(GPIO.input(channel_DGM))
+            if GPIO.input(channel_DGM):
+                pulse_time['rising'].append(edge_time)
+            else:
+                pulse_time['falling'].append(edge_time)
 
-# %%
-try:
-    GPIO.wait_for_edge(channel_DGM, GPIO.RISING)  
-    while True:            # this will carry on until you hit CTRL+C  
-        if GPIO.input(channel_DGM): 
-            print("Channel_DGM is 1")  
-        else:  
-            print("Channel_DGM is 0")
-        time.sleep(0.1) 
-  
 except KeyboardInterrupt:  
-    GPIO.cleanup()          
+    print(pulse_time)
+except Exception as ex:
+    print ("communicating error " + str(ex))    
+finally:  
+    GPIO.cleanup()  
+
 # %%
-GPIO.cleanup() 
+GPIO.cleanup()
 # %%
+if __name__ == "__main__":
+    main()
