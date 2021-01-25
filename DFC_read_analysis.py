@@ -4,10 +4,12 @@ def error_percentage(signal, watch_DFM, setting):
     lst = signal
     DFM = np.array(watch_DFM)
     arr = np.array([i[5:] for i in lst])
-    print(np.mean(arr, axis=1))
+    #print(np.mean(arr, axis=1))
 
     print(f"Setting MFC as {setting} SLPM")
-    print("the error percentage for 5 min is... ")
+    print("the error percentage for 1 min, 3 min, 5 min are respectively...")
+    print(f"{round(np.mean((DFM - np.mean(arr, axis=1))[0]) / setting * 100, 3)} %")
+    print(f"{round(np.mean((DFM - np.mean(arr, axis=1))[:3]) / setting * 100, 3)} %")
     print(f"{round(np.mean(DFM - np.mean(arr, axis=1)) / setting * 100, 3)} %")
     print('-'*30)
 
