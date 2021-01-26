@@ -6,6 +6,10 @@ import threading
 
 print('Import Succeed')
 
+# %% 
+pulse_times_min = []
+pulse_times = []
+
 # %%
 # def func for reading 
 def read(channel):
@@ -29,7 +33,7 @@ def calc_average_flow_rate(pulse_times_min):
     average_min_lst = []
 
     # calc average min flow rate by each interval 
-    for pulse_times in pulse_times_min: # [[1st min pulse_times], [2nd min pulse_times], [3rd min pulse_times], ...]
+    for pulse in pulse_times_min: # [[1st min pulse_times], [2nd min pulse_times], [3rd min pulse_times], ...]
         average_interval_lst = []
 
         for interval in range(30, 55, 5): # [[1st min intervals], [2nd min intervals], [3rd min intervals], ...]
@@ -37,11 +41,11 @@ def calc_average_flow_rate(pulse_times_min):
             flow_rate_interval_lst = [] 
 
             # for each interval, calculate the average flow rate
-            for i in range(interval, len(pulse_times), interval):
+            for i in range(interval, len(pulse), interval):
                 try:
                     # flow rate in [liter/s]
                     # 0.1 liter / pulse
-                    flow_rate = 60 * 0.1 * (interval-1) / (pulse_times[i-1] - pulse_times[i-interval])
+                    flow_rate = 60 * 0.01 * (interval-1) / (pulse[i-1] - pulse[i-interval])
                     flow_rate_interval_lst.append(round(flow_rate, 2)) 
                 except Exception as ex:
                     print("Error: " + str(ex))
@@ -50,16 +54,14 @@ def calc_average_flow_rate(pulse_times_min):
             average_interval_lst.append(average_flow_rate_interval)
         average_min_lst.append(average_interval_lst)
 
-    print("the error percentage for 1 min, 2min, 3 min, 4min, 5 min are respectively...")
-    result = np.mean(DFM - np.mean(np.array(average_min_lst), axis=1))
+    #print(average_min_lst)
+    result = np.round(np.mean(np.array(average_min_lst), axis=1), 2)
     np.savetxt('result.csv', result, delimiter=',')
-    print(f"{result}")
+    print(result)
 
 # %%
 def main():
     try:
-        pulse_times_min = []
-        pulse_times = []
         WAIT_TIME_SECONDS = 60 # per min
         ticker = threading.Event()
         #count = 0

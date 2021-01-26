@@ -67,13 +67,14 @@ finally:
 
 # %%
 print("Data Analysis...")
+#print(pulse_times_min)
 
 average_min_lst = []
 
 for pulse_times in pulse_times_min: # [[1st min pulse_times], [2nd min pulse_times], [3rd min pulse_times], ...]
     average_interval_lst = []
 
-    for interval in range(5, 55, 5): # [[1st min intervals], [2nd min intervals], [3rd min intervals], ...]
+    for interval in range(30, 55, 5): # [[1st min intervals], [2nd min intervals], [3rd min intervals], ...]
         #print(interval)
         flow_rate_interval_lst = [] 
 
@@ -82,11 +83,12 @@ for pulse_times in pulse_times_min: # [[1st min pulse_times], [2nd min pulse_tim
             try:
                 # flow rate in [liter/s]
                 # 0.1 liter / pulse
-                flow_rate = 60 * 0.1 * (interval-1) / (pulse_times[i-1] - pulse_times[i-interval])
+                flow_rate = 60 * 0.01 * (interval-1) / (pulse_times[i-1] - pulse_times[i-interval])
                 flow_rate_interval_lst.append(round(flow_rate, 2)) 
             except Exception as ex:
                 print("Error: " + str(ex))
 
+        #print(flow_rate_interval_lst)
         average_flow_rate_interval = round(sum(flow_rate_interval_lst) / len(flow_rate_interval_lst), 2)
         #print(f"In each set-up interval ({interval}[s]), the flow rates are calculated as:\n{flow_rate_interval_lst} in liter/s")
         #print(f"During the period of {pulse_times[interval*int(len(pulse_times)/interval) - 1] - pulse_times[0]}[s], the average flow rate is:\n{average_flow_rate_interval} [liter/s]")
@@ -95,7 +97,10 @@ for pulse_times in pulse_times_min: # [[1st min pulse_times], [2nd min pulse_tim
 
     average_min_lst.append(average_interval_lst)
 
-print(average_min_lst)
+#print(average_min_lst)
+result = np.mean(np.array(average_min_lst), axis=1)
+np.savetxt('DFM_result.csv', result, delimiter=',')
+print(result)
 
 # %%
 #f __name__ == "__main__":
