@@ -51,7 +51,9 @@ def calc_average_flow_rate(pulse_times_min):
         average_min_lst.append(average_interval_lst)
 
     print("the error percentage for 1 min, 2min, 3 min, 4min, 5 min are respectively...")
-    print(f"{np.mean(DFM - np.mean(np.array(average_min_lst), axis=1))}")
+    result = np.mean(DFM - np.mean(np.array(average_min_lst), axis=1))
+    np.savetxt('result.csv', result, delimiter=',')
+    print(f"{result}")
 
 # %%
 def main():
