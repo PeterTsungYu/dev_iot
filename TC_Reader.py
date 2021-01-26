@@ -17,7 +17,8 @@ ser = serial.Serial()
 # set the USB port name (acquired by $ dmesg | grep tty)
 ser.port = "/dev/ttyUSB0"
 
-# 9600 bps
+# 19200 bps
+#　60 Hz
 ser.baudrate = 19200
 # O_81
 ser.bytesize = serial.EIGHTBITS # 8 bits per bytes

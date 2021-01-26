@@ -8,8 +8,8 @@ import RPi.GPIO as GPIO
 
 # write from
 TXRX = serial.Serial(    
-    port='/dev/ttyUSB0',
-    baudrate = 9600,
+    port="/dev/ttyAMA0",
+    baudrate = 19200,
     parity=serial.PARITY_NONE,
     stopbits=serial.STOPBITS_ONE,
     bytesize=serial.EIGHTBITS,
@@ -19,7 +19,7 @@ counter=0
 
 while True:
     print(counter)
-    TXRX.write(b'yes')
+    TXRX.write(b'03 03 00 00 00 01 85 E8')
     #TXRX.write(b'Write counter: %d \n'%(counter))
     #print(str.encode(f'{counter}'))
     time.sleep(1)
