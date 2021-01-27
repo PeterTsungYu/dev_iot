@@ -52,9 +52,7 @@ class Slave:
 
 
 def gen_Slave():
-    slave_3 = Slave(3, {
-        'temp_0':'030300000001 85e8'
-        })
+    slave_3 = Slave(3, '030300000001')
     return slave_3
 
 slave_3 = gen_Slave()
@@ -73,20 +71,20 @@ except Exception as ex:
 
 start_w = 0
 count = 0
-chunk = 10
-nap = 1
+chunk = 10000
+nap = 0.01
 #flow_rate = 18 # [g/min]
 # write to slave_3 
 # steady-state recording
 # user input to terminate the program 
 
-for i in range(5):
+for i in range(50):
     try:
         if start_w == 0:
             start_w = time.time()
         
         #write 8 byte data
-        ser.write(bytes.fromhex(slave_3.rtu['temp_0'])) #hex to binary(byte) 
+        ser.write(bytes.fromhex(slave_3.rtu)) #hex to binary(byte) 
         
         # record the time of reading from slaves
         slave_3.time_readings['temp_0'].append(time.time()-start_w)
@@ -98,7 +96,9 @@ for i in range(5):
         #read 8 byte data
         if ser.inWaiting(): # look up the buffer for reading
             # read the exact data size in the buffer
-            # convert the byte-formed return to hex 
+            # convert the byte-formed return to hex
+            print(ser.inWaiting())
+            print(ser.in_waiting) 
             return_data = ser.read(ser.inWaiting()).hex()
             print(return_data)
             #print(type(return_data))
@@ -133,6 +133,8 @@ for i in range(5):
 ser.close()
 print("Port closed")
 print('succeed')
+print(slave_3.lst_readings)
+print(slave_3.time_readings)
 
 # %%
 # verify the exported file
