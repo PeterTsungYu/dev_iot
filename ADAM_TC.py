@@ -2,7 +2,7 @@
 import serial
 import numpy as np
 import time
-import subprocess
+from crccheck.crc import Crc16Modbus
 
 print('succeed')
 
@@ -14,7 +14,7 @@ print('succeed')
 ## port of the master (RPi)
 ser = serial.Serial()
 # set the USB port name (acquired by $ dmesg | grep tty)
-ser.port = "/dev/ttyAMA0"
+ser.port = "/dev/ttyUSB0"
 
 # According to Adam module spec...
 # 19200 bps
@@ -44,14 +44,16 @@ ser.parity = serial.PARITY_NONE #set parity check
 class Slave:     
     def __init__(self, idno, rtu):
         self.id = idno # id number of slave
-        self.rtu = rtu # rtu sent by master
+        self.crc = Crc16Modbus.calchex(bytearray.fromhex(rtu))
+        self.rtu = rtu + self.crc[-2:] + self.crc[:2]  # rtu sent by master
         self.lst_readings = {'temp_0':[]} # record readings
         self.time_readings = {'temp_0':[]} # record time
         self.arr_readings = np.array([]) # for all data 
 
+
 def gen_Slave():
     slave_3 = Slave(3, {
-        'temp_0':'03 03 00 00 00 01 85 E8'
+        'temp_0':'030300000001 85e8'
         })
     return slave_3
 
@@ -78,14 +80,14 @@ nap = 1
 # steady-state recording
 # user input to terminate the program 
 
-for i in range(30):
+for i in range(5):
     try:
         if start_w == 0:
             start_w = time.time()
-        print('0')
+        
         #write 8 byte data
         ser.write(bytes.fromhex(slave_3.rtu['temp_0'])) #hex to binary(byte) 
-        print('1')
+        
         # record the time of reading from slaves
         slave_3.time_readings['temp_0'].append(time.time()-start_w)
         print(f"writing temp_0 to slave_{slave_3.id}")
@@ -98,7 +100,7 @@ for i in range(30):
             # read the exact data size in the buffer
             # convert the byte-formed return to hex 
             return_data = ser.read(ser.inWaiting()).hex()
-            #print(return_data)
+            print(return_data)
             #print(type(return_data))
 
             # extract the reading temp_0 from the str and convert from hex to decimal(int)

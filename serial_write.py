@@ -8,7 +8,7 @@ import RPi.GPIO as GPIO
 
 # write from
 TXRX = serial.Serial(    
-    port="/dev/ttyAMA0",
+    port="/dev/ttyUSB0",
     baudrate = 19200,
     parity=serial.PARITY_NONE,
     stopbits=serial.STOPBITS_ONE,
