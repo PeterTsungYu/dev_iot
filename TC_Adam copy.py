@@ -44,24 +44,31 @@ start = time.time()
 # define Threads and Events...
 # count down events
 ticker = threading.Event()
+button_exit = threading.Event()
+
 
 # Adam data collect threads
-Adam_data_collect = threading.Thread(target=Modbus.Adam_data_collect, args=(ser, slave_3, start, 1, 21))
+Adam_data_collect = threading.Thread(target=Modbus.Adam_data_collect, args=(button_exit, ser, slave_3, start, 1, 21))
 Adam_data_analyze = threading.Thread(target=Modbus.Adam_data_analyze, args=(slave_3))
+
+# button threads
+## signal...
+
+## Threading Class...
 
 # %%
 # main threading...
-
 Adam_data_collect.start()
+Adam_data_analyze.start()
 
 #while True:
-while not ticker.wait(5): # wait for sec and then execute
-    # Adam data analyze threads
-    Adam_data_analyze.start()
-    Adam_data_analyze.join()
-    print("Analysis done")
-ser.close()
-
-print(slave_3.lst_readings)
-print(slave_3.time_readings)
-print(slave_3.readings)
+while True:
+    try:
+        print("Analysis done")
+    except:
+        pass
+    finally:    
+        ser.close()
+        print(slave_3.lst_readings)
+        print(slave_3.time_readings)
+        print(slave_3.readings)

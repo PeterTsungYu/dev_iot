@@ -26,28 +26,32 @@ def gen_Slave(RTU):
     return slave
 
 
-def Adam_data_collect(event, port, slave, start, time_out, wait_data):
-    while not event.is_set():
-        try:
-            port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
-            slave.time_readings.append(time.time()-start)
+def Adam_data_collect(port, slave, start, time_out, wait_data):
+    #while True:
+    try:
+        port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
+        slave.time_readings.append(time.time()-start)
 
-            time.sleep(time_out)
+        time.sleep(time_out)
 
-            # look up the buffer for 21 bytes, which is for 8 channels data length
-            if port.inWaiting() == wait_data: 
-                readings = port.read(wait_data).hex()
-                slave.lst_readings.append(readings)
-            else: # if data is not correct, return as None
-                slave.lst_readings.append(None)
-                port.reset_input_buffer() 
-            print('collect done')
+        # look up the buffer for 21 bytes, which is for 8 channels data length
+        if port.inWaiting() == wait_data: 
+            readings = port.read(wait_data).hex()
+            slave.lst_readings.append(readings)
+        else: # if data is not correct, return as None
+            slave.lst_readings.append(None)
+            port.reset_input_buffer() 
+        print('collect done')
 
-        except Exception as e1:
-            print ("communicating error " + str(e1))
+    except Exception as e1:
+        print ("communicating error " + str(e1))
+    
+    # if event.is_set():
+    ## break
 
 
 def Adam_data_analyze(slave):
+    # while not ticker.wait(5):
     lst_readings = slave.lst_readings
     time_readings = slave.time_readings
     slave.lst_readings = []
