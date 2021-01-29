@@ -17,8 +17,8 @@ ser.baudrate = 19200
 ser.bytesize = serial.EIGHTBITS # 8 bits per bytes
 ser.stopbits = serial.STOPBITS_ONE #number of stop bits
 ser.parity = serial.PARITY_NONE #set parity check
-#ser.timeout = 0.5          #non-block read 0.5s
-#ser.writeTimeout = 0.5     #timeout for write 0.5s
+ser.timeout = 1          #non-block read 0.5s
+ser.writeTimeout = 1     #timeout for write 0.5s
 #------------------------------------------------------------------
 
 #-----------------ModBus RTU------------------------------

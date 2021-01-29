@@ -4,6 +4,7 @@ import numpy as np
 import time
 import Modbus
 import threading
+import signal
 
 print('Import: succeed')
 
@@ -23,11 +24,8 @@ ser.parity = serial.PARITY_NONE #set parity check
 
 #-----------------ModBus RTU------------------------------
 RTU1 = Modbus.RTU('03', '03', '0000', '0008')
-
-def gen_Slave(RTU):
-    slave_3 = Modbus.Slave(RTU.id, RTU.rtu)
-    return slave_3
-slave_3 = gen_Slave(RTU1)
+slave_3 = Modbus.gen_Slave(RTU1)
+#print(slave_3.rtu)
 print('Generate Slaves: succeed')
 #------------------------------------------------------------------
 # %%
@@ -44,17 +42,22 @@ start = time.time()
 # define Threads and Events...
 # count down events
 ticker = threading.Event()
-button_exit = threading.Event()
 
+# Keyboard interrupt to kill all the threads
+kbinterrupt_event = threading.Event()
+def signal_handler(signum, frame):
+    kbinterrupt_event.set()
+signal.signal(signal.SIGINT, signal_handler) # Keyboard interrupt to stop the program
 
 # Adam data collect threads
-Adam_data_collect = threading.Thread(target=Modbus.Adam_data_collect, args=(button_exit, ser, slave_3, start, 1, 21))
-Adam_data_analyze = threading.Thread(target=Modbus.Adam_data_analyze, args=(slave_3))
-
-# button threads
-## signal...
-
-## Threading Class...
+Adam_data_collect = threading.Thread(
+    target=Modbus.Adam_data_collect, 
+    args=(kbinterrupt_event, ser, slave_3, start, 1, 21,),
+    )
+Adam_data_analyze = threading.Thread(
+    target=Modbus.Adam_data_analyze, 
+    args=(kbinterrupt_event, ticker, slave_3,),
+    )
 
 # %%
 # main threading...
@@ -62,13 +65,10 @@ Adam_data_collect.start()
 Adam_data_analyze.start()
 
 #while True:
-while True:
-    try:
-        print("Analysis done")
-    except:
+try:
+    while not kbinterrupt_event.isSet():
         pass
-    finally:    
-        ser.close()
-        print(slave_3.lst_readings)
-        print(slave_3.time_readings)
-        print(slave_3.readings)
+except:
+    pass
+finally:    
+    print('kill main thread')
