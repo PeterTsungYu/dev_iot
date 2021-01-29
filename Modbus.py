@@ -45,7 +45,16 @@ class SlaveThread(threading.Thread):
         self._stopevent.set(  ) # stop the tread by join method
         threading.Thread.join(self, timeout)'''
 
+def terminate(event): # ask user input to stop the program
+    print(event.is_set())
+    text = input("Type 'exit' to terminate the program...\n>")
+    if text == 'exit':
+        event.set()
+#------------------------------------------------------------------
 
+
+# func
+#------------------------------------------------------------------
 def Adam_data_collect(event, port, slave, start, time_out, wait_data):
     while not event.isSet():
         try:
@@ -93,11 +102,4 @@ def Adam_data_analyze(event, ticker, slave):
     print(slave.lst_readings)
     print(slave.time_readings)
     print(slave.readings)
-
-    
-def terminate(event): # ask user input to stop the program
-    print(event.is_set())
-    text = input("Type 'exit' to terminate the program...\n>")
-    if text == 'exit':
-        event.set()
 
