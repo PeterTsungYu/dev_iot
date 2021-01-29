@@ -23,13 +23,51 @@ ser.parity = serial.PARITY_NONE #set parity check
 
 #-----------------ModBus RTU------------------------------
 RTU1 = Modbus.RTU('03', '03', '0000', '0008')
-
-def gen_Slave(RTU):
-    slave_3 = Modbus.Slave(RTU.id, RTU.rtu)
-    return slave_3
-slave_3 = gen_Slave(RTU1)
+slave_3 = Modbus.gen_Slave(RTU1)
+#print(slave_3.rtu)
 print('Generate Slaves: succeed')
 #------------------------------------------------------------------
+# %%
+def Adam_data_collect(port, slave, start, time_out, wait_data):
+    #while True:
+    try:
+        port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
+        slave.time_readings.append(time.time()-start)
+
+        time.sleep(time_out)
+
+        # look up the buffer for 21 bytes, which is for 8 channels data length
+        if port.inWaiting() == wait_data: 
+            readings = port.read(wait_data).hex()
+            slave.lst_readings.append(readings)
+        else: # if data is not correct, return as None
+            slave.lst_readings.append(None)
+            port.reset_input_buffer() 
+        print('collect done')
+
+    except Exception as e1:
+        print ("communicating error " + str(e1))
+    
+    # if event.is_set():
+    ## break
+
+
+def Adam_data_analyze(slave):
+    # while not ticker.wait(5):
+    lst_readings = slave.lst_readings
+    time_readings = slave.time_readings
+    slave.lst_readings = []
+    slave.time_readings = []
+
+    arr_readings = np.array([[int(reading[i-4:i],16) for i in range(10,len(reading)-2,4)] for reading in lst_readings])
+    lst_readings = list(np.sum(arr_readings, axis=0) / len(lst_readings))
+
+    readings = []
+    readings.append(time_readings[-1])
+    readings.append(lst_readings)
+    slave.readings.append(readings)
+    print('analyze done')
+
 # %%
 try: 
     ser.open()
@@ -40,28 +78,13 @@ except Exception as ex:
     exit()
 start = time.time()
 
-# %%
-# define Threads and Events...
-# count down events
-ticker = threading.Event()
-
-# Adam data collect threads
-Adam_data_collect = threading.Thread(target=Modbus.Adam_data_collect, args=(ser, slave_3, start, 1, 21))
-Adam_data_analyze = threading.Thread(target=Modbus.Adam_data_analyze, args=(slave_3))
-
-# %%
-# main threading...
-
-Adam_data_collect.start()
-
 #while True:
-while not ticker.wait(5): # wait for sec and then execute
-    # Adam data analyze threads
-    Adam_data_analyze.start()
-    Adam_data_analyze.join()
-    print("Analysis done")
-ser.close()
+for i in range(3):
+    for i in range(5):
+        Adam_data_collect(ser, slave_3, start, 1, 21)
+    Adam_data_analyze(slave_3)
 
+ser.close()
 print(slave_3.lst_readings)
 print(slave_3.time_readings)
 print(slave_3.readings)
