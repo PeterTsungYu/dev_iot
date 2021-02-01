@@ -24,7 +24,7 @@ class Slave:
         self.readings = [] # for all data 
 
 
-def gen_Slave(RTU):
+def gen_Slave(RTU): # deprecated 
     slave = Slave(RTU.id, RTU.rtu)
     return slave
 #------------------------------------------------------------------
@@ -32,7 +32,7 @@ def gen_Slave(RTU):
 
 # threading
 #------------------------------------------------------------------
-class SlaveThread(threading.Thread):
+class SlaveThread(threading.Thread): # deprecated 
     def __init__(self, name='SlaveThread'):
         threading.Thread.__init__(self, name=name)
         #self._kill = threading.Event()
