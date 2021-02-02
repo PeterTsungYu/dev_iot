@@ -16,7 +16,7 @@ class RTU:
 
 
 class Slave:     
-    def __init__(self, idno, rtu):
+    def __init__(self, idno='', rtu=''):
         self.id = idno # id number of slave
         self.rtu = rtu # tuple of rtu value
         self.lst_readings = [] # record readings
