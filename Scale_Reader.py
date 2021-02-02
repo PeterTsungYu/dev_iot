@@ -30,12 +30,12 @@ print('Generate Slaves: succeed')
 def data_collect(port, slave, start, time_out, wait_data):
     #while True:
     try:
-        time.sleep(time_out)
+        time.sleep(time_out) # wait for the data input to the buffer
         if port.inWaiting():
             readings = port.read(port.inWaiting()).decode('utf-8')
             #print(readings)
             slave.time_readings.append(time.time()-start)
-            readings = [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'.{6}\.\d', readings)]
+            readings = [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ \-][ \d]{5}\.\d', readings)]
             #print(readings)
             #print(len(readings))
             slave.lst_readings.append(readings)
