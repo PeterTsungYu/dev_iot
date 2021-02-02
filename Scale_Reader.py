@@ -33,8 +33,9 @@ def data_collect(port, slave, start, time_out, wait_data):
         time.sleep(time_out)
         if port.inWaiting():
             readings = port.read(port.inWaiting()).decode('utf-8')
+            #print(readings)
             slave.time_readings.append(time.time()-start)
-            readings = [float(s) for s in re.findall(r'\d+.\d+', readings)]
+            readings = [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'.{6}\.\d', readings)]
             #print(readings)
             #print(len(readings))
             slave.lst_readings.append(readings)
@@ -77,7 +78,7 @@ print('start')
 
 
 #while True:
-for i in range(2):
+for i in range(10):
     for i in range(3):
         data_collect(ser, slave_Scale, start, 1, 0)
     data_analyze(slave_Scale)
