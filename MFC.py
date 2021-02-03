@@ -40,32 +40,38 @@ def data_collect(port, slave, start, time_out, wait_data):
             slave.lst_readings.append(readings)
             print('collect done')
     except Exception as e1:
-        print ("communicating error " + str(e1))
+        print (f"{data_collect.__name__} error " + str(e1))
     finally:
         port.reset_input_buffer() # reset the buffer after each reading process
 
 
 def data_analyze(slave):
-    # while not ticker.wait(5):
-    lst_readings = slave.lst_readings
-    time_readings = slave.time_readings
-    slave.lst_readings = []
-    slave.time_readings = []
+    try:
+        # while not ticker.wait(5):
+        lst_readings = slave.lst_readings
+        time_readings = slave.time_readings
+        slave.lst_readings = []
+        slave.time_readings = []
 
-    arr_readings = np.array(
-        [
-            (lambda i: [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ +\-][\d.]{6}', i)])(readings) 
-            for readings in lst_readings
-        ]
-        )
-    #print(arr_readings)
-    lst_readings = list(np.round(np.sum(arr_readings, axis=0) / len(lst_readings), 2))
+        arr_readings = np.array(
+            [
+                (lambda i: [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ +\-][\d.]{6}', i)])(readings) 
+                for readings in lst_readings
+            ]
+            )
+        #print(arr_readings)
+        lst_readings = list(np.round(np.sum(arr_readings, axis=0) / len(lst_readings), 2))
 
-    readings = []
-    readings.append(time_readings[-1])
-    readings.append(lst_readings)
-    slave.readings.append(readings)
-    print('analyze done')
+        readings = []
+        readings.append(time_readings[-1])
+        readings.append(lst_readings)
+        slave.readings.append(readings)
+        print('analyze done')
+    except Exception as ex:
+        print (f"{data_analyze.__name__} error: " + str(ex)) 
+    finally:
+        slave.lst_readings = []
+        slave.time_readings = []
 
 # %%
 try: 

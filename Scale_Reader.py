@@ -12,7 +12,7 @@ print('Import: succeed')
 # %%
 #-----------------Master(RPi) setting------------------------------
 ser = serial.Serial()
-ser.port = "/dev/ttyUSB0"
+ser.port = "/dev/ttyUSB1"
 
 # According to Adam module spec...60 Hz, O_81
 ser.baudrate = 9600
@@ -38,32 +38,38 @@ def data_collect(port, slave, start, time_out, wait_data):
             readings = [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ \-][ \d]{5}\.\d', readings)]
             #print(readings)
             #print(len(readings))
-            slave.lst_readings.append(readings)
-        else: # if data is not correct, return as None
-            slave.lst_readings.append(None)
-            port.reset_input_buffer() 
+            slave.lst_readings.append(readings) 
         print('collect done')
     except Exception as e1:
-        print ("communicating error " + str(e1))
+        print (f"{data_collect.__name__} error " + str(e1))
+    finally:
+        port.reset_input_buffer() # reset the buffer after each reading process
 
 
 def data_analyze(slave):
     # while not ticker.wait(5):
-    lst_readings = slave.lst_readings
-    time_readings = slave.time_readings
-    slave.lst_readings = []
-    slave.time_readings = []
-    #print(lst_readings)
+    try:
+        lst_readings = slave.lst_readings
+        time_readings = slave.time_readings
+        slave.lst_readings = []
+        slave.time_readings = []
+        #print(lst_readings)
 
-    lst_readings = [sum(i)/len(i) for i in lst_readings] # average for 1s' data
-    #print(lst_readings)
-    lst_readings = round(sum(lst_readings) / len(lst_readings), 2) # average for 1min's data
+        lst_readings = [sum(i)/len(i) for i in lst_readings] # average for 1s' data
+        #print(lst_readings)
+        lst_readings = round(sum(lst_readings) / len(lst_readings), 2) # average for 1min's data
 
-    readings = []
-    readings.append(time_readings[-1])
-    readings.append(lst_readings)
-    slave.readings.append(readings)
-    print('analyze done')
+        readings = []
+        readings.append(time_readings[-1])
+        readings.append(lst_readings)
+        slave.readings.append(readings)
+        print('analyze done')
+    except Exception as ex:
+        print (f"{data_analyze.__name__} error: " + str(ex)) 
+    finally:
+        slave.lst_readings = []
+        slave.time_readings = []
+
 
 # %%
 try: 
@@ -78,7 +84,7 @@ print('start')
 
 
 #while True:
-for i in range(10):
+for i in range(2):
     for i in range(3):
         data_collect(ser, slave_Scale, start, 1, 0)
     data_analyze(slave_Scale)
