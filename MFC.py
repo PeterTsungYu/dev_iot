@@ -5,13 +5,15 @@ import time
 import Modbus
 import threading
 import re
+import sqlite3
+conn = sqlite3.connect('./SQlite/test_DB.db')
 
 print('Import: succeed')
 
 # %%
 #-----------------Master(RPi) setting------------------------------
 ser = serial.Serial()
-ser.port = "/dev/ttyUSB0"
+ser.port = "/dev/ttyUSB1"
 
 ser.baudrate = 19200
 ser.bytesize = serial.EIGHTBITS # 8 bits per bytes
@@ -60,11 +62,13 @@ def data_analyze(slave):
             ]
             )
         #print(arr_readings)
-        lst_readings = list(np.round(np.sum(arr_readings, axis=0) / len(lst_readings), 2))
-
-        readings = []
-        readings.append(time_readings[-1])
-        readings.append(lst_readings)
+        lst_readings = tuple(np.round(np.sum(arr_readings, axis=0) / len(lst_readings), 2))
+        readings = tuple(time_readings[-1:]) + lst_readings
+        print(readings)
+        conn.execute(
+            "INSERT INTO MFC(Time, Pressure, Temper, VolFlow, MassFlow, Setpoint) VALUES (?,?,?,?,?,?);", 
+            readings
+            )
         slave.readings.append(readings)
         print('analyze done')
     except Exception as ex:
@@ -92,6 +96,9 @@ for i in range(5):
     data_analyze(slave_MFC)
 
 ser.close()
+conn.commit()
+conn.close()
+
 
 print(slave_MFC.lst_readings)
 print(slave_MFC.time_readings)
