@@ -17,11 +17,11 @@ while True:
 '''
 
 #!/usr/bin/env python
-from pymodbus.server.sync import StartSerialServer, ModbusSerialServer
-from pymodbus.device import ModbusDeviceIdentification
-from pymodbus.datastore import ModbusSequentialDataBlock, ModbusSparseDataBlock
+from pymodbus.server.sync import ModbusSerialServer
+from pymodbus.datastore import ModbusSequentialDataBlock
 from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
-from pymodbus.transaction import ModbusRtuFramer, ModbusBinaryFramer
+from pymodbus.transaction import ModbusRtuFramer
+import threading
 # --------------------------------------------------------------------------- #
 # configure the service logging
 # --------------------------------------------------------------------------- #
@@ -32,76 +32,25 @@ logging.basicConfig(format=FORMAT)
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
 
-
 def gen_and_run_server():
-    # ----------------------------------------------------------------------- #
-    # initialize your data store
-    # ----------------------------------------------------------------------- #
-    # The datastores only respond to the addresses that they are initialized to
-    # Therefore, if you initialize a DataBlock to addresses of 0x00 to 0xFF, a
-    # request to 0x100 will respond with an invalid address exception. This is
-    # because many devices exhibit this kind of behavior (but not all)::
-    #
-    #     block = ModbusSequentialDataBlock(0x00, [0]*0xff)
-    #
-    # Continuing, you can choose to use a sequential or a sparse DataBlock in
-    # your data context.  The difference is that the sequential has no gaps in
-    # the data while the sparse can. Once again, there are devices that exhibit
-    # both forms of behavior::
-    #
-    #     block = ModbusSparseDataBlock({0x00: 0, 0x05: 1})
-    #     block = ModbusSequentialDataBlock(0x00, [0]*5)
-    #
-    # Alternately, you can use the factory methods to initialize the DataBlocks
-    # or simply do not pass them to have them initialized to 0x00 on the full
-    # address range::
-    #
-    #     store = ModbusSlaveContext(di = ModbusSequentialDataBlock.create())
-    #     store = ModbusSlaveContext()
-    #
-    # Finally, you are allowed to use the same DataBlock reference for every
-    # table or you may use a separate DataBlock for each table.
-    # This depends if you would like functions to be able to access and modify
-    # the same data or not::
-    #
-    #     block = ModbusSequentialDataBlock(0x00, [0]*0xff)
-    #     store = ModbusSlaveContext(di=block, co=block, hr=block, ir=block)
-    #
-    # The server then makes use of a server context that allows the server to
-    # respond with different slave contexts for different unit ids. By default
-    # it will return the same context for every unit id supplied (broadcast
-    # mode).
-    # However, this can be overloaded by setting the single flag to False and
-    # then supplying a dictionary of unit id to context mapping::
-    #
-    #     slaves  = {
-    #         0x01: ModbusSlaveContext(...),
-    #         0x02: ModbusSlaveContext(...),
-    #         0x03: ModbusSlaveContext(...),
-    #     }
-    #     context = ModbusServerContext(slaves=slaves, single=False)
-    #
-    # The slave context can also be initialized in zero_mode which means that a
-    # request to address(0-7) will map to the address (0-7). The default is
-    # False which is based on section 4.4 of the specification, so address(0-7)
-    # will map to (1-8)::
-    #
-    #     store = ModbusSlaveContext(..., zero_mode=True)
-    # ----------------------------------------------------------------------- #
     register_block = ModbusSequentialDataBlock(0x00, [0]*0xff)
+    #print(register_block.__str__())
+
     store = ModbusSlaveContext(
         #di=ModbusSequentialDataBlock(0, [1]*100),
         #co=ModbusSequentialDataBlock(0, [2]*100),
         hr=register_block, # holding register block, for func = 3, 6, 16
         #ir=ModbusSequentialDataBlock(0, [4]*100),
-        zero_mode=True)
-    print(store.getValues(3, 0x00, count=5))
+        zero_mode=True
+        )
+    #print(store.getValues(fx=3, address=0x00, count=5))
 
     context = ModbusServerContext(
-        slaves={0x06:store,}, 
+        slaves={slave_id:store,}, # collection of slaves; here only slave 6
         single=False
         )
-    
+    #print(context)    
+    #print(f"This is the slave 6: {context[slave_id]}") # index as a dict; otherwise, as a list
 
     # RTU:
     RTU_server = ModbusSerialServer(
@@ -117,14 +66,56 @@ def gen_and_run_server():
 
     return RTU_server
 
+
+def updating_writer(context):
+    #print(context[slave_id])
+    log.debug("updating the context")
+    values = context[slave_id].getValues(fx=fx_code, address=address, count=5)
+    values = [v + 1 for v in values]
+    log.debug("new values: " + str(values))
+    context[slave_id].setValues(fx=fx_code, address=address, values=values)
+
+
+class update_and_timeout(threading.Thread):
+    def __init__(self, context):
+        threading.Thread.__init__(self)
+        self._timeout = threading.Event()
+        self.context = context
+        print(self.context)
+
+    def run(self):
+        while not self._timeout.wait(1): # every beginning of iteration, timeout for 1s
+            updating_writer(self.context)
+
+    def join(self, timeout=None):
+        """ Stop the thread. """
+        self._timeout.set(  )
+        threading.Thread.join(self, timeout)
+
+
 if __name__ == "__main__":
+    fx_code = 3
+    slave_id = 0x06
+    address = 0x10
     try:
         Rpi = gen_and_run_server()
-        print(Rpi._connect())
         print("Server is online")
+        update = update_and_timeout(Rpi.context)
+        update.start()
+        time.sleep(10.0)
+        update.join()
+        '''
         while True:
-            continue
-    except:
+            run_updating_server = threading.Timer(interval=1, function=updating_writer, args=Rpi.context)
+            run_updating_server.start()
+            run_updating_server.join()
+        '''
+
+    except Exception as ex:
+        print ("open serial port error " + str(ex))
         Rpi.server_close()
         print("Server is offline")
+
+
+print(Rpi.context[0x06].getValues(fx=fx_code, address=address, count=5))
     
