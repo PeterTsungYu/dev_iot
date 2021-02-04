@@ -100,9 +100,10 @@ if __name__ == "__main__":
     try:
         Rpi = gen_and_run_server()
         print("Server is online")
+
         update = update_and_timeout(Rpi.context)
         update.start()
-        time.sleep(10.0)
+        time.sleep(600.0)
         update.join()
         '''
         while True:
