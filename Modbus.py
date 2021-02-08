@@ -6,8 +6,8 @@ import threading
 
 # RTU
 #------------------------------------------------------------------
-class RTU:     
-    def __init__(self, idno, func_code, data_site, data_len):
+class RTU: # generate the CRC for the complete RTU 
+    def __init__(self, idno='', func_code='', data_site='', data_len=''):
         self.id = idno # id number of slave
         self.data_len = data_len
         data_struc = idno + func_code + data_site + data_len
@@ -15,7 +15,7 @@ class RTU:
         self.rtu = data_struc + crc[-2:] + crc[:2]
 
 
-class Slave:     
+class Slave: # Create Slave data store 
     def __init__(self, idno='', rtu=''):
         self.id = idno # id number of slave
         self.rtu = rtu # tuple of rtu value
@@ -23,27 +23,30 @@ class Slave:
         self.time_readings = [] # record time
         self.readings = [] # for all data 
 
-
+'''
 def gen_Slave(RTU): # deprecated 
     slave = Slave(RTU.id, RTU.rtu)
     return slave
+'''
 #------------------------------------------------------------------
 
 
 # threading
 #------------------------------------------------------------------
+'''
 class SlaveThread(threading.Thread): # deprecated 
     def __init__(self, name='SlaveThread'):
         threading.Thread.__init__(self, name=name)
-        #self._kill = threading.Event()
+        self._kill = threading.Event()
         self._sleepperiod = 1
-    '''def run(self):
+    def run(self):
         while not self._kill.isSet(): # inspect the event till it is set
             self._kill.wait(self._sleepperiod) # inspect every period
-        print('end')'''
-    '''def join(self, timeout=None):
+        print('end')
+    def join(self, timeout=None):
         self._stopevent.set(  ) # stop the tread by join method
-        threading.Thread.join(self, timeout)'''
+        threading.Thread.join(self, timeout)
+'''
 
 def terminate(event): # ask user input to stop the program
     print(event.is_set())
