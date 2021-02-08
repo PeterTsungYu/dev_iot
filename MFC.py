@@ -13,9 +13,9 @@ print('Import: succeed')
 # %%
 #-----------------Master(RPi) setting------------------------------
 ser = serial.Serial()
-ser.port = "/dev/ttyUSB1"
+ser.port = "/dev/ttyUSB0"
 
-ser.baudrate = 19200
+ser.baudrate = 9600
 ser.bytesize = serial.EIGHTBITS # 8 bits per bytes
 ser.stopbits = serial.STOPBITS_ONE #number of stop bits
 ser.parity = serial.PARITY_NONE #set parity check
@@ -36,6 +36,7 @@ def data_collect(port, slave, start, time_out, wait_data):
 
         time.sleep(time_out)
         
+        print(port.inWaiting())
         if port.inWaiting() == wait_data:
             readings = port.read(port.inWaiting()).decode('utf-8')
             #print(readings)
@@ -103,3 +104,4 @@ conn.close()
 print(slave_MFC.lst_readings)
 print(slave_MFC.time_readings)
 print(slave_MFC.readings)
+# [(2.004014492034912, 1.0, 25.11, 0.0, 0.0, 0.0), (5.0139899253845215, 1.0, 25.12, 0.0, 0.0, 0.0), (8.021106719970703, 1.0, 25.12, 0.0, 0.0, 0.0), (11.028206825256348, 1.0, 25.12, 0.0, 0.0, 0.0), (14.03491497039795, 1.0, 25.12, 0.0, 0.0, 0.0)]

@@ -12,7 +12,7 @@ print('Import: succeed')
 # %%
 #-----------------Master(RPi) setting------------------------------
 ser = serial.Serial()
-ser.port = "/dev/ttyUSB1"
+ser.port = "/dev/ttyUSB2"
 
 # According to Adam module spec...60 Hz, O_81
 ser.baudrate = 9600
@@ -57,7 +57,7 @@ def data_analyze(slave):
 
         lst_readings = [sum(i)/len(i) for i in lst_readings] # average for 1s' data
         #print(lst_readings)
-        lst_readings = round(sum(lst_readings) / len(lst_readings), 2) # average for 1min's data
+        lst_readings = round(sum(lst_readings) / len(lst_readings), 1) # average for 1min's data
 
         readings = []
         readings.append(time_readings[-1])
@@ -94,3 +94,4 @@ ser.close()
 print(slave_Scale.lst_readings)
 print(slave_Scale.time_readings)
 print(slave_Scale.readings)
+# [[3.007049798965454, 0.0], [6.0131144523620605, 0.0]]

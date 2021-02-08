@@ -11,7 +11,7 @@ print('Import: succeed')
 # %%
 #-----------------Master(RPi) setting------------------------------
 ser = serial.Serial()
-ser.port = "/dev/ttyUSB0"
+ser.port = "/dev/ttyUSB1"
 
 # According to Adam module spec...60 Hz, O_81
 ser.baudrate = 19200
@@ -24,7 +24,7 @@ ser.parity = serial.PARITY_NONE #set parity check
 
 #-----------------ModBus RTU------------------------------
 RTU1 = Modbus.RTU('03', '03', '0000', '0008')
-slave_3 = Modbus.gen_Slave(RTU1)
+slave_3 = Modbus.Slave('03', RTU1.rtu)
 #print(slave_3.rtu)
 print('Generate Slaves: succeed')
 #------------------------------------------------------------------
@@ -72,3 +72,6 @@ except:
     pass
 finally:    
     print('kill main thread')
+
+# [4.12, [0.0, 0.0, 0.0, 0.0, 0.0, 19.91, 1370.0, 1370.0]]
+# [4.13, [22.53, 22.59, 22.64, 22.73, 22.78, 1370.0, 1370.0, 1370.0]

@@ -13,7 +13,7 @@ receiver = serial.Serial(
 '''
 TC - 8 * 2 = 16 (RS485)
 DFM - 1 * 2 = 2 (GPIO)
-GA - 6 * 2 = 12 (RS232)
+GA - 6 * 2 = 12 (RS232, 4 digits)
 MFC - 1 * 2 = 2 (RS232)
 Scale - 1 * 2 = 2 (USB)
 TO PC (USB)

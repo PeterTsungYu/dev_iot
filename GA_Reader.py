@@ -63,7 +63,7 @@ def data_analyze(slave):
         for readings in lst_readings]
         )
     #print(arr_readings)
-    lst_readings = list(np.sum(arr_readings, axis=0) / len(lst_readings))
+    lst_readings = list(np.round(np.sum(arr_readings, axis=0) / len(lst_readings), 2))
 
     readings = []
     readings.append(time_readings[-1])
@@ -92,3 +92,4 @@ ser.close()
 print(slave_GA.lst_readings)
 print(slave_GA.time_readings)
 print(slave_GA.readings)
+#　[[4.006276369094849, [0.0, 0.0, 0.0, 0.47, 99.53, 0.05]], [9.01613736152649, [0.0, 0.0, 0.0, 0.47, 99.53, 0.05]], [14.02524185180664, [0.0, 0.0, 0.0, 0.47, 99.53, 0.05]]]

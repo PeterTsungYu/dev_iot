@@ -69,6 +69,7 @@ def Adam_data_collect(event, port, slave, start, time_out, wait_data):
             # look up the buffer for 21 bytes, which is for 8 channels data length
             if port.inWaiting() == wait_data: 
                 readings = port.read(wait_data).hex()
+                print(readings)
                 slave.lst_readings.append(readings)
             else: # if data is not correct, return as None
                 slave.lst_readings.append(None)
