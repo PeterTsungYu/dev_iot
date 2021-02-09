@@ -41,21 +41,15 @@ Scale_slave = Modbus.Slave()
 
 #-----GPIO port setting------------------------------
 ## DFM
+# read High as 3.3V
+channel_DFM = 18
+GPIO.setmode(GPIO.BCM)
+DFM_slave = Modbus.Slave()
+
 
 print('Serial port setting: succeed')
-#------------------------------------------------------------------
-# %%
-try: 
-    ser.open()
-    ser.reset_input_buffer() #flush input buffer
-    ser.reset_output_buffer() #flush output buffer
-except Exception as ex:
-    print ("open serial port error " + str(ex))
-    exit()
-start = time.time()
 
-# %%
-# define Threads and Events...
+#-------------------------define Threads and Events-----------------------------------------
 # count down events
 ticker = threading.Event()
 
@@ -65,26 +59,50 @@ def signal_handler(signum, frame):
     kbinterrupt_event.set()
 signal.signal(signal.SIGINT, signal_handler) # Keyboard interrupt to stop the program
 
-# Adam data collect threads
+## RS485
 Adam_data_collect = threading.Thread(
     target=Modbus.Adam_data_collect, 
     args=(kbinterrupt_event, ser, slave_3, start, 1, 21,),
     )
 Adam_data_analyze = threading.Thread(
     target=Modbus.Adam_data_analyze, 
-    args=(kbinterrupt_event, ticker, slave_3,),
+    args=(kbinterrupt_event, ticker, 30, slave_3,),
     )
 
-# %%
-# main threading...
+## GPIO
+# Edge detection
+def DFM_data_collect():
+    DFM_slave.time_readings.append(time.time())
+
+#-------------------------Open ports--------------------------------------
+try: 
+    ser.open() # code here........
+    ser.reset_input_buffer() #flush input buffer
+    ser.reset_output_buffer() #flush output buffer
+
+    GPIO.setup(channel_DFM, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+    
+except Exception as ex:
+    print ("open serial port error " + str(ex))
+    exit()
+
+#-------------------------Threading-----------------------------------------
+start = time.time()
+flag_time = start
 Adam_data_collect.start()
 Adam_data_analyze.start()
+GPIO.add_event_detect(channel_DFM, GPIO.RISING, callback=DFM_data_collect)
 
-#while True:
 try:
     while not kbinterrupt_event.isSet():
         pass
-except:
-    pass
-finally:    
+except KeyboardInterrupt: 
+    GPIO.cleanup() 
+    print(f"Program duration: {time.time() - start}")
+    print(f"Keyboard Interrupt...")
+    print("=="*30)
+except Exception as ex:
+    print ("communicating error " + str(ex))    
+    print("=="*30)
+finally:
     print('kill main thread')

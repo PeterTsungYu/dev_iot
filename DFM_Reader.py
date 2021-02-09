@@ -12,7 +12,7 @@ pulse_times = []
 
 # %%
 # def func for reading 
-def read(channel):
+def read():
     # while a >=1.6V(3.3/2) input to the pin, it will detect as 1
     #print('read in')
     global pulse_times
@@ -55,7 +55,7 @@ def calc_average_flow_rate(pulse_times_min):
         average_min_lst.append(average_interval_lst)
 
     #print(average_min_lst)
-    result = np.round(np.mean(np.array(average_min_lst), axis=1), 2)
+    result = np.round(np.mean(np.array(average_min_lst), axis=1), 1)
     np.savetxt('result.csv', result, delimiter=',')
     print(result)
 

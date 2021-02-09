@@ -58,8 +58,8 @@ def terminate(event): # ask user input to stop the program
 
 # func
 #------------------------------------------------------------------
-def Adam_data_collect(event, port, slave, start, time_out, wait_data):
-    while not event.isSet():
+def Adam_data_collect(kb_event, port, slave, start, time_out, wait_data):
+    while not kb_event.isSet():
         try:
             port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
             slave.time_readings.append(time.time()-start)
@@ -77,16 +77,14 @@ def Adam_data_collect(event, port, slave, start, time_out, wait_data):
             print('collect done')
         except Exception as e1:
             print ("Adam_data_collect error " + str(e1))
-        # if event.is_set():
-        ## break
     port.close()
     print('kill Adam_data_collect')
 
 
-def Adam_data_analyze(event, ticker, slave):
-    while not event.isSet():
+def Adam_data_analyze(kb_event, ticker, wait_time, slave):
+    while not kb_event.isSet():
         try:
-            if not ticker.wait(5):
+            if not ticker.wait(wait_time):
                 lst_readings = slave.lst_readings
                 time_readings = slave.time_readings
                 slave.lst_readings = []
@@ -107,3 +105,34 @@ def Adam_data_analyze(event, ticker, slave):
     print(slave.time_readings)
     print(slave.readings)
 
+
+def DFM_data_analyze(kb_event, ticker, wait_time, slave):
+    while not kb_event.isSet():
+        try:
+            if not ticker.wait(wait_time): # for each wait_time, collect data 
+                time_readings = slave.time_readings
+                slave.time_readings = []
+
+                average_interval_lst = []
+                # calc average min flow rate by each interval 
+                for interval in range(30, 55, 5):
+                    flow_rate_interval_lst = []
+                    # for each interval, calculate the average flow rate
+                    for i in range(interval, len(time_readings), interval):
+                        try:
+                            # flow rate in [liter/s]
+                            # 0.1 liter / pulse
+                            flow_rate = 60 * 0.01 * (interval-1) / (time_readings[i-1] - time_readings[i-interval])
+                            flow_rate_interval_lst.append(round(flow_rate, 2)) 
+                        except Exception as ex:
+                            print("DFM_data_analyze internal loop Error: " + str(ex))
+                    average_flow_rate_interval = round(sum(flow_rate_interval_lst) / len(flow_rate_interval_lst), 2)          
+                    average_interval_lst.append(average_flow_rate_interval)
+                slave.readings.append(round(sum(average_interval_lst) / len(average_interval_lst), 2))
+                
+        except Exception as e1:
+            print ("DFM_data_analyze error " + str(e1))
+    print('kill Adam_data_analyze')
+    print(slave.lst_readings)
+    print(slave.time_readings)
+    print(slave.readings)
