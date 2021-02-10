@@ -100,6 +100,6 @@ if __name__ == "__main__":
         update.join()
     except Exception as ex:
         print ("Server error: " + str(ex))
-        Rpi.server_close()
+        #Rpi.server_close()
         print("Server is offline")
     print(server_DB[0x06].getValues(fx=fx_code, address=address, count=5))   

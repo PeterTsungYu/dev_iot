@@ -6,6 +6,10 @@ import threading
 import re
 import sqlite3
 
+from pymodbus.server.asynchronous import StartSerialServer
+from pymodbus.datastore import ModbusSequentialDataBlock
+from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
+from pymodbus.transaction import ModbusRtuFramer
 #-------------------------RTU & Slave--------------------------------------
 class RTU: # generate the CRC for the complete RTU 
     def __init__(self, idno='', func_code='', data_site='', data_len=''):
@@ -29,6 +33,38 @@ def gen_Slave(RTU): # deprecated
     slave = Slave(RTU.id, RTU.rtu)
     return slave
 '''
+
+
+def serverDB_gen(slave_id=0x00):
+    register_block = ModbusSequentialDataBlock(0x00, [0x00]*0x22) # each address can hold from a range 0x00 to 0xffff
+    store = ModbusSlaveContext(
+        #di=ModbusSequentialDataBlock(0, [1]*100),
+        #co=ModbusSequentialDataBlock(0, [2]*100),
+        hr=register_block, # holding register block, for func = 3, 6, 16
+        #ir=ModbusSequentialDataBlock(0, [4]*100),
+        zero_mode=True
+        )
+    context = ModbusServerContext(
+        slaves={slave_id:store,}, # collection of slaves; here only slave 6
+        single=False
+        )
+    print("Succeed to generate a server context")
+    return context
+
+
+def run_server(context, port, timeout=1, baudrate=115200, stopbits=1, bytesize=8, parity='N'):
+    StartSerialServer(
+        context, 
+        framer=ModbusRtuFramer,  
+        port=port, 
+        timeout=timeout, 
+        baudrate=baudrate,
+        stopbits=stopbits,
+        bytesize=bytesize,
+        parity=parity, 
+        )
+
+    print("Server is offline")
 
 #--------------------------Threading--------------------------------
 '''
@@ -143,7 +179,7 @@ def GA_data_collect(port, slave, start, time_out, wait_data):
     #print('kill MFC_data_collect')
 
 
-def Adam_data_analyze(kb_event, ticker, sample_time, slave, db):
+def Adam_data_analyze(kb_event, ticker, sample_time, slave, server_DB):
     while not kb_event.isSet():
         if not ticker.wait(sample_time):
             lst_readings = slave.lst_readings
@@ -152,7 +188,7 @@ def Adam_data_analyze(kb_event, ticker, sample_time, slave, db):
             slave.time_readings = []
             try:
                 arr_readings = np.array([[int(reading[i-4:i],16) for i in range(10,len(reading)-2,4)] for reading in lst_readings])
-                lst_readings = tuple(np.round(1370/65535*(np.sum(arr_readings, axis=0) / len(lst_readings)), 2))
+                lst_readings = tuple(np.round(1370/65535*(np.sum(arr_readings, axis=0) / len(lst_readings)), 1))
                 #print(lst_readings)
                 readings = tuple([round(time_readings[-1],2)]) + lst_readings
                 #print(readings)
@@ -168,11 +204,13 @@ def Adam_data_analyze(kb_event, ticker, sample_time, slave, db):
                 '''
                 print(f'Adam_data_analyze done: {readings}')
                 slave.readings.append(readings)
+                # 0x09:1f:TC_0, 0x10:1f:TC_1, 0x11:1f:TC_2, 0x12:1f:TC_3, 0x13:1f:TC_4, 0x14:1f:TC_5, 0x15:1f:TC_6, 0x16:1f:TC_7
+                server_DB[0x06].setValues(fx=3, address=0x09, values=[int(i*10) for i in readings[1:]])
     print('kill Adam_data_analyze')
     print(f'Final Adam_data_analyze: {slave.readings}')
 
 
-def DFM_data_analyze(kb_event, ticker, start, sample_time, slave, db):
+def DFM_data_analyze(kb_event, ticker, start, sample_time, slave, server_DB):
     while not kb_event.isSet():
         if not ticker.wait(sample_time): # for each sample_time, collect data
             sampling_time = round(time.time()-start, 2)
@@ -191,7 +229,7 @@ def DFM_data_analyze(kb_event, ticker, start, sample_time, slave, db):
                         flow_rate_interval_lst.append(round(flow_rate, 2)) 
                     average_flow_rate_interval = round(sum(flow_rate_interval_lst) / len(flow_rate_interval_lst), 2)          
                     average_interval_lst.append(average_flow_rate_interval)
-                    _average = round(sum(average_interval_lst) / len(average_interval_lst), 2)
+                    _average = round(sum(average_interval_lst) / len(average_interval_lst), 1)
                 readings = tuple(sampling_time, _average)
             except Exception as e1:
                 readings = tuple([sampling_time, 0])
@@ -205,11 +243,13 @@ def DFM_data_analyze(kb_event, ticker, start, sample_time, slave, db):
                 '''
                 print(f'DFM_data_analyze done: {readings}')
                 slave.readings.append(readings)
+                # 0x08:1f:DFM_flowrate
+                server_DB[0x06].setValues(fx=3, address=0x08, values=[int(readings[-1]*10)])
     print('kill DFM_data_analyze')
     print(f'Final DFM_data_analyze: {slave.readings}')
 
 
-def Scale_data_analyze(kb_event, ticker, sample_time, slave, db):
+def Scale_data_analyze(kb_event, ticker, sample_time, slave, server_DB):
     while not kb_event.isSet():
         if not ticker.wait(sample_time):
             lst_readings = slave.lst_readings
@@ -232,11 +272,13 @@ def Scale_data_analyze(kb_event, ticker, sample_time, slave, db):
                 '''
                 print(f'Scale_data_analyze done: {readings}')
                 slave.readings.append(readings)
+                # 0x07:1f:Weight
+                server_DB[0x06].setValues(fx=3, address=0x07, values=[int(readings[-1]*10)])
     print('kill Scale_data_analyze')
     print(f'Final Scale_data_analyze: {slave.readings}')
 
 
-def GA_data_analyze(kb_event, ticker, sample_time, slave, db):
+def GA_data_analyze(kb_event, ticker, sample_time, slave, server_DB):
     while not kb_event.isSet():
         if not ticker.wait(sample_time):
             lst_readings = slave.lst_readings
@@ -252,10 +294,10 @@ def GA_data_analyze(kb_event, ticker, sample_time, slave, db):
                     for readings in lst_readings]
                     )
                 #print(arr_readings)
-                lst_readings = tuple(np.round(np.sum(arr_readings, axis=0) / len(lst_readings), 2))
-                readings = tuple(time_readings[-1:]) + lst_readings
+                lst_readings = tuple(np.round(np.sum(arr_readings, axis=0) / len(lst_readings), 1))
+                readings = tuple([round(time_readings[-1],2)]) + lst_readings
             except Exception as ex:
-                readings = tuple(time_readings[-1:]) + (0,0,0,0,0,0)
+                readings = tuple([round(time_readings[-1],2)]) + (0,0,0,0,0,0)
                 print ("GA_data_analyze error: " + str(ex))
             finally:
                 '''
@@ -266,11 +308,13 @@ def GA_data_analyze(kb_event, ticker, sample_time, slave, db):
                 '''
                 print(f'GA_data_analyze done: {readings}')
                 slave.readings.append(readings)
+                # 0x01:1f:CO, 0x02:1f:CO2, 0x03:1f:CH4, 0x04:1f:H2, 0x05:1f:N2, 0x06:1f:HEAT
+                server_DB[0x06].setValues(fx=3, address=0x01, values=[int(i*10) for i in readings[1:]])
     print('kill GA_data_analyze')
     print(f'Final GA_data_analyze: {slave.readings}')
 
 
-def MFC_data_analyze(kb_event, ticker, sample_time, slave, db):
+def MFC_data_analyze(kb_event, ticker, sample_time, slave, server_DB):
     #conn = sqlite3.connect(db)
     while not kb_event.isSet():
         if not ticker.wait(sample_time):
@@ -286,7 +330,7 @@ def MFC_data_analyze(kb_event, ticker, sample_time, slave, db):
                     ]
                     )
                 #print(arr_readings)
-                lst_readings = tuple(np.round(np.sum(arr_readings, axis=0) / len(lst_readings), 2))
+                lst_readings = tuple(np.round(np.sum(arr_readings, axis=0) / len(lst_readings), 1))
                 readings = tuple(time_readings[-1:]) + lst_readings
             except Exception as ex:
                 readings = tuple(time_readings[-1:]) + (0,0,0,0,0)
@@ -301,6 +345,8 @@ def MFC_data_analyze(kb_event, ticker, sample_time, slave, db):
                 '''
                 print(f'MFC_data_analyze done: {readings}')
                 slave.readings.append(readings)
+                # 0x00:1f:MFC_MassFlow 
+                server_DB[0x06].setValues(fx=3, address=0x00, values=[int(readings[-2]*10),])
     print('kill MFC_data_analyze')
     print(f'Final MFC_data_analyze: {slave.readings}')
     #conn.close()
