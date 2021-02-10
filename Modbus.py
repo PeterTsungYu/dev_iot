@@ -4,6 +4,7 @@ import serial
 import time
 import threading
 import re
+import sqlite3
 
 #-------------------------RTU & Slave--------------------------------------
 class RTU: # generate the CRC for the complete RTU 
@@ -103,10 +104,10 @@ def MFC_data_collect(port, slave, start, time_out, wait_data):
 
         time.sleep(time_out)
         
-        print(port.inWaiting())
+        #print(port.inWaiting())
         if port.inWaiting() == wait_data:
             readings = port.read(port.inWaiting()).decode('utf-8')
-            print(readings)
+            #print(readings)
             slave.lst_readings.append(readings)
     except Exception as e1:
         print ("MFC_data_collect error: " + str(e1))
@@ -142,92 +143,107 @@ def GA_data_collect(port, slave, start, time_out, wait_data):
     #print('kill MFC_data_collect')
 
 
-def Adam_data_analyze(kb_event, ticker, sample_time, slave):
+def Adam_data_analyze(kb_event, ticker, sample_time, slave, db):
     while not kb_event.isSet():
-        try:
-            if not ticker.wait(sample_time):
-                lst_readings = slave.lst_readings
-                time_readings = slave.time_readings
-                slave.lst_readings = []
-                slave.time_readings = []
-
+        if not ticker.wait(sample_time):
+            lst_readings = slave.lst_readings
+            time_readings = slave.time_readings
+            slave.lst_readings = []
+            slave.time_readings = []
+            try:
                 arr_readings = np.array([[int(reading[i-4:i],16) for i in range(10,len(reading)-2,4)] for reading in lst_readings])
-                lst_readings = list(np.round(1370/65535*(np.sum(arr_readings, axis=0) / len(lst_readings)), 2))
-
-                readings = []
-                readings.append(round(time_readings[-1],2))
-                readings.append(lst_readings)
-                slave.readings.append(readings)
+                lst_readings = tuple(np.round(1370/65535*(np.sum(arr_readings, axis=0) / len(lst_readings)), 2))
+                #print(lst_readings)
+                readings = tuple([round(time_readings[-1],2)]) + lst_readings
+                #print(readings)
+            except Exception as e1:
+                readings = tuple([round(time_readings[-1],2)]) + (0,0,0,0,0,0,0,0)
+                print ("Adam_data_analyze error: " + str(e1))
+            finally:
+                '''
+                conn.execute(
+                    "INSERT INTO ADAM_TC(Time, TC_0, TC_1, TC_2, TC_3, TC_4, TC_5, TC_6, TC_7) VALUES (?,?,?,?,?,?,?,?,?);", 
+                    readings
+                    )
+                '''
                 print(f'Adam_data_analyze done: {readings}')
-        except Exception as e1:
-            print ("Adam_data_analyze error: " + str(e1))
+                slave.readings.append(readings)
     print('kill Adam_data_analyze')
     print(f'Final Adam_data_analyze: {slave.readings}')
 
 
-def DFM_data_analyze(kb_event, ticker, sample_time, slave):
+def DFM_data_analyze(kb_event, ticker, start, sample_time, slave, db):
     while not kb_event.isSet():
-        try:
-            if not ticker.wait(sample_time): # for each sample_time, collect data 
+        if not ticker.wait(sample_time): # for each sample_time, collect data
+            sampling_time = round(time.time()-start, 2)
+            try: 
                 time_readings = slave.time_readings
                 slave.time_readings = []
-
                 average_interval_lst = []
                 # calc average min flow rate by each interval 
                 for interval in range(30, 55, 5):
                     flow_rate_interval_lst = []
                     # for each interval, calculate the average flow rate
                     for i in range(interval, len(time_readings), interval):
-                        try:
-                            # flow rate in [liter/s]
-                            # 0.1 liter / pulse
-                            flow_rate = 60 * 0.01 * (interval-1) / (time_readings[i-1] - time_readings[i-interval])
-                            flow_rate_interval_lst.append(round(flow_rate, 2)) 
-                        except Exception as ex:
-                            print("DFM_data_analyze internal loop Error: " + str(ex))
+                        # flow rate in [liter/s]
+                        # 0.1 liter / pulse
+                        flow_rate = 60 * 0.01 * (interval-1) / (time_readings[i-1] - time_readings[i-interval])
+                        flow_rate_interval_lst.append(round(flow_rate, 2)) 
                     average_flow_rate_interval = round(sum(flow_rate_interval_lst) / len(flow_rate_interval_lst), 2)          
                     average_interval_lst.append(average_flow_rate_interval)
                     _average = round(sum(average_interval_lst) / len(average_interval_lst), 2)
-                slave.readings.append(_average)
-                print(f'DFM_data_analyze done: {_average}')
-        except Exception as e1:
-            print ("DFM_data_analyze error: " + str(e1))
+                readings = tuple(sampling_time, _average)
+            except Exception as e1:
+                readings = tuple([sampling_time, 0])
+                print ("DFM_data_analyze error: " + str(e1))
+            finally:
+                '''
+                conn.execute(
+                    "INSERT INTO DFM(Time, FlowRate) VALUES (?,?);", 
+                    readings
+                    )
+                '''
+                print(f'DFM_data_analyze done: {readings}')
+                slave.readings.append(readings)
     print('kill DFM_data_analyze')
     print(f'Final DFM_data_analyze: {slave.readings}')
 
 
-def Scale_data_analyze(kb_event, ticker, sample_time, slave):
+def Scale_data_analyze(kb_event, ticker, sample_time, slave, db):
     while not kb_event.isSet():
-        try:
-            if not ticker.wait(sample_time):
-                lst_readings = slave.lst_readings
-                time_readings = slave.time_readings
-                slave.lst_readings = []
-                slave.time_readings = []
-
+        if not ticker.wait(sample_time):
+            lst_readings = slave.lst_readings
+            time_readings = slave.time_readings
+            slave.lst_readings = []
+            slave.time_readings = []
+            try:
                 lst_readings = [sum(i)/len(i) for i in lst_readings] # average for 1s' data
                 lst_readings = round(sum(lst_readings) / len(lst_readings), 1) # average for 1min's data
-
-                readings = []
-                readings.append(time_readings[-1])
-                readings.append(lst_readings)
-                slave.readings.append(readings)
+                readings = tuple([round(time_readings[-1], 2), lst_readings])
+            except Exception as ex:
+                readings = tuple([round(time_readings[-1], 2), 0])
+                print ("Scale_data_analyze error: " + str(ex))
+            finally:
+                '''
+                conn.execute(
+                    "INSERT INTO Scale(Time, Weight) VALUES (?,?);", 
+                    readings
+                    )
+                '''
                 print(f'Scale_data_analyze done: {readings}')
-        except Exception as ex:
-            print ("Scale_data_analyze error: " + str(ex))
+                slave.readings.append(readings)
     print('kill Scale_data_analyze')
     print(f'Final Scale_data_analyze: {slave.readings}')
 
 
-def GA_data_analyze(kb_event, ticker, sample_time, slave):
+def GA_data_analyze(kb_event, ticker, sample_time, slave, db):
     while not kb_event.isSet():
-        try:
-            if not ticker.wait(sample_time):
-                lst_readings = slave.lst_readings
-                time_readings = slave.time_readings
-                slave.lst_readings = []
-                slave.time_readings = []
-
+        if not ticker.wait(sample_time):
+            lst_readings = slave.lst_readings
+            time_readings = slave.time_readings
+            slave.lst_readings = []
+            slave.time_readings = []
+            try:           
                 arr_readings = np.array(
                     [[int(readings[i:i+4],16)/100 for i in range(8,20,4)] 
                     + [int(readings[24:28],16)/100] 
@@ -236,28 +252,33 @@ def GA_data_analyze(kb_event, ticker, sample_time, slave):
                     for readings in lst_readings]
                     )
                 #print(arr_readings)
-                lst_readings = list(np.round(np.sum(arr_readings, axis=0) / len(lst_readings), 2))
-
-                readings = []
-                readings.append(time_readings[-1])
-                readings.append(lst_readings)
-                slave.readings.append(readings)
+                lst_readings = tuple(np.round(np.sum(arr_readings, axis=0) / len(lst_readings), 2))
+                readings = tuple(time_readings[-1:]) + lst_readings
+            except Exception as ex:
+                readings = tuple(time_readings[-1:]) + (0,0,0,0,0,0)
+                print ("GA_data_analyze error: " + str(ex))
+            finally:
+                '''
+                conn.execute(
+                    "INSERT INTO GA(Time, CO, CO2, CH4, H2, N2, HEAT) VALUES (?,?,?,?,?,?,?);", 
+                    readings
+                    )
+                '''
                 print(f'GA_data_analyze done: {readings}')
-        except Exception as ex:
-            print ("GA_data_analyze error: " + str(ex))
+                slave.readings.append(readings)
     print('kill GA_data_analyze')
     print(f'Final GA_data_analyze: {slave.readings}')
 
 
-def MFC_data_analyze(kb_event, ticker, sample_time, slave):
+def MFC_data_analyze(kb_event, ticker, sample_time, slave, db):
+    #conn = sqlite3.connect(db)
     while not kb_event.isSet():
-        try:
-            if not ticker.wait(sample_time):
-                lst_readings = slave.lst_readings
-                time_readings = slave.time_readings
-                slave.lst_readings = []
-                slave.time_readings = []
-
+        if not ticker.wait(sample_time):
+            lst_readings = slave.lst_readings
+            time_readings = slave.time_readings
+            slave.lst_readings = []
+            slave.time_readings = []
+            try:
                 arr_readings = np.array(
                     [
                         (lambda i: [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ +\-][\d.]{6}', i)])(readings) 
@@ -267,15 +288,19 @@ def MFC_data_analyze(kb_event, ticker, sample_time, slave):
                 #print(arr_readings)
                 lst_readings = tuple(np.round(np.sum(arr_readings, axis=0) / len(lst_readings), 2))
                 readings = tuple(time_readings[-1:]) + lst_readings
+            except Exception as ex:
+                readings = tuple(time_readings[-1:]) + (0,0,0,0,0)
+                print ("MFC_data_analyze error: " + str(ex))
+            finally:
                 '''
                 conn.execute(
                     "INSERT INTO MFC(Time, Pressure, Temper, VolFlow, MassFlow, Setpoint) VALUES (?,?,?,?,?,?);", 
                     readings
                     )
+                conn.commit()
                 '''
-                slave.readings.append(readings)
                 print(f'MFC_data_analyze done: {readings}')
-        except Exception as ex:
-            print ("MFC_data_analyze error: " + str(ex))
+                slave.readings.append(readings)
     print('kill MFC_data_analyze')
     print(f'Final MFC_data_analyze: {slave.readings}')
+    #conn.close()
