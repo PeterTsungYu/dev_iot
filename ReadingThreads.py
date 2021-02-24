@@ -72,6 +72,8 @@ channel_DFM = 18
 GPIO.setmode(GPIO.BCM)
 DFM_slave = Modbus.Slave()
 
+BUTTON_PIN = 24
+
 #-----RPi Server port setting----------------------------------------------------------------
 server_DB = Modbus.serverDB_gen(slave_id=0x06)
 
@@ -79,8 +81,11 @@ print('Port setting: succeed')
 
 #-------------------------define Threads and Events-----------------------------------------
 start = time.time()
-sample_time = 30
+sample_time = 5
 lst_thread = []
+
+## button event
+presser = threading.Event()
 
 ## count down events
 ticker = threading.Event()
@@ -94,18 +99,18 @@ signal.signal(signal.SIGINT, signal_handler) # Keyboard interrupt to stop the pr
 ## RS485
 Adam_data_collect = threading.Thread(
     target=Modbus.Adam_data_collect, 
-    args=(kbinterrupt_event, RS485_port, ADAM_TC_slave, start, 1, 21,),
+    args=(kbinterrupt_event, presser, RS485_port, ADAM_TC_slave, start, 1, 21,),
     )
 Adam_data_analyze = threading.Thread(
     target=Modbus.Adam_data_analyze, 
-    args=(kbinterrupt_event, ticker, sample_time, ADAM_TC_slave, server_DB,),
+    args=(kbinterrupt_event, presser, ticker, sample_time, ADAM_TC_slave, server_DB,),
     )
 lst_thread.append(Adam_data_collect)
 lst_thread.append(Adam_data_analyze)
 
 ## RS232
-def RS232_data_collect(kb_event, port):
-    while not kb_event.isSet():
+def RS232_data_collect(kb_event, presser, port):
+    while (not kb_event.isSet()) or (not presser.isSet()):
         Modbus.GA_data_collect(port, GA_slave, start, 1, 31)
         #Modbus.MFC_data_collect(port, MFC_slave, start, 1, 49)
     port.close()
@@ -113,16 +118,16 @@ def RS232_data_collect(kb_event, port):
     #print('kill MFC_data_collect')
 RS232_data_collect = threading.Thread(
     target=RS232_data_collect, 
-    args=(kbinterrupt_event, RS232_port,)
+    args=(kbinterrupt_event, presser, RS232_port,)
     )
 GA_data_analyze = threading.Thread(
     target=Modbus.GA_data_analyze, 
-    args=(kbinterrupt_event, ticker, sample_time, GA_slave, server_DB,),
+    args=(kbinterrupt_event, presser, ticker, sample_time, GA_slave, server_DB,),
     )
 '''
 MFC_data_analyze = threading.Thread(
     target=Modbus.MFC_data_analyze, 
-    args=(kbinterrupt_event, ticker, sample_time, MFC_slave, server_DB,),
+    args=(kbinterrupt_event, presser, ticker, sample_time, MFC_slave, server_DB,),
     )
 '''
 lst_thread.append(RS232_data_collect)
@@ -132,11 +137,11 @@ lst_thread.append(GA_data_analyze)
 ## Scale USB
 Scale_data_collect = threading.Thread(
     target=Modbus.Scale_data_collect, 
-    args=(kbinterrupt_event, Scale_port, Scale_slave, start, 1,),
+    args=(kbinterrupt_event, presser, Scale_port, Scale_slave, start, 1,),
     )
 Scale_data_analyze = threading.Thread(
     target=Modbus.Scale_data_analyze, 
-    args=(kbinterrupt_event, ticker, sample_time, Scale_slave, server_DB,),
+    args=(kbinterrupt_event, presser, ticker, sample_time, Scale_slave, server_DB,),
     )
 lst_thread.append(Scale_data_collect)
 lst_thread.append(Scale_data_analyze)
@@ -147,7 +152,7 @@ def DFM_data_collect(channel_DFM):
     DFM_slave.time_readings.append(time.time())
 DFM_data_analyze = threading.Thread(
     target=Modbus.DFM_data_analyze, 
-    args=(kbinterrupt_event, ticker, start, 60, DFM_slave, server_DB,),
+    args=(kbinterrupt_event, presser, ticker, start, 60, DFM_slave, server_DB,),
     )
 lst_thread.append(DFM_data_analyze)
 
@@ -168,6 +173,7 @@ try:
         port.reset_output_buffer() #flush output buffer
     print('serial ports open')
     
+    GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     GPIO.setup(channel_DFM, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     print('GPIO ports open')
     
@@ -177,6 +183,20 @@ except Exception as ex:
         port.close()
     exit() 
 
+#-------------------------Button Threadingggg-----------------------------------------
+def button_press(BUTTON_PIN):
+    if GPIO.input(BUTTON_PIN) == GPIO.LOW:
+        presser.set()
+    else:
+        presser.clear()
+GPIO.add_event_detect(
+    BUTTON_PIN, GPIO.BOTH, 
+    callback=button_press, 
+    bouncetime=200
+    ) # debounce the button for 200 ms
+
+presser.wait()
+
 #-------------------------Sub Threadingggg-----------------------------------------
 for subthread in lst_thread:
     subthread.start()
@@ -185,7 +205,7 @@ GPIO.add_event_detect(channel_DFM, GPIO.RISING, callback=DFM_data_collect)
 
 #-------------------------Main Threadingggg-----------------------------------------
 try:
-    while not kbinterrupt_event.isSet():
+    while (not kb_event.isSet()) or (not presser.isSet()):
         if not ticker.wait(sample_time):
             print(f'Sampling at {time.time()-start}')
             print("=="*30)

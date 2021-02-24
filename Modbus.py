@@ -6,6 +6,7 @@ import threading
 import re
 import sqlite3
 
+from pymodbus.device import ModbusDeviceIdentification
 from pymodbus.server.asynchronous import StartSerialServer
 from pymodbus.datastore import ModbusSequentialDataBlock
 from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
@@ -53,9 +54,19 @@ def serverDB_gen(slave_id=0x00):
 
 
 def run_server(context, port, timeout=1, baudrate=115200, stopbits=1, bytesize=8, parity='N'):
+    
+    identity = ModbusDeviceIdentification()
+    identity.VendorName = 'RPi'
+    identity.ProductCode = 'RPi'
+    identity.VendorUrl = ''
+    identity.ProductName = 'RPi Server'
+    identity.ModelName = 'RPi Server'
+    identity.MajorMinorRevision = '0.0.1'
+
     StartSerialServer(
         context, 
-        framer=ModbusRtuFramer,  
+        framer=ModbusRtuFramer,
+        identity=identity,  
         port=port, 
         timeout=timeout, 
         baudrate=baudrate,
@@ -89,8 +100,8 @@ def terminate(event): # ask user input to stop the program
         event.set()
 
 #------------------------------func---------------------------------
-def Adam_data_collect(kb_event, port, slave, start, time_out, wait_data):
-    while not kb_event.isSet():
+def Adam_data_collect(kb_event, presser, port, slave, start, time_out, wait_data):
+    while (not kb_event.isSet()) or (not presser.isSet()):
         try:
             port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
             slave.time_readings.append(round(time.time()-start, 2))
@@ -114,13 +125,13 @@ def Adam_data_collect(kb_event, port, slave, start, time_out, wait_data):
     print('kill Adam_data_collect')
 
 
-def Scale_data_collect(kb_event, port, slave, start, time_out):
-    while not kb_event.isSet():
+def Scale_data_collect(kb_event, presser, port, slave, start, time_out):
+    while (not kb_event.isSet()) or (not presser.isSet()):
         try:
             time.sleep(time_out) # wait for the data input to the buffer
+            slave.time_readings.append(round(time.time()-start, 2))
             if port.inWaiting():
                 readings = port.read(port.inWaiting()).decode('utf-8')
-                slave.time_readings.append(round(time.time()-start, 2))
                 readings = [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ \-][ \d]{5}\.\d', readings)]
                 slave.lst_readings.append(readings) 
         except Exception as e1:
@@ -133,7 +144,7 @@ def Scale_data_collect(kb_event, port, slave, start, time_out):
 
 
 def MFC_data_collect(port, slave, start, time_out, wait_data):
-    #while not kb_event.isSet():
+    #while (not kb_event.isSet()) or (not presser.isSet()):
     try:
         port.write(bytes(slave.rtu, 'utf-8')) #string to binary(byte) 
         slave.time_readings.append(round(time.time()-start, 2))
@@ -155,7 +166,7 @@ def MFC_data_collect(port, slave, start, time_out, wait_data):
 
 
 def GA_data_collect(port, slave, start, time_out, wait_data):
-    #while not kb_event.isSet():
+    #while (not kb_event.isSet()) or (not presser.isSet()):
     try:
         port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
         slave.time_readings.append(time.time()-start)
@@ -179,8 +190,8 @@ def GA_data_collect(port, slave, start, time_out, wait_data):
     #print('kill MFC_data_collect')
 
 
-def Adam_data_analyze(kb_event, ticker, sample_time, slave, server_DB):
-    while not kb_event.isSet():
+def Adam_data_analyze(kb_event, presser, ticker, sample_time, slave, server_DB):
+    while (not kb_event.isSet()) or (not presser.isSet()):
         if not ticker.wait(sample_time):
             lst_readings = slave.lst_readings
             time_readings = slave.time_readings
@@ -210,8 +221,8 @@ def Adam_data_analyze(kb_event, ticker, sample_time, slave, server_DB):
     print(f'Final Adam_data_analyze: {slave.readings}')
 
 
-def DFM_data_analyze(kb_event, ticker, start, sample_time, slave, server_DB):
-    while not kb_event.isSet():
+def DFM_data_analyze(kb_event, presser, ticker, start, sample_time, slave, server_DB):
+    while (not kb_event.isSet()) or (not presser.isSet()):
         if not ticker.wait(sample_time): # for each sample_time, collect data
             sampling_time = round(time.time()-start, 2)
             try: 
@@ -249,8 +260,8 @@ def DFM_data_analyze(kb_event, ticker, start, sample_time, slave, server_DB):
     print(f'Final DFM_data_analyze: {slave.readings}')
 
 
-def Scale_data_analyze(kb_event, ticker, sample_time, slave, server_DB):
-    while not kb_event.isSet():
+def Scale_data_analyze(kb_event, presser, ticker, sample_time, slave, server_DB):
+    while (not kb_event.isSet()) or (not presser.isSet()):
         if not ticker.wait(sample_time):
             lst_readings = slave.lst_readings
             time_readings = slave.time_readings
@@ -278,8 +289,8 @@ def Scale_data_analyze(kb_event, ticker, sample_time, slave, server_DB):
     print(f'Final Scale_data_analyze: {slave.readings}')
 
 
-def GA_data_analyze(kb_event, ticker, sample_time, slave, server_DB):
-    while not kb_event.isSet():
+def GA_data_analyze(kb_event, presser, ticker, sample_time, slave, server_DB):
+    while (not kb_event.isSet()) or (not presser.isSet()):
         if not ticker.wait(sample_time):
             lst_readings = slave.lst_readings
             time_readings = slave.time_readings
@@ -314,9 +325,9 @@ def GA_data_analyze(kb_event, ticker, sample_time, slave, server_DB):
     print(f'Final GA_data_analyze: {slave.readings}')
 
 
-def MFC_data_analyze(kb_event, ticker, sample_time, slave, server_DB):
+def MFC_data_analyze(kb_event, presser, ticker, sample_time, slave, server_DB):
     #conn = sqlite3.connect(db)
-    while not kb_event.isSet():
+    while (not kb_event.isSet()) or (not presser.isSet()):
         if not ticker.wait(sample_time):
             lst_readings = slave.lst_readings
             time_readings = slave.time_readings
