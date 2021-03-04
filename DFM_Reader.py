@@ -12,7 +12,7 @@ pulse_times = []
 
 # %%
 # def func for reading 
-def read():
+def read(channel_DGM):
     # while a >=1.6V(3.3/2) input to the pin, it will detect as 1
     #print('read in')
     global pulse_times
@@ -22,6 +22,7 @@ def read():
 def flag_min():
     global pulse_times
     global pulse_times_min
+    #print(pulse_times)
     pulse_times_min.append(pulse_times)
     pulse_times = []
 
@@ -45,7 +46,7 @@ def calc_average_flow_rate(pulse_times_min):
                 try:
                     # flow rate in [liter/s]
                     # 0.1 liter / pulse
-                    flow_rate = 60 * 0.01 * (interval-1) / (pulse[i-1] - pulse[i-interval])
+                    flow_rate = 60 * 0.1 * (interval-1) / (pulse[i-1] - pulse[i-interval])
                     flow_rate_interval_lst.append(round(flow_rate, 2)) 
                 except Exception as ex:
                     print("Error: " + str(ex))
@@ -54,7 +55,7 @@ def calc_average_flow_rate(pulse_times_min):
             average_interval_lst.append(average_flow_rate_interval)
         average_min_lst.append(average_interval_lst)
 
-    #print(average_min_lst)
+    print(average_min_lst)
     result = np.round(np.mean(np.array(average_min_lst), axis=1), 1)
     np.savetxt('result.csv', result, delimiter=',')
     print(result)

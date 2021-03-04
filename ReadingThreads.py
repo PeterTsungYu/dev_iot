@@ -195,7 +195,7 @@ GPIO.add_event_detect(
     bouncetime=200
     ) # debounce the button for 200 ms
 
-presser.wait()
+#presser.wait()
 
 #-------------------------Sub Threadingggg-----------------------------------------
 for subthread in lst_thread:

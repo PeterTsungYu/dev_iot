@@ -37,6 +37,7 @@ def gen_Slave(RTU): # deprecated
 
 
 def serverDB_gen(slave_id=0x00):
+    # Rpi protocol, '06 03 0000 0022 C464'
     register_block = ModbusSequentialDataBlock(0x00, [0x00]*0x22) # each address can hold from a range 0x00 to 0xffff
     store = ModbusSlaveContext(
         #di=ModbusSequentialDataBlock(0, [1]*100),
