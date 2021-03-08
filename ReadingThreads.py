@@ -13,10 +13,10 @@ from pymodbus.server.asynchronous import StopServer
 print('Import: succeed')
 
 #-----------------Serial port setting------------------------------
-RS485_port_path = '/dev/ttyUSB0'
-RS232_port_path = '/dev/ttyUSB1'
-Scale_port_path = '/dev/ttyUSB2'
-Server_port_path = '/dev/ttyUSB3'
+RS485_port_path = '/dev/ttyUSB_RS485'
+RS232_port_path = '/dev/ttyUSB_RS232'
+Scale_port_path = '/dev/ttyUSB_Scale'
+Server_port_path = '/dev/ttyUSB_PC'
 
 
 lst_port = []
