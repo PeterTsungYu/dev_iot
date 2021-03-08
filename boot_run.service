@@ -7,6 +7,7 @@ ExecStart=/usr/bin/python3.7 -u myscript.py
 WorkingDirectory=/home/pi/iot_rasp-001
 StandardOutput=file:/home/pi/iot_rasp-001/outlog.log
 StandardError=file:/home/pi/iot_rasp-001/errlog.log
+KillSignal=SIGINT
 Restart=always
 User=pi
 
