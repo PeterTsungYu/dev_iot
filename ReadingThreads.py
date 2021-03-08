@@ -8,7 +8,6 @@ import threading
 import signal
 import re
 import sqlite3
-from pymodbus.server.asynchronous import StopServer
 
 print('Import: succeed')
 
@@ -200,7 +199,6 @@ except Exception as ex:
     print ("Main threading error: " + str(ex))    
     print("=="*30)
 finally:
-    StopServer()
     GPIO.cleanup()
     print(f"Program duration: {time.time() - start}")
     print('kill main thread')

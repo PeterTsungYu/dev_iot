@@ -11,6 +11,7 @@ from pymodbus.server.asynchronous import StartSerialServer
 from pymodbus.datastore import ModbusSequentialDataBlock
 from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
 from pymodbus.transaction import ModbusRtuFramer
+from pymodbus.server.asynchronous import StopServer
 #-------------------------RTU & Slave--------------------------------------
 class RTU: # generate the CRC for the complete RTU 
     def __init__(self, idno='', func_code='', data_site='', data_len=''):
@@ -259,6 +260,7 @@ def DFM_data_analyze(kb_event, ticker, start, sample_time, slave, server_DB):
                 server_DB[0x06].setValues(fx=3, address=0x08, values=[int(readings[-1]*10)])
     print('kill DFM_data_analyze')
     print(f'Final DFM_data_analyze: {slave.readings}')
+    StopServer()
 
 
 def Scale_data_analyze(kb_event, ticker, sample_time, slave, server_DB):
