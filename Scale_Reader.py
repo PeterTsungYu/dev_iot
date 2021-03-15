@@ -12,7 +12,7 @@ print('Import: succeed')
 # %%
 #-----------------Master(RPi) setting------------------------------
 ser = serial.Serial()
-ser.port = "/dev/ttyUSB2"
+ser.port = "/dev/ttyUSB0"
 
 # According to Adam module spec...60 Hz, O_81
 ser.baudrate = 9600
@@ -32,11 +32,12 @@ def data_collect(port, slave, start, time_out, wait_data):
     try:
         time.sleep(time_out) # wait for the data input to the buffer
         if port.inWaiting():
+            #print(port.inWaiting())
             readings = port.read(port.inWaiting()).decode('utf-8')
-            #print(readings)
+            print(readings)
             slave.time_readings.append(time.time()-start)
-            readings = [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ \-][ \d]{5}\.\d', readings)]
-            #print(readings)
+            readings = [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ \-][ .\d]{7}', readings)]
+            print(readings)
             #print(len(readings))
             slave.lst_readings.append(readings) 
         print('collect done')

@@ -134,7 +134,7 @@ def Scale_data_collect(kb_event, port, slave, start, time_out):
             slave.time_readings.append(round(time.time()-start, 2))
             if port.inWaiting():
                 readings = port.read(port.inWaiting()).decode('utf-8')
-                readings = [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ \-][ \d]{5}\.\d', readings)]
+                readings = [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ \-][ .\d]{7}', readings)]
                 slave.lst_readings.append(readings) 
         except Exception as e1:
             print ("Scale_data_collect error: " + str(e1))
