@@ -7,9 +7,9 @@ import Modbus
 import threading
 import signal
 import re
-import sqlite3
 
 print('Import: succeed')
+#-------------------------MQTT--------------------------------------
 
 #-----------------Serial port setting------------------------------
 RS485_port_path = '/dev/ttyUSB_RS485'

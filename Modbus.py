@@ -5,6 +5,7 @@ import time
 import threading
 import re
 import sqlite3
+from paho.mqtt import client as mqtt_client
 
 from pymodbus.device import ModbusDeviceIdentification
 from pymodbus.server.asynchronous import StartSerialServer
@@ -12,6 +13,28 @@ from pymodbus.datastore import ModbusSequentialDataBlock
 from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
 from pymodbus.transaction import ModbusRtuFramer
 from pymodbus.server.asynchronous import StopServer
+
+#-------------------------MQTT--------------------------------------
+def connect_mqtt(client_id_mqtt, hostname_mqtt='localhost', port_mqtt=1883):
+    def on_connect(client, userdata, flags, rc):
+        if rc == 0:
+            print("Connected to MQTT!")
+        else:
+            print("Failed to connect, return code %d\n", rc)
+
+    client = mqtt_client.Client(client_id_mqtt)
+    # client.username_pw_set(username, password)
+    client.on_connect = on_connect
+    client.connect(hostname_mqtt, port_mqtt)
+    return client
+
+client_mqtt = connect_mqtt(client_id_mqtt='rpi-001-mqtt')
+client_mqtt.loop_start()
+
+topic_ADAM_TC = [
+    "/rpi/Reformer_TC_07", "/rpi/Reformer_TC_08", "/rpi/Reformer_TC_09", "/rpi/Reformer_TC_10",
+    "/rpi/Reformer_TC_11", "/rpi/Reformer_TC_12", "/rpi/Reformer_TC_13", "/rpi/Reformer_TC_14"]
+
 #-------------------------RTU & Slave--------------------------------------
 class RTU: # generate the CRC for the complete RTU 
     def __init__(self, idno='', func_code='', data_site='', data_len=''):
@@ -192,7 +215,7 @@ def GA_data_collect(port, slave, start, time_out, wait_data):
     #print('kill MFC_data_collect')
 
 
-def Adam_data_analyze(kb_event, ticker, sample_time, slave, server_DB):
+def Adam_data_analyze(kb_event, ticker, sample_time, slave,server_DB):
     while not kb_event.isSet():
         if not ticker.wait(sample_time):
             lst_readings = slave.lst_readings
@@ -209,16 +232,22 @@ def Adam_data_analyze(kb_event, ticker, sample_time, slave, server_DB):
                 readings = tuple([round(time_readings[-1],2)]) + (0,0,0,0,0,0,0,0)
                 print ("Adam_data_analyze error: " + str(e1))
             finally:
+                print(f'Adam_data_analyze done: {readings}')
                 '''
                 conn.execute(
                     "INSERT INTO ADAM_TC(Time, TC_0, TC_1, TC_2, TC_3, TC_4, TC_5, TC_6, TC_7) VALUES (?,?,?,?,?,?,?,?,?);", 
                     readings
                     )
                 '''
-                print(f'Adam_data_analyze done: {readings}')
+                # RTU write to master
                 slave.readings.append(readings)
                 # 0x09:1f:TC_0, 0x10:1f:TC_1, 0x11:1f:TC_2, 0x12:1f:TC_3, 0x13:1f:TC_4, 0x14:1f:TC_5, 0x15:1f:TC_6, 0x16:1f:TC_7
                 server_DB[0x06].setValues(fx=3, address=0x09, values=[int(i*10) for i in readings[1:]])
+
+                # publish via MQTT
+                for i in range(8):
+                    client_mqtt.publish(topic_ADAM_TC[i], readings[i+1])
+                    
     print('kill Adam_data_analyze')
     print(f'Final Adam_data_analyze: {slave.readings}')
 
