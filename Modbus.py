@@ -4,8 +4,7 @@ import serial
 import time
 import threading
 import re
-import sqlite3
-from paho.mqtt import client as mqtt_client
+#from paho.mqtt import client as mqtt_client
 
 from pymodbus.device import ModbusDeviceIdentification
 from pymodbus.server.asynchronous import StartSerialServer
@@ -13,6 +12,7 @@ from pymodbus.datastore import ModbusSequentialDataBlock
 from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
 from pymodbus.transaction import ModbusRtuFramer
 from pymodbus.server.asynchronous import StopServer
+
 
 #-------------------------MQTT--------------------------------------
 def connect_mqtt(client_id_mqtt, hostname_mqtt='localhost', port_mqtt=1883):
@@ -62,7 +62,7 @@ def gen_Slave(RTU): # deprecated
 
 def serverDB_gen(slave_id=0x00):
     # Rpi protocol, '06 03 0000 0022 C464'
-    register_block = ModbusSequentialDataBlock(0x00, [0x00]*0x22) # each address can hold from a range 0x00 to 0xffff
+    register_block = ModbusSequentialDataBlock(0x00, [0x00]*0x17) # each address can hold from a range 0x00 to 0xffff
     store = ModbusSlaveContext(
         #di=ModbusSequentialDataBlock(0, [1]*100),
         #co=ModbusSequentialDataBlock(0, [2]*100),
@@ -101,6 +101,34 @@ def run_server(context, port, timeout=1, baudrate=115200, stopbits=1, bytesize=8
         )
 
     print("Server is offline")
+
+for i in slave.readings:
+    i = hex(i)
+    if len(i) != 4:
+        i = '0x'+'0'*4-len(i)+i
+    print(i)
+
+
+def RPiserver(kb_event, port, slave):
+    while not kb_event.isSet():
+        try:
+            writing = ''
+            for i in slave.readings:
+                i = hex(i)
+                if len(i) != 6: # ex. 0x0010
+                    i = '0x' + '0'*(6-len(i)) + i[2:]
+                writing = writing + i
+
+            readings = port.read(port.inWaiting()).hex()
+            if slave.rtu in readings:
+                #print(readings)
+                port.write(bytes.fromhex(writing)) #hex to binary(byte) 
+                port.reset_input_buffer()
+                print('RPiserver: write')
+        except Exception as e1:
+            print ("RPiserver error: " + str(e1))
+    port.close()
+    print('kill RPiserver')
 
 #--------------------------Threading--------------------------------
 '''
@@ -239,10 +267,11 @@ def Adam_data_analyze(kb_event, ticker, sample_time, slave,server_DB):
                     readings
                     )
                 '''
-                # RTU write to master
                 slave.readings.append(readings)
+                # RTU write to master
                 # 0x09:1f:TC_0, 0x10:1f:TC_1, 0x11:1f:TC_2, 0x12:1f:TC_3, 0x13:1f:TC_4, 0x14:1f:TC_5, 0x15:1f:TC_6, 0x16:1f:TC_7
-                server_DB[0x06].setValues(fx=3, address=0x09, values=[int(i*10) for i in readings[1:]])
+                server_DB.readings[9:] = [int(i*10) for i in readings[1:]]
+                #server_DB[0x06].setValues(fx=3, address=0x09, values=[int(i*10) for i in readings[1:]])
 
                 # publish via MQTT
                 for i in range(8):
@@ -286,7 +315,8 @@ def DFM_data_analyze(kb_event, ticker, start, sample_time, slave, server_DB):
                 print(f'DFM_data_analyze done: {readings}')
                 slave.readings.append(readings)
                 # 0x08:1f:DFM_flowrate
-                server_DB[0x06].setValues(fx=3, address=0x08, values=[int(readings[-1]*10)])
+                server_DB.readings[8] = int(readings[-1]*10)
+                # server_DB[0x06].setValues(fx=3, address=0x08, values=[int(readings[-1]*10)])
     print('kill DFM_data_analyze')
     print(f'Final DFM_data_analyze: {slave.readings}')
     StopServer()
@@ -316,7 +346,8 @@ def Scale_data_analyze(kb_event, ticker, sample_time, slave, server_DB):
                 print(f'Scale_data_analyze done: {readings}')
                 slave.readings.append(readings)
                 # 0x07:1f:Weight
-                server_DB[0x06].setValues(fx=3, address=0x07, values=[int(readings[-1]*10)])
+                server_DB.readings[7] = int(readings[-1]*10)
+                #server_DB[0x06].setValues(fx=3, address=0x07, values=[int(readings[-1]*10)])
     print('kill Scale_data_analyze')
     print(f'Final Scale_data_analyze: {slave.readings}')
 
@@ -352,7 +383,8 @@ def GA_data_analyze(kb_event, ticker, sample_time, slave, server_DB):
                 print(f'GA_data_analyze done: {readings}')
                 slave.readings.append(readings)
                 # 0x01:1f:CO, 0x02:1f:CO2, 0x03:1f:CH4, 0x04:1f:H2, 0x05:1f:N2, 0x06:1f:HEAT
-                server_DB[0x06].setValues(fx=3, address=0x01, values=[int(i*10) for i in readings[1:]])
+                server_DB.readings[1:7] = [int(i*10) for i in readings[1:]]
+                #server_DB[0x06].setValues(fx=3, address=0x01, values=[int(i*10) for i in readings[1:]])
     print('kill GA_data_analyze')
     print(f'Final GA_data_analyze: {slave.readings}')
 
@@ -388,8 +420,9 @@ def MFC_data_analyze(kb_event, ticker, sample_time, slave, server_DB):
                 '''
                 print(f'MFC_data_analyze done: {readings}')
                 slave.readings.append(readings)
-                # 0x00:1f:MFC_MassFlow 
-                server_DB[0x06].setValues(fx=3, address=0x00, values=[int(readings[-2]*10),])
+                # 0x00:1f:MFC_MassFlow
+                server_DB.readings[0] = int(readings[-2]*10)
+                #server_DB[0x06].setValues(fx=3, address=0x00, values=[int(readings[-2]*10),])
     print('kill MFC_data_analyze')
     print(f'Final MFC_data_analyze: {slave.readings}')
     #conn.close()
