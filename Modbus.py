@@ -4,7 +4,7 @@ import serial
 import time
 import threading
 import re
-#from paho.mqtt import client as mqtt_client
+from paho.mqtt import client as mqtt_client
 
 from pymodbus.device import ModbusDeviceIdentification
 from pymodbus.server.asynchronous import StartSerialServer
@@ -13,7 +13,8 @@ from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
 from pymodbus.transaction import ModbusRtuFramer
 from pymodbus.server.asynchronous import StopServer
 
-
+# revise RPi server
+# revise scale scope
 #-------------------------MQTT--------------------------------------
 def connect_mqtt(client_id_mqtt, hostname_mqtt='localhost', port_mqtt=1883):
     def on_connect(client, userdata, flags, rc):
@@ -102,29 +103,32 @@ def run_server(context, port, timeout=1, baudrate=115200, stopbits=1, bytesize=8
 
     print("Server is offline")
 
-for i in slave.readings:
-    i = hex(i)
-    if len(i) != 4:
-        i = '0x'+'0'*4-len(i)+i
-    print(i)
-
 
 def RPiserver(kb_event, port, slave):
     while not kb_event.isSet():
         try:
-            writing = ''
+            # '06' is slave 6
+            # '03' is func code 
+            # 17*2 data entries
+            writing = '0603' + hex(34)[2:]
+            print(slave.readings)
             for i in slave.readings:
                 i = hex(i)
-                if len(i) != 6: # ex. 0x0010
-                    i = '0x' + '0'*(6-len(i)) + i[2:]
+                if len(i) != 6: # ex. 0x10
+                    i = '0'*(6-len(i)) + i[2:]
+                else:
+                    i = i[2:]
                 writing = writing + i
+            print(bytearray.fromhex(writing))
+            crc = Crc16Modbus.calchex(bytearray.fromhex(writing)) # ex. bytearray.fromhex('0010'), two-by-two digits in the bytearray
+            writing = writing + crc[-2:] + crc[:2]
 
             readings = port.read(port.inWaiting()).hex()
             if slave.rtu in readings:
-                #print(readings)
-                port.write(bytes.fromhex(writing)) #hex to binary(byte) 
-                port.reset_input_buffer()
+                port.write(bytes.fromhex(writing)) #hex to binary(byte)
+                readings = '' 
                 print('RPiserver: write')
+            port.reset_input_buffer()
         except Exception as e1:
             print ("RPiserver error: " + str(e1))
     port.close()
@@ -274,8 +278,8 @@ def Adam_data_analyze(kb_event, ticker, sample_time, slave,server_DB):
                 #server_DB[0x06].setValues(fx=3, address=0x09, values=[int(i*10) for i in readings[1:]])
 
                 # publish via MQTT
-                for i in range(8):
-                    client_mqtt.publish(topic_ADAM_TC[i], readings[i+1])
+                #for i in range(8):
+                    #client_mqtt.publish(topic_ADAM_TC[i], readings[i+1])
                     
     print('kill Adam_data_analyze')
     print(f'Final Adam_data_analyze: {slave.readings}')
@@ -331,10 +335,10 @@ def Scale_data_analyze(kb_event, ticker, sample_time, slave, server_DB):
             slave.time_readings = []
             try:
                 lst_readings = [sum(i)/len(i) for i in lst_readings] # average for 1s' data
-                lst_readings = round(sum(lst_readings) / len(lst_readings), 1) # average for 1min's data
+                lst_readings = round(sum(lst_readings) / len(lst_readings), 2) # average for 1min's data
                 readings = tuple([round(time_readings[-1], 2), lst_readings])
             except Exception as ex:
-                readings = tuple([round(time_readings[-1], 2), 0])
+                readings = tuple([round(time_readings[-1], 3), 0])
                 print ("Scale_data_analyze error: " + str(ex))
             finally:
                 '''
@@ -346,7 +350,7 @@ def Scale_data_analyze(kb_event, ticker, sample_time, slave, server_DB):
                 print(f'Scale_data_analyze done: {readings}')
                 slave.readings.append(readings)
                 # 0x07:1f:Weight
-                server_DB.readings[7] = int(readings[-1]*10)
+                server_DB.readings[7] = int(readings[-1]*1000)
                 #server_DB[0x06].setValues(fx=3, address=0x07, values=[int(readings[-1]*10)])
     print('kill Scale_data_analyze')
     print(f'Final Scale_data_analyze: {slave.readings}')
