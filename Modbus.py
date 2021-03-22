@@ -13,7 +13,7 @@ from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
 from pymodbus.transaction import ModbusRtuFramer
 from pymodbus.server.asynchronous import StopServer
 
-'''
+
 #-------------------------MQTT--------------------------------------
 def connect_mqtt(client_id_mqtt, hostname_mqtt='localhost', port_mqtt=1883):
     def on_connect(client, userdata, flags, rc):
@@ -34,7 +34,6 @@ client_mqtt.loop_start()
 topic_ADAM_TC = [
     "/rpi/Reformer_TC_07", "/rpi/Reformer_TC_08", "/rpi/Reformer_TC_09", "/rpi/Reformer_TC_10",
     "/rpi/Reformer_TC_11", "/rpi/Reformer_TC_12", "/rpi/Reformer_TC_13", "/rpi/Reformer_TC_14"]
-'''
 
 #-------------------------RTU & Slave--------------------------------------
 class RTU: # generate the CRC for the complete RTU 
@@ -103,10 +102,10 @@ def run_server(context, port, timeout=1, baudrate=115200, stopbits=1, bytesize=8
     print("Server is offline")
 
 
-def RPiserver(kb_event, ticker, port, slave):
+def RPiserver(kb_event, port, slave):
     while not kb_event.isSet():
-        if not ticker.wait(1):
-            try:
+        try:
+            if port.inWaiting():
                 # '06' is slave 6
                 # '03' is func code 
                 # 17*2 data entries
@@ -123,16 +122,15 @@ def RPiserver(kb_event, ticker, port, slave):
                 writing = writing + crc[-2:] + crc[:2]
                 #print(writing)
 
-                if port.inWaiting():
-                    readings = port.read(port.inWaiting()).hex()
-                    if slave.rtu in readings: # Rpi protocol, '06 03 0000 0017 042F'
-                        port.write(bytes.fromhex(writing)) #hex to binary(byte)
-                        readings = '' 
-                        print('RPiserver: write')
-                    port.reset_input_buffer()
-                #time.sleep(1)
-            except Exception as e1:
-                print ("RPiserver error: " + str(e1))
+                readings = port.read(port.inWaiting()).hex()
+                if slave.rtu in readings: # Rpi protocol, '06 03 0000 0017 042F'
+                    port.write(bytes.fromhex(writing)) #hex to binary(byte)
+                    readings = '' 
+                    print('RPiserver: write')
+                port.reset_input_buffer()
+            #time.sleep(1)
+        except Exception as e1:
+            print ("RPiserver error: " + str(e1))
     port.close()
     print('kill RPiserver')
 
