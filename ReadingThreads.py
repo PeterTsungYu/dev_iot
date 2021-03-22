@@ -100,6 +100,7 @@ lst_thread = []
 
 ## count down events
 ticker = threading.Event()
+ticker_RPi = threading.Event()
 
 ## Keyboard interrupt event to kill all the threads
 kbinterrupt_event = threading.Event()
@@ -171,7 +172,7 @@ lst_thread.append(DFM_data_analyze)
 # RPi run as a server 
 RPi_Server_process = threading.Thread(
     target=Modbus.RPiserver, 
-    args=(kbinterrupt_event, RPi_Server_port, RPi_Server,),
+    args=(kbinterrupt_event, ticker_RPi, RPi_Server_port, RPi_Server,),
     )
 lst_thread.append(RPi_Server_process)
 

@@ -13,6 +13,7 @@ from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
 from pymodbus.transaction import ModbusRtuFramer
 from pymodbus.server.asynchronous import StopServer
 
+'''
 #-------------------------MQTT--------------------------------------
 def connect_mqtt(client_id_mqtt, hostname_mqtt='localhost', port_mqtt=1883):
     def on_connect(client, userdata, flags, rc):
@@ -33,6 +34,7 @@ client_mqtt.loop_start()
 topic_ADAM_TC = [
     "/rpi/Reformer_TC_07", "/rpi/Reformer_TC_08", "/rpi/Reformer_TC_09", "/rpi/Reformer_TC_10",
     "/rpi/Reformer_TC_11", "/rpi/Reformer_TC_12", "/rpi/Reformer_TC_13", "/rpi/Reformer_TC_14"]
+'''
 
 #-------------------------RTU & Slave--------------------------------------
 class RTU: # generate the CRC for the complete RTU 
@@ -101,33 +103,36 @@ def run_server(context, port, timeout=1, baudrate=115200, stopbits=1, bytesize=8
     print("Server is offline")
 
 
-def RPiserver(kb_event, port, slave):
+def RPiserver(kb_event, ticker, port, slave):
     while not kb_event.isSet():
-        try:
-            # '06' is slave 6
-            # '03' is func code 
-            # 17*2 data entries
-            writing = '0603' + hex(34)[2:]
-            #print(slave.readings)
-            for i in slave.readings:
-                i = hex(i)
-                if len(i) != 6: # ex. 0x10
-                    i = '0'*(6-len(i)) + i[2:]
-                else:
-                    i = i[2:]
-                writing = writing + i
-            crc = Crc16Modbus.calchex(bytearray.fromhex(writing)) # ex. bytearray.fromhex('0010'), two-by-two digits in the bytearray
-            writing = writing + crc[-2:] + crc[:2]
-            #print(writing)
+        if not ticker.wait(1):
+            try:
+                # '06' is slave 6
+                # '03' is func code 
+                # 17*2 data entries
+                writing = '0603' + hex(34)[2:]
+                print(slave.readings)
+                for i in slave.readings:
+                    i = hex(i)
+                    if len(i) != 6: # ex. 0x10
+                        i = '0'*(6-len(i)) + i[2:]
+                    elif len(i) == 6: # ex. 0x10
+                        i = i[2:]
+                    writing = writing + i
+                crc = Crc16Modbus.calchex(bytearray.fromhex(writing)) # ex. bytearray.fromhex('0010'), two-by-two digits in the bytearray
+                writing = writing + crc[-2:] + crc[:2]
+                #print(writing)
 
-            readings = port.read(port.inWaiting()).hex()
-            if slave.rtu in readings: # Rpi protocol, '06 03 0000 0017 042F'
-                port.write(bytes.fromhex(writing)) #hex to binary(byte)
-                readings = '' 
-                print('RPiserver: write')
-            port.reset_input_buffer()
-        except Exception as e1:
-            print ("RPiserver error: " + str(e1))
+                if port.inWaiting():
+                    readings = port.read(port.inWaiting()).hex()
+                    if slave.rtu in readings: # Rpi protocol, '06 03 0000 0017 042F'
+                        port.write(bytes.fromhex(writing)) #hex to binary(byte)
+                        readings = '' 
+                        print('RPiserver: write')
+                    port.reset_input_buffer()
+                #time.sleep(1)
+            except Exception as e1:
+                print ("RPiserver error: " + str(e1))
     port.close()
     print('kill RPiserver')
 
@@ -249,6 +254,7 @@ def Adam_data_analyze(kb_event, ticker, sample_time, slave,server_DB):
         if not ticker.wait(sample_time):
             lst_readings = slave.lst_readings
             time_readings = slave.time_readings
+            #print(f'Adam_data_analyze: {lst_readings}')
             slave.lst_readings = []
             slave.time_readings = []
             try:
@@ -328,12 +334,13 @@ def Scale_data_analyze(kb_event, ticker, sample_time, slave, server_DB):
         if not ticker.wait(sample_time):
             lst_readings = slave.lst_readings
             time_readings = slave.time_readings
+            #print(f'Scale_data_analyze: {lst_readings}')
             slave.lst_readings = []
             slave.time_readings = []
             try:
                 lst_readings = [sum(i)/len(i) for i in lst_readings] # average for 1s' data
                 lst_readings = round(sum(lst_readings) / len(lst_readings), 2) # average for 1min's data
-                readings = tuple([round(time_readings[-1], 2), lst_readings])
+                readings = tuple([round(time_readings[-1], 3), lst_readings])
             except Exception as ex:
                 readings = tuple([round(time_readings[-1], 3), 0])
                 print ("Scale_data_analyze error: " + str(ex))
@@ -358,6 +365,7 @@ def GA_data_analyze(kb_event, ticker, sample_time, slave, server_DB):
         if not ticker.wait(sample_time):
             lst_readings = slave.lst_readings
             time_readings = slave.time_readings
+            #print(f'GA_data_analyze: {lst_readings}')
             slave.lst_readings = []
             slave.time_readings = []
             try:           
