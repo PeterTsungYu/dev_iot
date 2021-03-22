@@ -3,6 +3,7 @@ import serial
 import RPi.GPIO as GPIO
 import numpy as np
 import time
+from datetime import datetime
 import Modbus
 import threading
 import signal
@@ -94,13 +95,11 @@ RPi_Server.readings = [0] * 17 # 17 data entries
 
 print('Port setting: succeed')
 #-------------------------define Threads and Events-----------------------------------------
-start = time.time()
 sample_time = 2
 lst_thread = []
 
 ## count down events
 ticker = threading.Event()
-#ticker_RPi = threading.Event()
 
 ## Keyboard interrupt event to kill all the threads
 kbinterrupt_event = threading.Event()
@@ -111,7 +110,7 @@ signal.signal(signal.SIGINT, signal_handler) # Keyboard interrupt to stop the pr
 ## RS485
 Adam_data_collect = threading.Thread(
     target=Modbus.Adam_data_collect, 
-    args=(kbinterrupt_event, RS485_port, ADAM_TC_slave, start, 1, 21,),
+    args=(kbinterrupt_event, RS485_port, ADAM_TC_slave, 1, 21,),
     )
 Adam_data_analyze = threading.Thread(
     target=Modbus.Adam_data_analyze, 
@@ -123,8 +122,8 @@ lst_thread.append(Adam_data_analyze)
 ## RS232
 def RS232_data_collect(kbinterrupt_event, port):
     while not kbinterrupt_event.isSet():
-        Modbus.GA_data_collect(port, GA_slave, start, 1, 31)
-        #Modbus.MFC_data_collect(port, MFC_slave, start, 1, 49)
+        Modbus.GA_data_collect(port, GA_slave, 1, 31)
+        #Modbus.MFC_data_collect(port, MFC_slave, 1, 49)
     port.close()
     print('kill GA_data_collect')
     #print('kill MFC_data_collect')
@@ -149,7 +148,7 @@ lst_thread.append(GA_data_analyze)
 ## Scale USB
 Scale_data_collect = threading.Thread(
     target=Modbus.Scale_data_collect, 
-    args=(kbinterrupt_event, Scale_port, Scale_slave, start, 1,),
+    args=(kbinterrupt_event, Scale_port, Scale_slave, 1,),
     )
 Scale_data_analyze = threading.Thread(
     target=Modbus.Scale_data_analyze, 
@@ -164,7 +163,7 @@ def DFM_data_collect(channel_DFM):
     DFM_slave.time_readings.append(time.time())
 DFM_data_analyze = threading.Thread(
     target=Modbus.DFM_data_analyze, 
-    args=(kbinterrupt_event, ticker, start, 60, DFM_slave, RPi_Server,),
+    args=(kbinterrupt_event, ticker, 60, DFM_slave, RPi_Server,),
     )
 lst_thread.append(DFM_data_analyze)
 
@@ -204,6 +203,12 @@ except Exception as ex:
     exit() 
 
 #-------------------------Sub Threadingggg-----------------------------------------
+
+timeit = datetime.now().strftime('%Y_%m_%d_%H_%M')
+print(f'Execution time is {timeit}')
+print('=='*30)
+start = time.time()
+
 for subthread in lst_thread:
     subthread.start()
 

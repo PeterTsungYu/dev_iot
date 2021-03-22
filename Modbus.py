@@ -105,12 +105,12 @@ def run_server(context, port, timeout=1, baudrate=115200, stopbits=1, bytesize=8
 def RPiserver(kb_event, port, slave):
     while not kb_event.isSet():
         try:
-            if port.inWaiting():
+            if port.inWaiting() >= 8: # Rpi protocol has 8 bytes ('0603000000170473')
                 # '06' is slave 6
                 # '03' is func code 
                 # 17*2 data entries
                 writing = '0603' + hex(34)[2:]
-                print(slave.readings)
+                #print(slave.readings)
                 for i in slave.readings:
                     i = hex(i)
                     if len(i) != 6: # ex. 0x10
@@ -123,10 +123,11 @@ def RPiserver(kb_event, port, slave):
                 #print(writing)
 
                 readings = port.read(port.inWaiting()).hex()
-                if slave.rtu in readings: # Rpi protocol, '06 03 0000 0017 042F'
+                print(readings)
+                if slave.rtu in readings: # Rpi protocol, '06 03 0000 0017 0473'
                     port.write(bytes.fromhex(writing)) #hex to binary(byte)
                     readings = '' 
-                    print('RPiserver: write')
+                    print(f'RPiserver: write {writing}')
                 port.reset_input_buffer()
             #time.sleep(1)
         except Exception as e1:
@@ -157,7 +158,8 @@ def terminate(event): # ask user input to stop the program
         event.set()
 
 #------------------------------func---------------------------------
-def Adam_data_collect(kb_event, port, slave, start, time_out, wait_data):
+def Adam_data_collect(kb_event, port, slave, time_out, wait_data):
+    start = time.time()
     while not kb_event.isSet():
         try:
             port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
@@ -182,7 +184,8 @@ def Adam_data_collect(kb_event, port, slave, start, time_out, wait_data):
     print('kill Adam_data_collect')
 
 
-def Scale_data_collect(kb_event, port, slave, start, time_out):
+def Scale_data_collect(kb_event, port, slave, time_out):
+    start = time.time()
     while not kb_event.isSet():
         try:
             time.sleep(time_out) # wait for the data input to the buffer
@@ -200,7 +203,8 @@ def Scale_data_collect(kb_event, port, slave, start, time_out):
     print('kill Scale_data_collect')
 
 
-def MFC_data_collect(port, slave, start, time_out, wait_data):
+def MFC_data_collect(port, slave, time_out, wait_data):
+    start = time.time()
     #while not kb_event.isSet():
     try:
         port.write(bytes(slave.rtu, 'utf-8')) #string to binary(byte) 
@@ -222,8 +226,9 @@ def MFC_data_collect(port, slave, start, time_out, wait_data):
     #print('kill MFC_data_collect')
 
 
-def GA_data_collect(port, slave, start, time_out, wait_data):
-    #while not kb_event.isSet():
+def GA_data_collect(port, slave, time_out, wait_data):
+    start = time.time()
+    #while not kb_event.isSet(): # it is written in the ReadingThreads.py
     try:
         port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
         slave.time_readings.append(time.time()-start)
@@ -286,7 +291,8 @@ def Adam_data_analyze(kb_event, ticker, sample_time, slave,server_DB):
     print(f'Final Adam_data_analyze: {slave.readings}')
 
 
-def DFM_data_analyze(kb_event, ticker, start, sample_time, slave, server_DB):
+def DFM_data_analyze(kb_event, ticker, sample_time, slave, server_DB):
+    start = time.time()
     while not kb_event.isSet():
         if not ticker.wait(sample_time): # for each sample_time, collect data
             sampling_time = round(time.time()-start, 2)
