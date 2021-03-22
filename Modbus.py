@@ -13,8 +13,6 @@ from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
 from pymodbus.transaction import ModbusRtuFramer
 from pymodbus.server.asynchronous import StopServer
 
-# revise RPi server
-# revise scale scope
 #-------------------------MQTT--------------------------------------
 def connect_mqtt(client_id_mqtt, hostname_mqtt='localhost', port_mqtt=1883):
     def on_connect(client, userdata, flags, rc):
@@ -62,7 +60,6 @@ def gen_Slave(RTU): # deprecated
 
 
 def serverDB_gen(slave_id=0x00):
-    # Rpi protocol, '06 03 0000 0022 C464'
     register_block = ModbusSequentialDataBlock(0x00, [0x00]*0x17) # each address can hold from a range 0x00 to 0xffff
     store = ModbusSlaveContext(
         #di=ModbusSequentialDataBlock(0, [1]*100),
@@ -111,7 +108,7 @@ def RPiserver(kb_event, port, slave):
             # '03' is func code 
             # 17*2 data entries
             writing = '0603' + hex(34)[2:]
-            print(slave.readings)
+            #print(slave.readings)
             for i in slave.readings:
                 i = hex(i)
                 if len(i) != 6: # ex. 0x10
@@ -119,12 +116,12 @@ def RPiserver(kb_event, port, slave):
                 else:
                     i = i[2:]
                 writing = writing + i
-            print(bytearray.fromhex(writing))
             crc = Crc16Modbus.calchex(bytearray.fromhex(writing)) # ex. bytearray.fromhex('0010'), two-by-two digits in the bytearray
             writing = writing + crc[-2:] + crc[:2]
+            #print(writing)
 
             readings = port.read(port.inWaiting()).hex()
-            if slave.rtu in readings:
+            if slave.rtu in readings: # Rpi protocol, '06 03 0000 0017 042F'
                 port.write(bytes.fromhex(writing)) #hex to binary(byte)
                 readings = '' 
                 print('RPiserver: write')
