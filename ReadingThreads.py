@@ -116,6 +116,8 @@ def RS232_data_collect(port):
     port.close()
     print('kill GA_data_collect')
     #print('kill MFC_data_collect')
+    Modbus.barrier_kill.wait()
+
 RS232_data_collect = threading.Thread(
     target=RS232_data_collect, 
     args=(RS232_port,)
@@ -192,7 +194,6 @@ except Exception as ex:
     exit() 
 
 #-------------------------Sub Threadingggg-----------------------------------------
-
 timeit = datetime.now().strftime('%Y_%m_%d_%H_%M')
 print(f'Execution time is {timeit}')
 print('=='*30)
@@ -206,10 +207,12 @@ GPIO.add_event_detect(channel_DFM, GPIO.RISING, callback=DFM_data_collect)
 #-------------------------Main Threadingggg-----------------------------------------
 try:
     while not Modbus.kb_event.isSet():
-        if not Modbus.ticker.wait(Modbus.sample_time):
-            print(f'Elapsed time: {time.time()-start}')
-            print("=="*30)
-        pass
+        #if not Modbus.ticker.wait(Modbus.sample_time):
+        Modbus.barrier_analyze.wait()
+        print("=="*10 + f'Analyzing done. Elapsed time: {time.time()-start}' + "=="*10)
+        Modbus.barrier_cast.wait()
+        print("=="*10 + f'Casting done. Elapsed time: {time.time()-start}' + "=="*10)
+        
 except KeyboardInterrupt: 
     print(f"Keyboard Interrupt in main thread!")
     print("=="*30)
@@ -217,6 +220,8 @@ except Exception as ex:
     print ("Main threading error: " + str(ex))    
     print("=="*30)
 finally:
+    Modbus.barrier_kill.wait()
+    print("=="*30)
     GPIO.cleanup()
     print(f"Program duration: {time.time() - start}")
     print('kill main thread')

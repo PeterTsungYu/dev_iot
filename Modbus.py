@@ -19,10 +19,17 @@ from pymodbus.server.asynchronous import StopServer
 time_out = 1 # for collecting data
 sample_time = 2 # for analyzing data
 sample_time_DFM = 60
-## count down events
+
+# count down events
 ticker = threading.Event() # for analyzing data
 
-## Keyboard interrupt event to kill all the threads
+# barrier event for syncing all threads
+barrier_analyze = threading.Barrier(4) # Adam_data_analyze, Scale_data_analyze, GA_data_analyze, Main thread
+barrier_cast = threading.Barrier(4) # Adam_data_analyze, Scale_data_analyze, GA_data_analyze, Main thread
+barrier_kill = threading.Barrier(9) # all threads
+
+
+# Keyboard interrupt event to kill all the threads
 kb_event = threading.Event()
 def signal_handler(signum, frame):
     kb_event.set()
@@ -146,8 +153,10 @@ def RPiserver(port, slave):
             #time.sleep(1)
         except Exception as e1:
             print ("RPiserver error: " + str(e1))
+
     port.close()
     print('kill RPiserver')
+    barrier_kill.wait()
 
 #--------------------------Threading--------------------------------
 '''
@@ -189,13 +198,15 @@ def Adam_data_collect(port, slave, wait_data):
             else: # if data is not correct, return as None
                 slave.lst_readings.append(None)
                 port.reset_input_buffer() 
-        except Exception as e1:
+        except Exception as e2:
             print ("Adam_data_collect error: " + str(e1))
         finally:
             port.reset_input_buffer() # reset the buffer after each reading process
             print('Adam_data_collect: done')
+
     port.close()
     print('kill Adam_data_collect')
+    barrier_kill.wait()
 
 
 def Scale_data_collect(port, slave):
@@ -208,13 +219,15 @@ def Scale_data_collect(port, slave):
                 readings = port.read(port.inWaiting()).decode('utf-8')
                 readings = [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ \-][ .\d]{7}', readings)]
                 slave.lst_readings.append(readings) 
-        except Exception as e1:
+        except Exception as e3:
             print ("Scale_data_collect error: " + str(e1))
         finally:
             port.reset_input_buffer() # reset the buffer after each reading process
             print('Scale_data_collect done')
+
     port.close()
     print('kill Scale_data_collect')
+    barrier_kill.wait()
 
 
 def MFC_data_collect(port, slave, wait_data):
@@ -231,13 +244,14 @@ def MFC_data_collect(port, slave, wait_data):
             readings = port.read(port.inWaiting()).decode('utf-8')
             #print(readings)
             slave.lst_readings.append(readings)
-    except Exception as e1:
+    except Exception as e4:
         print ("MFC_data_collect error: " + str(e1))
     finally:
         port.reset_input_buffer() # reset the buffer after each reading process
         print('MFC_data_collect done')
     #port.close()
     #print('kill MFC_data_collect')
+    #barrier_kill.wait()
 
 
 def GA_data_collect(port, slave, wait_data):
@@ -257,13 +271,14 @@ def GA_data_collect(port, slave, wait_data):
         else: # if data is not correct, return as None
             slave.lst_readings.append(None)
             port.reset_input_buffer() 
-    except Exception as e1:
+    except Exception as e5:
         print ("GA_data_collect error: " + str(e1))
     finally:
         port.reset_input_buffer() # reset the buffer after each reading process
         print('GA_data_collect done')
     #port.close()
     #print('kill MFC_data_collect')
+    #barrier_kill.wait()
 
 
 def Adam_data_analyze(slave, server_DB):
@@ -280,29 +295,39 @@ def Adam_data_analyze(slave, server_DB):
                 #print(lst_readings)
                 readings = tuple([round(time_readings[-1],2)]) + lst_readings
                 #print(readings)
-            except Exception as e1:
+            except Exception as e6:
                 readings = tuple([round(time_readings[-1],2)]) + (0,0,0,0,0,0,0,0)
                 print ("Adam_data_analyze error: " + str(e1))
             finally:
-                print(f'Adam_data_analyze done: {readings}')
-                '''
-                conn.execute(
-                    "INSERT INTO ADAM_TC(Time, TC_0, TC_1, TC_2, TC_3, TC_4, TC_5, TC_6, TC_7) VALUES (?,?,?,?,?,?,?,?,?);", 
-                    readings
-                    )
-                '''
                 slave.readings.append(readings)
                 # RTU write to master
                 # 0x09:1f:TC_0, 0x10:1f:TC_1, 0x11:1f:TC_2, 0x12:1f:TC_3, 0x13:1f:TC_4, 0x14:1f:TC_5, 0x15:1f:TC_6, 0x16:1f:TC_7
                 server_DB.readings[9:] = [int(i*10) for i in readings[1:]]
                 #server_DB[0x06].setValues(fx=3, address=0x09, values=[int(i*10) for i in readings[1:]])
-
-                # publish via MQTT
-                #for i in range(8):
-                    #client_mqtt.publish(topic_ADAM_TC[i], readings[i+1])
+                print(f'Adam_data_analyze done: {readings}')
+                barrier_analyze.wait()
+                
+                try:
+                    barrier_cast.wait()
+                    '''
+                    conn.execute(
+                        "INSERT INTO ADAM_TC(Time, TC_0, TC_1, TC_2, TC_3, TC_4, TC_5, TC_6, TC_7) VALUES (?,?,?,?,?,?,?,?,?);", 
+                        readings
+                        )
+                    '''
+                    # publish via MQTT
+                    #for i in range(8):
+                        #client_mqtt.publish(topic_ADAM_TC[i], readings[i+1])
+                    pass
+                except Exception as e6_1:
+                    print ("Adam_data_cast error: " + str(e6_1))
+                finally:
+                    print(f'Adam_data_cast done')
+                    #print(None/2)
                     
     print('kill Adam_data_analyze')
     print(f'Final Adam_data_analyze: {slave.readings}')
+    barrier_kill.wait()
 
 
 def DFM_data_analyze(slave, server_DB):
@@ -327,23 +352,33 @@ def DFM_data_analyze(slave, server_DB):
                     average_interval_lst.append(average_flow_rate_interval)
                     _average = round(sum(average_interval_lst) / len(average_interval_lst), 1)
                 readings = tuple(sampling_time, _average)
-            except Exception as e1:
+            except Exception as e7:
                 readings = tuple([sampling_time, 0])
                 print ("DFM_data_analyze error: " + str(e1))
             finally:
-                '''
-                conn.execute(
-                    "INSERT INTO DFM(Time, FlowRate) VALUES (?,?);", 
-                    readings
-                    )
-                '''
-                print(f'DFM_data_analyze done: {readings}')
                 slave.readings.append(readings)
                 # 0x08:1f:DFM_flowrate
                 server_DB.readings[8] = int(readings[-1]*10)
                 # server_DB[0x06].setValues(fx=3, address=0x08, values=[int(readings[-1]*10)])
+                print(f'DFM_data_analyze done: {readings}')
+
+                try:
+                    '''
+                    conn.execute(
+                        "INSERT INTO DFM(Time, FlowRate) VALUES (?,?);", 
+                        readings
+                        )
+                    '''
+                    pass
+                except Exception as e_71:
+                    print ("DFM_data_cast error: " + str(e7_1))
+                finally:
+                    print(f'DFM_data_cast done')
+                    #barrier_cast.wait()
+
     print('kill DFM_data_analyze')
     print(f'Final DFM_data_analyze: {slave.readings}')
+    barrier_kill.wait()
 
 
 def Scale_data_analyze(slave, server_DB):
@@ -358,23 +393,34 @@ def Scale_data_analyze(slave, server_DB):
                 lst_readings = [sum(i)/len(i) for i in lst_readings] # average for 1s' data
                 lst_readings = round(sum(lst_readings) / len(lst_readings), 2) # average for 1min's data
                 readings = tuple([round(time_readings[-1], 3), lst_readings])
-            except Exception as ex:
+            except Exception as e8:
                 readings = tuple([round(time_readings[-1], 3), 0])
-                print ("Scale_data_analyze error: " + str(ex))
+                print ("Scale_data_analyze error: " + str(e8))
             finally:
-                '''
-                conn.execute(
-                    "INSERT INTO Scale(Time, Weight) VALUES (?,?);", 
-                    readings
-                    )
-                '''
-                print(f'Scale_data_analyze done: {readings}')
                 slave.readings.append(readings)
                 # 0x07:1f:Weight
                 server_DB.readings[7] = int(readings[-1]*1000)
                 #server_DB[0x06].setValues(fx=3, address=0x07, values=[int(readings[-1]*10)])
+                print(f'Scale_data_analyze done: {readings}')
+                barrier_analyze.wait()
+
+                try:
+                    barrier_cast.wait()
+                    '''
+                    conn.execute(
+                        "INSERT INTO Scale(Time, Weight) VALUES (?,?);", 
+                        readings
+                        )
+                    '''
+                    pass
+                except Exception as e8_1:
+                    print ("Scale_data_cast error: " + str(e8_1))
+                finally:
+                    print(f'Scale_data_cast done')
+
     print('kill Scale_data_analyze')
     print(f'Final Scale_data_analyze: {slave.readings}')
+    barrier_kill.wait()
 
 
 def GA_data_analyze(slave, server_DB):
@@ -396,23 +442,34 @@ def GA_data_analyze(slave, server_DB):
                 #print(arr_readings)
                 lst_readings = tuple(np.round(np.sum(arr_readings, axis=0) / len(lst_readings), 1))
                 readings = tuple([round(time_readings[-1],2)]) + lst_readings
-            except Exception as ex:
+            except Exception as e9:
                 readings = tuple([round(time_readings[-1],2)]) + (0,0,0,0,0,0)
-                print ("GA_data_analyze error: " + str(ex))
+                print ("GA_data_analyze error: " + str(e9))
             finally:
-                '''
-                conn.execute(
-                    "INSERT INTO GA(Time, CO, CO2, CH4, H2, N2, HEAT) VALUES (?,?,?,?,?,?,?);", 
-                    readings
-                    )
-                '''
-                print(f'GA_data_analyze done: {readings}')
                 slave.readings.append(readings)
                 # 0x01:1f:CO, 0x02:1f:CO2, 0x03:1f:CH4, 0x04:1f:H2, 0x05:1f:N2, 0x06:1f:HEAT
                 server_DB.readings[1:7] = [int(i*10) for i in readings[1:]]
                 #server_DB[0x06].setValues(fx=3, address=0x01, values=[int(i*10) for i in readings[1:]])
+                print(f'GA_data_analyze done: {readings}')
+                barrier_analyze.wait()
+
+                try:
+                    barrier_cast.wait()
+                    '''
+                    conn.execute(
+                        "INSERT INTO GA(Time, CO, CO2, CH4, H2, N2, HEAT) VALUES (?,?,?,?,?,?,?);", 
+                        readings
+                        )
+                    '''
+                    pass
+                except Exception as e9_1:
+                    print ("GA_data_cast error: " + str(e9_1))
+                finally:
+                    print(f'GA_data_cast done')
+
     print('kill GA_data_analyze')
     print(f'Final GA_data_analyze: {slave.readings}')
+    barrier_kill.wait()
 
 
 def MFC_data_analyze(slave, server_DB):
@@ -433,22 +490,32 @@ def MFC_data_analyze(slave, server_DB):
                 #print(arr_readings)
                 lst_readings = tuple(np.round(np.sum(arr_readings, axis=0) / len(lst_readings), 1))
                 readings = tuple(time_readings[-1:]) + lst_readings
-            except Exception as ex:
+            except Exception as e10:
                 readings = tuple(time_readings[-1:]) + (0,0,0,0,0)
-                print ("MFC_data_analyze error: " + str(ex))
+                print ("MFC_data_analyze error: " + str(e10))
             finally:
-                '''
-                conn.execute(
-                    "INSERT INTO MFC(Time, Pressure, Temper, VolFlow, MassFlow, Setpoint) VALUES (?,?,?,?,?,?);", 
-                    readings
-                    )
-                conn.commit()
-                '''
-                print(f'MFC_data_analyze done: {readings}')
                 slave.readings.append(readings)
                 # 0x00:1f:MFC_MassFlow
                 server_DB.readings[0] = int(readings[-2]*10)
                 #server_DB[0x06].setValues(fx=3, address=0x00, values=[int(readings[-2]*10),])
+                print(f'MFC_data_analyze done: {readings}')
+                barrier_analyze.wait()
+
+                try:
+                    barrier_cast.wait()
+                    '''
+                    conn.execute(
+                        "INSERT INTO MFC(Time, Pressure, Temper, VolFlow, MassFlow, Setpoint) VALUES (?,?,?,?,?,?);", 
+                        readings
+                        )
+                    conn.commit()
+                    '''
+                    pass
+                except Exception as e10_1:
+                    print ("MFC_data_cast error: " + str(e10_1))
+                finally:
+                    print(f'MFC_data_cast done')
+
     print('kill MFC_data_analyze')
     print(f'Final MFC_data_analyze: {slave.readings}')
-    #conn.close()
+    barrier_kill.wait()
