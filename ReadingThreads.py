@@ -6,7 +6,6 @@ import time
 from datetime import datetime
 import Modbus
 import threading
-import signal
 import re
 
 print('Import: succeed')
@@ -95,50 +94,40 @@ RPi_Server.readings = [0] * 17 # 17 data entries
 
 print('Port setting: succeed')
 #-------------------------define Threads and Events-----------------------------------------
-sample_time = 2
 lst_thread = []
-
-## count down events
-ticker = threading.Event()
-
-## Keyboard interrupt event to kill all the threads
-kbinterrupt_event = threading.Event()
-def signal_handler(signum, frame):
-    kbinterrupt_event.set()
-signal.signal(signal.SIGINT, signal_handler) # Keyboard interrupt to stop the program
 
 ## RS485
 Adam_data_collect = threading.Thread(
     target=Modbus.Adam_data_collect, 
-    args=(kbinterrupt_event, RS485_port, ADAM_TC_slave, 1, 21,),
+    args=(RS485_port, ADAM_TC_slave, 21,),
     )
 Adam_data_analyze = threading.Thread(
     target=Modbus.Adam_data_analyze, 
-    args=(kbinterrupt_event, ticker, sample_time, ADAM_TC_slave, RPi_Server,),
+    args=(ADAM_TC_slave, RPi_Server,),
     )
 lst_thread.append(Adam_data_collect)
 lst_thread.append(Adam_data_analyze)
 
 ## RS232
-def RS232_data_collect(kbinterrupt_event, port):
-    while not kbinterrupt_event.isSet():
-        Modbus.GA_data_collect(port, GA_slave, 1, 31)
-        #Modbus.MFC_data_collect(port, MFC_slave, 1, 49)
+def RS232_data_collect(port):
+    while not Modbus.kb_event.isSet():
+        Modbus.GA_data_collect(port, GA_slave, 31)
+        #Modbus.MFC_data_collect(port, MFC_slave, 49)
     port.close()
     print('kill GA_data_collect')
     #print('kill MFC_data_collect')
 RS232_data_collect = threading.Thread(
     target=RS232_data_collect, 
-    args=(kbinterrupt_event, RS232_port,)
+    args=(RS232_port,)
     )
 GA_data_analyze = threading.Thread(
     target=Modbus.GA_data_analyze, 
-    args=(kbinterrupt_event, ticker, sample_time, GA_slave, RPi_Server,),
+    args=(GA_slave, RPi_Server,),
     )
 '''
 MFC_data_analyze = threading.Thread(
     target=Modbus.MFC_data_analyze, 
-    args=(kbinterrupt_event, ticker, sample_time, MFC_slave, RPi_Server,),
+    args=(MFC_slave, RPi_Server,),
     )
 '''
 lst_thread.append(RS232_data_collect)
@@ -148,11 +137,11 @@ lst_thread.append(GA_data_analyze)
 ## Scale USB
 Scale_data_collect = threading.Thread(
     target=Modbus.Scale_data_collect, 
-    args=(kbinterrupt_event, Scale_port, Scale_slave, 1,),
+    args=(Scale_port, Scale_slave,),
     )
 Scale_data_analyze = threading.Thread(
     target=Modbus.Scale_data_analyze, 
-    args=(kbinterrupt_event, ticker, sample_time, Scale_slave, RPi_Server,),
+    args=(Scale_slave, RPi_Server,),
     )
 lst_thread.append(Scale_data_collect)
 lst_thread.append(Scale_data_analyze)
@@ -163,7 +152,7 @@ def DFM_data_collect(channel_DFM):
     DFM_slave.time_readings.append(time.time())
 DFM_data_analyze = threading.Thread(
     target=Modbus.DFM_data_analyze, 
-    args=(kbinterrupt_event, ticker, 60, DFM_slave, RPi_Server,),
+    args=(DFM_slave, RPi_Server,),
     )
 lst_thread.append(DFM_data_analyze)
 
@@ -171,7 +160,7 @@ lst_thread.append(DFM_data_analyze)
 # RPi run as a server 
 RPi_Server_process = threading.Thread(
     target=Modbus.RPiserver, 
-    args=(kbinterrupt_event, RPi_Server_port, RPi_Server,),
+    args=(RPi_Server_port, RPi_Server,),
     )
 lst_thread.append(RPi_Server_process)
 
@@ -216,9 +205,9 @@ GPIO.add_event_detect(channel_DFM, GPIO.RISING, callback=DFM_data_collect)
 
 #-------------------------Main Threadingggg-----------------------------------------
 try:
-    while not kbinterrupt_event.isSet():
-        if not ticker.wait(sample_time):
-            print(f'Sampling at {time.time()-start}')
+    while not Modbus.kb_event.isSet():
+        if not Modbus.ticker.wait(Modbus.sample_time):
+            print(f'Elapsed time: {time.time()-start}')
             print("=="*30)
         pass
 except KeyboardInterrupt: 
