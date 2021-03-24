@@ -94,16 +94,20 @@ RPi_Server.readings = [0] * 17 # 17 data entries
 
 print('Port setting: succeed')
 #-------------------------define Threads and Events-----------------------------------------
-lst_thread = []
+timeit = datetime.now().strftime('%Y_%m_%d_%H_%M')
+print(f'Execution time is {timeit}')
+print('=='*30)
+start = time.time()
 
+lst_thread = []
 ## RS485
 Adam_data_collect = threading.Thread(
     target=Modbus.Adam_data_collect, 
-    args=(RS485_port, ADAM_TC_slave, 21,),
+    args=(start, RS485_port, ADAM_TC_slave, 21,),
     )
 Adam_data_analyze = threading.Thread(
     target=Modbus.Adam_data_analyze, 
-    args=(ADAM_TC_slave, RPi_Server,),
+    args=(start, ADAM_TC_slave, RPi_Server,),
     )
 lst_thread.append(Adam_data_collect)
 lst_thread.append(Adam_data_analyze)
@@ -111,8 +115,8 @@ lst_thread.append(Adam_data_analyze)
 ## RS232
 def RS232_data_collect(port):
     while not Modbus.kb_event.isSet():
-        Modbus.GA_data_collect(port, GA_slave, 31)
-        #Modbus.MFC_data_collect(port, MFC_slave, 49)
+        Modbus.GA_data_collect(start, port, GA_slave, 31)
+        #Modbus.MFC_data_collect(start, port, MFC_slave, 49)
     port.close()
     print('kill GA_data_collect')
     #print('kill MFC_data_collect')
@@ -124,12 +128,12 @@ RS232_data_collect = threading.Thread(
     )
 GA_data_analyze = threading.Thread(
     target=Modbus.GA_data_analyze, 
-    args=(GA_slave, RPi_Server,),
+    args=(start, GA_slave, RPi_Server,),
     )
 '''
 MFC_data_analyze = threading.Thread(
     target=Modbus.MFC_data_analyze, 
-    args=(MFC_slave, RPi_Server,),
+    args=(start, MFC_slave, RPi_Server,),
     )
 '''
 lst_thread.append(RS232_data_collect)
@@ -139,11 +143,11 @@ lst_thread.append(GA_data_analyze)
 ## Scale USB
 Scale_data_collect = threading.Thread(
     target=Modbus.Scale_data_collect, 
-    args=(Scale_port, Scale_slave,),
+    args=(start, Scale_port, Scale_slave,),
     )
 Scale_data_analyze = threading.Thread(
     target=Modbus.Scale_data_analyze, 
-    args=(Scale_slave, RPi_Server,),
+    args=(start, Scale_slave, RPi_Server,),
     )
 lst_thread.append(Scale_data_collect)
 lst_thread.append(Scale_data_analyze)
@@ -154,7 +158,7 @@ def DFM_data_collect(channel_DFM):
     DFM_slave.time_readings.append(time.time())
 DFM_data_analyze = threading.Thread(
     target=Modbus.DFM_data_analyze, 
-    args=(DFM_slave, RPi_Server,),
+    args=(start, DFM_slave, RPi_Server,),
     )
 lst_thread.append(DFM_data_analyze)
 
@@ -194,11 +198,6 @@ except Exception as ex:
     exit() 
 
 #-------------------------Sub Threadingggg-----------------------------------------
-timeit = datetime.now().strftime('%Y_%m_%d_%H_%M')
-print(f'Execution time is {timeit}')
-print('=='*30)
-start = time.time()
-
 for subthread in lst_thread:
     subthread.start()
 

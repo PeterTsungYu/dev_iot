@@ -14,7 +14,6 @@ from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
 from pymodbus.transaction import ModbusRtuFramer
 from pymodbus.server.asynchronous import StopServer
 
-
 #-------------------------Global var--------------------------------------
 time_out = 1 # for collecting data
 sample_time = 2 # for analyzing data
@@ -144,7 +143,7 @@ def RPiserver(port, slave):
                 #print(writing)
 
                 readings = port.read(port.inWaiting()).hex()
-                print(readings)
+                #print(readings)
                 if slave.rtu in readings: # Rpi protocol, '06 03 0000 0017 0473'
                     port.write(bytes.fromhex(writing)) #hex to binary(byte)
                     readings = '' 
@@ -181,12 +180,12 @@ def terminate(event): # ask user input to stop the program
         event.set()
 
 #------------------------------func---------------------------------
-def Adam_data_collect(port, slave, wait_data):
-    start = time.time()
+def Adam_data_collect(start, port, slave, wait_data):
+    #start = time.time()
     while not kb_event.isSet():
         try:
-            port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
             slave.time_readings.append(round(time.time()-start, 2))
+            port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
 
             time.sleep(time_out)
 
@@ -196,10 +195,10 @@ def Adam_data_collect(port, slave, wait_data):
                 #print(readings)
                 slave.lst_readings.append(readings)
             else: # if data is not correct, return as None
-                slave.lst_readings.append(None)
+                #slave.lst_readings.append(None)
                 port.reset_input_buffer() 
         except Exception as e2:
-            print ("Adam_data_collect error: " + str(e1))
+            print ("Adam_data_collect error: " + str(e2))
         finally:
             port.reset_input_buffer() # reset the buffer after each reading process
             print('Adam_data_collect: done')
@@ -209,18 +208,18 @@ def Adam_data_collect(port, slave, wait_data):
     barrier_kill.wait()
 
 
-def Scale_data_collect(port, slave):
-    start = time.time()
+def Scale_data_collect(start, port, slave):
+    #start = time.time()
     while not kb_event.isSet():
         try:
-            time.sleep(time_out) # wait for the data input to the buffer
             slave.time_readings.append(round(time.time()-start, 2))
+            time.sleep(time_out) # wait for the data input to the buffer
             if port.inWaiting():
                 readings = port.read(port.inWaiting()).decode('utf-8')
                 readings = [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ \-][ .\d]{7}', readings)]
                 slave.lst_readings.append(readings) 
         except Exception as e3:
-            print ("Scale_data_collect error: " + str(e1))
+            print ("Scale_data_collect error: " + str(e3))
         finally:
             port.reset_input_buffer() # reset the buffer after each reading process
             print('Scale_data_collect done')
@@ -230,12 +229,12 @@ def Scale_data_collect(port, slave):
     barrier_kill.wait()
 
 
-def MFC_data_collect(port, slave, wait_data):
-    start = time.time()
+def MFC_data_collect(start, port, slave, wait_data):
+    #start = time.time()
     #while not kb_event.isSet():
     try:
-        port.write(bytes(slave.rtu, 'utf-8')) #string to binary(byte) 
         slave.time_readings.append(round(time.time()-start, 2))
+        port.write(bytes(slave.rtu, 'utf-8')) #string to binary(byte) 
 
         time.sleep(time_out)
         
@@ -245,7 +244,7 @@ def MFC_data_collect(port, slave, wait_data):
             #print(readings)
             slave.lst_readings.append(readings)
     except Exception as e4:
-        print ("MFC_data_collect error: " + str(e1))
+        print ("MFC_data_collect error: " + str(e4))
     finally:
         port.reset_input_buffer() # reset the buffer after each reading process
         print('MFC_data_collect done')
@@ -254,12 +253,12 @@ def MFC_data_collect(port, slave, wait_data):
     #barrier_kill.wait()
 
 
-def GA_data_collect(port, slave, wait_data):
-    start = time.time()
+def GA_data_collect(start, port, slave, wait_data):
+    #start = time.time()
     #while not kb_event.isSet(): # it is written in the ReadingThreads.py
     try:
-        port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
         slave.time_readings.append(time.time()-start)
+        port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
 
         time.sleep(time_out)
 
@@ -269,10 +268,10 @@ def GA_data_collect(port, slave, wait_data):
             #print(len(readings))
             slave.lst_readings.append(readings)
         else: # if data is not correct, return as None
-            slave.lst_readings.append(None)
+            #slave.lst_readings.append(None)
             port.reset_input_buffer() 
     except Exception as e5:
-        print ("GA_data_collect error: " + str(e1))
+        print ("GA_data_collect error: " + str(e5))
     finally:
         port.reset_input_buffer() # reset the buffer after each reading process
         print('GA_data_collect done')
@@ -281,7 +280,7 @@ def GA_data_collect(port, slave, wait_data):
     #barrier_kill.wait()
 
 
-def Adam_data_analyze(slave, server_DB):
+def Adam_data_analyze(start, slave, server_DB):
     while not kb_event.isSet():
         if not ticker.wait(sample_time):
             lst_readings = slave.lst_readings
@@ -296,8 +295,8 @@ def Adam_data_analyze(slave, server_DB):
                 readings = tuple([round(time_readings[-1],2)]) + lst_readings
                 #print(readings)
             except Exception as e6:
-                readings = tuple([round(time_readings[-1],2)]) + (0,0,0,0,0,0,0,0)
-                print ("Adam_data_analyze error: " + str(e1))
+                readings = tuple([round((time.time()-start),2)]) + (65535,65535,65535,65535,65535,65535,65535,65535)
+                print ("Adam_data_analyze error: " + str(e6))
             finally:
                 slave.readings.append(readings)
                 # RTU write to master
@@ -330,8 +329,8 @@ def Adam_data_analyze(slave, server_DB):
     barrier_kill.wait()
 
 
-def DFM_data_analyze(slave, server_DB):
-    start = time.time()
+def DFM_data_analyze(start, slave, server_DB):
+    #start = time.time()
     while not kb_event.isSet():
         if not ticker.wait(sample_time_DFM): # for each sample_time, collect data
             sampling_time = round(time.time()-start, 2)
@@ -346,15 +345,15 @@ def DFM_data_analyze(slave, server_DB):
                     for i in range(interval, len(time_readings), interval):
                         # flow rate in [liter/s]
                         # 0.1 liter / pulse
-                        flow_rate = 60 * 0.01 * (interval-1) / (time_readings[i-1] - time_readings[i-interval])
+                        flow_rate = 60 * 0.1 * (interval-1) / (time_readings[i-1] - time_readings[i-interval])
                         flow_rate_interval_lst.append(round(flow_rate, 2)) 
                     average_flow_rate_interval = round(sum(flow_rate_interval_lst) / len(flow_rate_interval_lst), 2)          
                     average_interval_lst.append(average_flow_rate_interval)
                     _average = round(sum(average_interval_lst) / len(average_interval_lst), 1)
-                readings = tuple(sampling_time, _average)
+                readings = tuple([sampling_time, _average])
             except Exception as e7:
-                readings = tuple([sampling_time, 0])
-                print ("DFM_data_analyze error: " + str(e1))
+                readings = tuple([sampling_time, 65535])
+                print ("DFM_data_analyze error: " + str(e7))
             finally:
                 slave.readings.append(readings)
                 # 0x08:1f:DFM_flowrate
@@ -381,7 +380,7 @@ def DFM_data_analyze(slave, server_DB):
     barrier_kill.wait()
 
 
-def Scale_data_analyze(slave, server_DB):
+def Scale_data_analyze(start, slave, server_DB):
     while not kb_event.isSet():
         if not ticker.wait(sample_time):
             lst_readings = slave.lst_readings
@@ -391,10 +390,10 @@ def Scale_data_analyze(slave, server_DB):
             slave.time_readings = []
             try:
                 lst_readings = [sum(i)/len(i) for i in lst_readings] # average for 1s' data
-                lst_readings = round(sum(lst_readings) / len(lst_readings), 2) # average for 1min's data
-                readings = tuple([round(time_readings[-1], 3), lst_readings])
+                lst_readings = round(sum(lst_readings) / len(lst_readings), 3) # average for 1min's data
+                readings = tuple([round(time_readings[-1], 2), lst_readings])
             except Exception as e8:
-                readings = tuple([round(time_readings[-1], 3), 0])
+                readings = tuple([round((time.time()-start),2), 65535])
                 print ("Scale_data_analyze error: " + str(e8))
             finally:
                 slave.readings.append(readings)
@@ -423,7 +422,7 @@ def Scale_data_analyze(slave, server_DB):
     barrier_kill.wait()
 
 
-def GA_data_analyze(slave, server_DB):
+def GA_data_analyze(start, slave, server_DB):
     while not kb_event.isSet():
         if not ticker.wait(sample_time):
             lst_readings = slave.lst_readings
@@ -443,7 +442,7 @@ def GA_data_analyze(slave, server_DB):
                 lst_readings = tuple(np.round(np.sum(arr_readings, axis=0) / len(lst_readings), 1))
                 readings = tuple([round(time_readings[-1],2)]) + lst_readings
             except Exception as e9:
-                readings = tuple([round(time_readings[-1],2)]) + (0,0,0,0,0,0)
+                readings = tuple([round((time.time()-start),2)]) + (65535,65535,65535,65535,65535,65535)
                 print ("GA_data_analyze error: " + str(e9))
             finally:
                 slave.readings.append(readings)
@@ -472,7 +471,7 @@ def GA_data_analyze(slave, server_DB):
     barrier_kill.wait()
 
 
-def MFC_data_analyze(slave, server_DB):
+def MFC_data_analyze(start, slave, server_DB):
     #conn = sqlite3.connect(db)
     while not kb_event.isSet():
         if not ticker.wait(sample_time):
@@ -491,7 +490,7 @@ def MFC_data_analyze(slave, server_DB):
                 lst_readings = tuple(np.round(np.sum(arr_readings, axis=0) / len(lst_readings), 1))
                 readings = tuple(time_readings[-1:]) + lst_readings
             except Exception as e10:
-                readings = tuple(time_readings[-1:]) + (0,0,0,0,0)
+                readings = tuple([round((time.time()-start),2)]) + (65535,65535,65535,65535,65535)
                 print ("MFC_data_analyze error: " + str(e10))
             finally:
                 slave.readings.append(readings)
