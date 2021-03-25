@@ -114,13 +114,14 @@ lst_thread.append(Adam_data_analyze)
 
 ## RS232
 def RS232_data_collect(port):
+    count_err = 0
     while not Modbus.kb_event.isSet():
-        Modbus.GA_data_collect(start, port, GA_slave, 31)
+        Modbus.GA_data_collect(start, count_err, port, GA_slave, 31)
         #Modbus.MFC_data_collect(start, port, MFC_slave, 49)
     port.close()
     print('kill GA_data_collect')
     #print('kill MFC_data_collect')
-    Modbus.barrier_kill.wait()
+    #Modbus.barrier_kill.wait()
 
 RS232_data_collect = threading.Thread(
     target=RS232_data_collect, 
@@ -143,7 +144,7 @@ lst_thread.append(GA_data_analyze)
 ## Scale USB
 Scale_data_collect = threading.Thread(
     target=Modbus.Scale_data_collect, 
-    args=(start, Scale_port, Scale_slave,),
+    args=(start, Scale_port, Scale_slave, 0,),
     )
 Scale_data_analyze = threading.Thread(
     target=Modbus.Scale_data_analyze, 
@@ -166,7 +167,7 @@ lst_thread.append(DFM_data_analyze)
 # RPi run as a server 
 RPi_Server_process = threading.Thread(
     target=Modbus.RPiserver, 
-    args=(RPi_Server_port, RPi_Server,),
+    args=(start, RPi_Server_port, RPi_Server, 8,),
     )
 lst_thread.append(RPi_Server_process)
 
@@ -206,11 +207,11 @@ GPIO.add_event_detect(channel_DFM, GPIO.RISING, callback=DFM_data_collect)
 #-------------------------Main Threadingggg-----------------------------------------
 try:
     while not Modbus.kb_event.isSet():
-        #if not Modbus.ticker.wait(Modbus.sample_time):
-        Modbus.barrier_analyze.wait()
-        print("=="*10 + f'Analyzing done. Elapsed time: {time.time()-start}' + "=="*10)
-        Modbus.barrier_cast.wait()
-        print("=="*10 + f'Casting done. Elapsed time: {time.time()-start}' + "=="*10)
+        if not Modbus.ticker.wait(Modbus.sample_time):
+        #Modbus.barrier_analyze.wait()
+            print("=="*10 + f'Elapsed time: {round((time.time()-start),2)}' + "=="*10)
+        #Modbus.barrier_cast.wait()
+            #print("=="*10 + f'Casting done. Elapsed time: {time.time()-start}' + "=="*10)
         
 except KeyboardInterrupt: 
     print(f"Keyboard Interrupt in main thread!")
@@ -219,7 +220,7 @@ except Exception as ex:
     print ("Main threading error: " + str(ex))    
     print("=="*30)
 finally:
-    Modbus.barrier_kill.wait()
+    #Modbus.barrier_kill.wait()
     print("=="*30)
     GPIO.cleanup()
     print(f"Program duration: {time.time() - start}")
