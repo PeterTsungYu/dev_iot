@@ -116,7 +116,7 @@ lst_thread.append(Adam_data_analyze)
 def RS232_data_collect(port):
     count_err = 0
     while not Modbus.kb_event.isSet():
-        Modbus.GA_data_collect(start, count_err, port, GA_slave, 31)
+        count_err = Modbus.GA_data_collect(start, port, GA_slave, 31, count_err)
         #Modbus.MFC_data_collect(start, port, MFC_slave, 49)
     port.close()
     print('kill GA_data_collect')

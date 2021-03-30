@@ -283,7 +283,7 @@ def MFC_data_collect(start, count_err, port, slave, wait_data):
     ##barrier_kill.wait()
 
 
-def GA_data_collect(start, count_err, port, slave, wait_data):
+def GA_data_collect(start, port, slave, wait_data, count_err):
     #start = time.time()
     #while not kb_event.isSet(): # it is written in the ReadingThreads.py
     try:
@@ -308,7 +308,7 @@ def GA_data_collect(start, count_err, port, slave, wait_data):
     except Exception as e5:
         print('XX'*10 + f" {count_err} GA_data_collect error at {round((time.time()-start),2)}s: " + str(e5) + 'XX'*10)
     finally:
-        pass
+        return count_err
     #port.close()
     #print('kill GA_data_collect')
     #print(f'Final GA_data_collect: {count_err} errors occured')
