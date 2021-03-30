@@ -120,6 +120,7 @@ def RS232_data_collect(port):
         #Modbus.MFC_data_collect(start, port, MFC_slave, 49)
     port.close()
     print('kill GA_data_collect')
+    print(f'Final GA_data_collect: {count_err} errors occured')
     #print('kill MFC_data_collect')
     #Modbus.barrier_kill.wait()
 

@@ -1,3 +1,7 @@
+# scale scope
+# show err_count at the end
+# don't show data after kill
+
 from crccheck.crc import Crc16Modbus
 import numpy as np
 import serial
@@ -212,6 +216,7 @@ def Adam_data_collect(start, port, slave, wait_data):
 
     port.close()
     print('kill Adam_data_collect')
+    print(f'Final Adam_data_collect: {count_err} errors occured')
     #barrier_kill.wait()
 
 
@@ -241,6 +246,7 @@ def Scale_data_collect(start, port, slave, wait_data):
 
     port.close()
     print('kill Scale_data_collect')
+    print(f'Final Scale_data_collect: {count_err} errors occured')
     #barrier_kill.wait()
 
 
@@ -273,6 +279,7 @@ def MFC_data_collect(start, count_err, port, slave, wait_data):
         
     #port.close()
     #print('kill MFC_data_collect')
+    #print(f'Final MFC_data_collect: {count_err} errors occured')
     ##barrier_kill.wait()
 
 
@@ -303,7 +310,8 @@ def GA_data_collect(start, count_err, port, slave, wait_data):
     finally:
         pass
     #port.close()
-    #print('kill MFC_data_collect')
+    #print('kill GA_data_collect')
+    #print(f'Final GA_data_collect: {count_err} errors occured')
     ##barrier_kill.wait()
 
 
@@ -324,7 +332,7 @@ def Adam_data_analyze(start, slave, server_DB):
                 #print(readings)
 
                 # casting
-                slave.readings.append(readings)
+                #slave.readings.append(readings)
                 # RTU write to master
                 # 0x09:1f:TC_0, 0x10:1f:TC_1, 0x11:1f:TC_2, 0x12:1f:TC_3, 0x13:1f:TC_4, 0x14:1f:TC_5, 0x15:1f:TC_6, 0x16:1f:TC_7
                 server_DB.readings[9:] = [int(i*10) for i in readings[1:]]
@@ -355,7 +363,7 @@ def Adam_data_analyze(start, slave, server_DB):
                 '''
                     
     print('kill Adam_data_analyze')
-    print(f'Final Adam_data_analyze: {slave.readings}')
+    print(f'Final Adam_data_analyze: {count_err} errors occured')
     #barrier_kill.wait()
 
 
@@ -384,7 +392,7 @@ def DFM_data_analyze(start, slave, server_DB):
                 readings = tuple([sampling_time, _average])
                 
                 # casting
-                slave.readings.append(readings)
+                #slave.readings.append(readings)
                 # 0x08:1f:DFM_flowrate
                 server_DB.readings[8] = int(readings[-1]*10)
                 # server_DB[0x06].setValues(fx=3, address=0x08, values=[int(readings[-1]*10)])
@@ -411,7 +419,7 @@ def DFM_data_analyze(start, slave, server_DB):
                 '''
 
     print('kill DFM_data_analyze')
-    print(f'Final DFM_data_analyze: {slave.readings}')
+    print(f'Final DFM_data_analyze: {count_err} errors occured')
     #barrier_kill.wait()
 
 
@@ -430,7 +438,7 @@ def Scale_data_analyze(start, slave, server_DB):
                 readings = tuple([round(time_readings[-1], 2), lst_readings])
                 
                 # casting
-                slave.readings.append(readings)
+                #slave.readings.append(readings)
                 # 0x07:1f:Weight
                 server_DB.readings[7] = int(readings[-1]*1000)
                 #server_DB[0x06].setValues(fx=3, address=0x07, values=[int(readings[-1]*10)])
@@ -458,7 +466,7 @@ def Scale_data_analyze(start, slave, server_DB):
                 '''
 
     print('kill Scale_data_analyze')
-    print(f'Final Scale_data_analyze: {slave.readings}')
+    print(f'Final Scale_data_analyze: {count_err} errors occured')
     #barrier_kill.wait()
 
 
@@ -484,7 +492,7 @@ def GA_data_analyze(start, slave, server_DB):
                 readings = tuple([round(time_readings[-1],2)]) + lst_readings
                 
                 # casting
-                slave.readings.append(readings)
+                #slave.readings.append(readings)
                 # 0x01:1f:CO, 0x02:1f:CO2, 0x03:1f:CH4, 0x04:1f:H2, 0x05:1f:N2, 0x06:1f:HEAT
                 server_DB.readings[1:7] = [int(i*10) for i in readings[1:]]
                 #server_DB[0x06].setValues(fx=3, address=0x01, values=[int(i*10) for i in readings[1:]])
@@ -510,7 +518,7 @@ def GA_data_analyze(start, slave, server_DB):
                 '''
 
     print('kill GA_data_analyze')
-    print(f'Final GA_data_analyze: {slave.readings}')
+    print(f'Final GA_data_analyze: {count_err} errors occured')
     #barrier_kill.wait()
 
 
@@ -535,7 +543,7 @@ def MFC_data_analyze(start, slave, server_DB):
                 readings = tuple(time_readings[-1:]) + lst_readings
                 
                 # CASTING
-                slave.readings.append(readings)
+                #slave.readings.append(readings)
                 # 0x00:1f:MFC_MassFlow
                 server_DB.readings[0] = int(readings[-2]*10)
                 #server_DB[0x06].setValues(fx=3, address=0x00, values=[int(readings[-2]*10),])
@@ -562,5 +570,5 @@ def MFC_data_analyze(start, slave, server_DB):
                 '''
 
     print('kill MFC_data_analyze')
-    print(f'Final MFC_data_analyze: {slave.readings}')
+    print(f'Final MFC_data_analyze: {count_err} errors occured')
     #barrier_kill.wait()
