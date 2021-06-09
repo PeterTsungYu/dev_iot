@@ -1,6 +1,8 @@
-# scale scope
-# show err_count at the end
-# don't show data after kill
+# pip3 install crccheck
+# pip3 install numpy 
+## for numpy, also do this: sudo apt-get install libatlas-base-dev
+# pip3 install pyserial
+# pip3 install paho-mqtt
 
 from crccheck.crc import Crc16Modbus
 import numpy as np
@@ -9,14 +11,8 @@ import time
 import threading
 import re
 import signal
-from paho.mqtt import client as mqtt_client
-
-from pymodbus.device import ModbusDeviceIdentification
-from pymodbus.server.asynchronous import StartSerialServer
-from pymodbus.datastore import ModbusSequentialDataBlock
-from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
-from pymodbus.transaction import ModbusRtuFramer
-from pymodbus.server.asynchronous import StopServer
+import paho.mqtt.client as mqtt
+import random
 
 #-------------------------Global var--------------------------------------
 time_out = 1 # for collecting data
@@ -32,28 +28,91 @@ ticker = threading.Event() # for analyzing data
 #barrier_kill = threading.Barrier(9) # all threads
 
 
-# Keyboard interrupt event to kill all the threads
+# Keyboard interrupt event to kill all the threads (Ctr + C)
 kb_event = threading.Event()
 def signal_handler(signum, frame):
     kb_event.set()
 signal.signal(signal.SIGINT, signal_handler) # Keyboard interrupt to stop the program
 
+'''
+class SlaveThread(threading.Thread): # deprecated 
+    def __init__(self, name='SlaveThread'):
+        threading.Thread.__init__(self, name=name)
+        self._kill = threading.Event()
+        self._sleepperiod = 1
+    def run(self):
+        while not self._kill.isSet(): # inspect the event till it is set
+            self._kill.wait(self._sleepperiod) # inspect every period
+        print('end')
+    def join(self, timeout=None):
+        self._stopevent.set(  ) # stop the tread by join method
+        threading.Thread.join(self, timeout)
+'''
+
+def terminate(event): # ask user input to stop the program
+    print(event.is_set())
+    text = input("Type 'exit' to terminate the program...\n>")
+    if text == 'exit':
+        event.set()
+
 #-------------------------MQTT--------------------------------------
-def connect_mqtt(client_id_mqtt, hostname_mqtt='localhost', port_mqtt=1883):
+def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60):
     def on_connect(client, userdata, flags, rc):
         if rc == 0:
-            print("Connected to MQTT!")
+            print(f"{client_id} Connected to MQTT!")
         else:
-            print("Failed to connect, return code %d\n", rc)
+            print(f"{client_id} Failed to connect, return code %d\n", rc)
+        
+        # Subscribing in on_connect() means that if we lose the connection and
+        # reconnect then subscriptions will be renewed.
+        client.subscribe("nodered", qos=0)
+        client.subscribe([("TCHeader/SV0", 0), ("TCHeader/SV1", 0)])
 
-    client = mqtt_client.Client(client_id_mqtt)
+    # The callback for when a PUBLISH message is received from the server.
+    def on_message(client, userdata, msg):
+        print(msg.topic+" "+str(msg.payload))
+
+    client = mqtt.Client(client_id=client_id, clean_session=True)
     # client.username_pw_set(username, password)
     client.on_connect = on_connect
-    client.connect(hostname_mqtt, port_mqtt)
+    client.on_message = on_message
+    client.connect_async(hostname, port, keepalive)
     return client
 
-client_mqtt = connect_mqtt(client_id_mqtt='rpi-001-mqtt')
-client_mqtt.loop_start()
+client_0 = connect_mqtt(client_id='client0', hostname='localhost', port=1883, keepalive=60)
+client_0.loop_start()
+client_1 = connect_mqtt(client_id='client1', hostname='localhost', port=1883, keepalive=60)
+client_1.loop_start()
+
+
+lst_thread = []
+def pub_0(client=client_0):
+    while True:
+        client.publish(topic='TCHeader/PV0', payload=random.random(), qos=0, retain=True)
+        time.sleep(2)
+def pub_1(client=client_1):
+    while True:
+        client.publish(topic='TCHeader/PV1', payload=random.random(), qos=0, retain=True)
+        time.sleep(2)
+
+payload_0 = random.random()
+payload_1 = random.random()
+pub_0 = threading.Thread(
+    target=pub_0, 
+    args=(client_0,)
+    )
+pub_1 = threading.Thread(
+    target=pub_1, 
+    args=(client_1,)
+    )
+lst_thread.append(pub_0)
+lst_thread.append(pub_1)
+for subthread in lst_thread:
+    subthread.start()
+
+while True:
+    time.sleep(1)
+
 
 topic_ADAM_TC = [
     "/rpi/Reformer_TC_07", "/rpi/Reformer_TC_08", "/rpi/Reformer_TC_09", "/rpi/Reformer_TC_10",
@@ -77,12 +136,15 @@ class Slave: # Create Slave data store
         self.time_readings = [] # record time
         self.readings = [] # for all data 
 
-'''
-def gen_Slave(RTU): # deprecated 
+'''deprecated 
+def gen_Slave(RTU):
     slave = Slave(RTU.id, RTU.rtu)
     return slave
 '''
 
+'''deprecated
+from pymodbus.datastore import ModbusSequentialDataBlock
+from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
 
 def serverDB_gen(slave_id=0x00):
     register_block = ModbusSequentialDataBlock(0x00, [0x00]*0x17) # each address can hold from a range 0x00 to 0xffff
@@ -99,7 +161,12 @@ def serverDB_gen(slave_id=0x00):
         )
     print("Succeed to generate a server context")
     return context
-
+'''
+'''deprecated
+from pymodbus.device import ModbusDeviceIdentification
+from pymodbus.server.asynchronous import StartSerialServer
+from pymodbus.transaction import ModbusRtuFramer
+from pymodbus.server.asynchronous import StopServer
 
 def run_server(context, port, timeout=1, baudrate=115200, stopbits=1, bytesize=8, parity='N'):
     
@@ -124,7 +191,7 @@ def run_server(context, port, timeout=1, baudrate=115200, stopbits=1, bytesize=8
         )
 
     print("Server is offline")
-
+'''
 
 def RPiserver(start, port, slave, wait_data):
     while not kb_event.isSet():
@@ -163,29 +230,7 @@ def RPiserver(start, port, slave, wait_data):
     print('kill RPiserver')
     #barrier_kill.wait()
 
-#--------------------------Threading--------------------------------
-'''
-class SlaveThread(threading.Thread): # deprecated 
-    def __init__(self, name='SlaveThread'):
-        threading.Thread.__init__(self, name=name)
-        self._kill = threading.Event()
-        self._sleepperiod = 1
-    def run(self):
-        while not self._kill.isSet(): # inspect the event till it is set
-            self._kill.wait(self._sleepperiod) # inspect every period
-        print('end')
-    def join(self, timeout=None):
-        self._stopevent.set(  ) # stop the tread by join method
-        threading.Thread.join(self, timeout)
-'''
-
-def terminate(event): # ask user input to stop the program
-    print(event.is_set())
-    text = input("Type 'exit' to terminate the program...\n>")
-    if text == 'exit':
-        event.set()
-
-#------------------------------func---------------------------------
+#------------------------------Collect and Analyze func---------------------------------
 def Adam_data_collect(start, port, slave, wait_data):
     #start = time.time()
     count_err = 0
@@ -315,6 +360,39 @@ def GA_data_collect(start, port, slave, wait_data, count_err):
     ##barrier_kill.wait()
 
 
+def Header_Vap_collect(start, port, slave, wait_data, count_err):
+    #start = time.time()
+    #while not kb_event.isSet(): # it is written in the ReadingThreads.py
+    try:
+        slave.time_readings.append(time.time()-start)
+        port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
+
+        time.sleep(time_out)
+
+        print(port.inWaiting())
+        #print(port.read(wait_data).hex())
+        if port.inWaiting() >= wait_data:
+            '''
+                check sta, func code, datalen, crc
+            '''  
+            readings = port.read(wait_data).hex()
+            print(readings)
+            slave.lst_readings.append(readings)
+            print('Header_Vap_collect done')
+        else: # if data len is less than the wait data
+            port.reset_input_buffer() # reset the buffer if no read
+            count_err += 1
+            print('XX'*10 + f" {count_err} Header_Vap_collect error at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+    except Exception as e11:
+        print('XX'*10 + f" {count_err} Header_Vap_collect error at {round((time.time()-start),2)}s: " + str(e11) + 'XX'*10)
+    finally:
+        return count_err
+    #port.close()
+    #print('kill GA_data_collect')
+    #print(f'Final GA_data_collect: {count_err} errors occured')
+    ##barrier_kill.wait()
+
+
 def Adam_data_analyze(start, slave, server_DB):
     count_err = 0
     while not kb_event.isSet():
@@ -335,7 +413,7 @@ def Adam_data_analyze(start, slave, server_DB):
                 #slave.readings.append(readings)
                 # RTU write to master
                 # 0x09:1f:TC_0, 0x10:1f:TC_1, 0x11:1f:TC_2, 0x12:1f:TC_3, 0x13:1f:TC_4, 0x14:1f:TC_5, 0x15:1f:TC_6, 0x16:1f:TC_7
-                server_DB.readings[9:] = [int(i*10) for i in readings[1:]]
+                server_DB.readings[9:17] = [int(i*10) for i in readings[1:]]
                 #server_DB[0x06].setValues(fx=3, address=0x09, values=[int(i*10) for i in readings[1:]])
                 print(f'Adam_data_analyze done: {readings}')
                 #barrier_analyze.wait()
@@ -571,4 +649,55 @@ def MFC_data_analyze(start, slave, server_DB):
 
     print('kill MFC_data_analyze')
     print(f'Final MFC_data_analyze: {count_err} errors occured')
+    #barrier_kill.wait()
+
+
+def Header_Vap_analyze(start, slave, server_DB):
+    count_err = 0
+    while not kb_event.isSet():
+        if not ticker.wait(sample_time):
+            lst_readings = slave.lst_readings
+            time_readings = slave.time_readings
+            print(lst_readings)
+            slave.lst_readings = []
+            slave.time_readings = []
+            try:           
+                arr_readings = np.array(
+                    [int(readings[-8:-4],16)/10 # convert from hex to dec 
+                    for readings in lst_readings]
+                    )
+                print(arr_readings)
+                lst_readings = tuple([np.round(np.sum(arr_readings) / len(lst_readings), 1)])
+                readings = tuple([round(time_readings[-1],2)]) + lst_readings
+
+                # casting 
+                ## to slave data list
+                slave.readings.append(readings)
+                ## to server database
+                ## 0x17:1f:Header_Vap_TC
+                server_DB.readings[17] = [int(i*10) for i in readings[1:]]
+                #server_DB[0x06].setValues(fx=3, address=0x01, values=[int(i*10) for i in readings[1:]])
+                print(f'Header_Vap_analyze done: {readings}')
+                #barrier_analyze.wait()
+            except Exception as e12:
+                count_err += 1
+                print('XX'*10 + f" {count_err} Header_Vap_analyze error at {round((time.time()-start),2)}s: " + str(e12) + 'XX'*5)
+            finally:
+                pass
+                '''
+                try:
+                    #barrier_cast.wait()
+                    conn.execute(
+                        "INSERT INTO GA(Time, CO, CO2, CH4, H2, N2, HEAT) VALUES (?,?,?,?,?,?,?);", 
+                        readings
+                        )
+                    pass
+                except Exception as e9_1:
+                    print ("GA_data_cast error: " + str(e9_1))
+                finally:
+                    print(f'GA_data_cast done')
+                '''
+
+    print('kill Header_Vap_analyze')
+    print(f'Final Header_Vap_analyze: {count_err} errors occured')
     #barrier_kill.wait()

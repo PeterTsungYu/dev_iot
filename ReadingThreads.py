@@ -9,9 +9,9 @@ import threading
 import re
 
 print('Import: succeed')
-#-------------------------MQTT--------------------------------------
 
 #-----------------Serial port setting------------------------------
+# Set the USB devices to have a default name
 RS485_port_path = '/dev/ttyUSB_RS485'
 RS232_port_path = '/dev/ttyUSB_RS232'
 Scale_port_path = '/dev/ttyUSB_Scale'
@@ -93,6 +93,7 @@ RPi_Server.readings = [0] * 17 # 17 data entries
 # server_DB = Modbus.serverDB_gen(slave_id=0x06)
 
 print('Port setting: succeed')
+
 #-------------------------define Threads and Events-----------------------------------------
 timeit = datetime.now().strftime('%Y_%m_%d_%H_%M')
 print(f'Execution time is {timeit}')
