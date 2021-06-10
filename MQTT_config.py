@@ -8,7 +8,8 @@ topic_ADAM_TC = [
     "/rpi/Reformer_TC_07", "/rpi/Reformer_TC_08", "/rpi/Reformer_TC_09", "/rpi/Reformer_TC_10",
     "/rpi/Reformer_TC_11", "/rpi/Reformer_TC_12", "/rpi/Reformer_TC_13", "/rpi/Reformer_TC_14"]
 
-sub_SV0 = 0
+# set value
+sub_SV0 = 0 #md: subscription value and rtu
 # incoming msg event
 sub_SV0_event = threading.Event()
 

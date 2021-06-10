@@ -40,7 +40,7 @@ lst_port.append(RS232_Header_Vap_port)
 Header_Vap_RTU_R = Modbus.RTU(Header_Vap_id, '03', '008A', '0001')
 # Header Writing, RTU func code 06, SV value site at '0000'
 Header_Vap_SV = '0000'  # setting Header value in hex
-Header_Vap_RTU_W = Modbus.RTU(Header_Vap_id, '06', '0000', Header_Vap_SV)
+Header_Vap_RTU_W = Modbus.RTU(Header_Vap_id, '06', '0000', Header_Vap_SV) #md: subscription value and rtu
 Header_Vap_slave = Modbus.Slave(Header_Vap_id, [Header_Vap_RTU_R.rtu, Header_Vap_RTU_W.rtu]) # list[0]:read, list[1]:write
 
 #print(Header_Vap_slave.rtu)

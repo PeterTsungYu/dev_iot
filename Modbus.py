@@ -311,7 +311,7 @@ def TCHeader_comm(start, port, slave, wait_data, count_err):
     else:
         set_err = 0
         try: # try to set value 
-            port.write(bytes.fromhex(slave.rtu[0])) #hex to binary(byte)
+            port.write(bytes.fromhex(slave.rtu[1])) #hex to binary(byte) #md: subscription value and rtu
             time.sleep(config.time_out)
             if port.inWaiting() >= 8: 
                 readings = port.read(wait_data).hex() # after reading, the buffer will be clean
