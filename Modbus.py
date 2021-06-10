@@ -8,52 +8,10 @@ from crccheck.crc import Crc16Modbus
 import numpy as np
 import serial
 import time
-import threading
 import re
-import signal
 import paho.mqtt.client as mqtt
 import random
-
-#-------------------------Global var--------------------------------------
-time_out = 1 # for collecting data
-sample_time = 2 # for analyzing data
-sample_time_DFM = 60
-
-# count down events
-ticker = threading.Event() # for analyzing data
-
-# #barrier event for syncing all threads
-#barrier_analyze = threading.Barrier(4) # Adam_data_analyze, Scale_data_analyze, GA_data_analyze, Main thread
-#barrier_cast = threading.Barrier(4) # Adam_data_analyze, Scale_data_analyze, GA_data_analyze, Main thread
-#barrier_kill = threading.Barrier(9) # all threads
-
-
-# Keyboard interrupt event to kill all the threads (Ctr + C)
-kb_event = threading.Event()
-def signal_handler(signum, frame):
-    kb_event.set()
-signal.signal(signal.SIGINT, signal_handler) # Keyboard interrupt to stop the program
-
-'''
-class SlaveThread(threading.Thread): # deprecated 
-    def __init__(self, name='SlaveThread'):
-        threading.Thread.__init__(self, name=name)
-        self._kill = threading.Event()
-        self._sleepperiod = 1
-    def run(self):
-        while not self._kill.isSet(): # inspect the event till it is set
-            self._kill.wait(self._sleepperiod) # inspect every period
-        print('end')
-    def join(self, timeout=None):
-        self._stopevent.set(  ) # stop the tread by join method
-        threading.Thread.join(self, timeout)
-'''
-
-def terminate(event): # ask user input to stop the program
-    print(event.is_set())
-    text = input("Type 'exit' to terminate the program...\n>")
-    if text == 'exit':
-        event.set()
+import config
 
 #-------------------------MQTT--------------------------------------
 def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60):
@@ -78,45 +36,6 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60):
     client.on_message = on_message
     client.connect_async(hostname, port, keepalive)
     return client
-'''
-client_0 = connect_mqtt(client_id='client0', hostname='localhost', port=1883, keepalive=60)
-client_0.loop_start()
-client_1 = connect_mqtt(client_id='client1', hostname='localhost', port=1883, keepalive=60)
-client_1.loop_start()
-
-
-lst_thread = []
-def pub_0(client=client_0):
-    while True:
-        client.publish(topic='TCHeader/PV0', payload=random.random(), qos=0, retain=True)
-        time.sleep(2)
-def pub_1(client=client_1):
-    while True:
-        client.publish(topic='TCHeader/PV1', payload=random.random(), qos=0, retain=True)
-        time.sleep(2)
-
-payload_0 = random.random()
-payload_1 = random.random()
-pub_0 = threading.Thread(
-    target=pub_0, 
-    args=(client_0,)
-    )
-pub_1 = threading.Thread(
-    target=pub_1, 
-    args=(client_1,)
-    )
-lst_thread.append(pub_0)
-lst_thread.append(pub_1)
-for subthread in lst_thread:
-    subthread.start()
-
-while True:
-    time.sleep(1)
-'''
-
-topic_ADAM_TC = [
-    "/rpi/Reformer_TC_07", "/rpi/Reformer_TC_08", "/rpi/Reformer_TC_09", "/rpi/Reformer_TC_10",
-    "/rpi/Reformer_TC_11", "/rpi/Reformer_TC_12", "/rpi/Reformer_TC_13", "/rpi/Reformer_TC_14"]
 
 #-------------------------RTU & Slave--------------------------------------
 class RTU: # generate the CRC for the complete RTU 
@@ -140,6 +59,21 @@ class Slave: # Create Slave data store
 def gen_Slave(RTU):
     slave = Slave(RTU.id, RTU.rtu)
     return slave
+'''
+
+'''
+class SlaveThread(threading.Thread): # deprecated 
+    def __init__(self, name='SlaveThread'):
+        threading.Thread.__init__(self, name=name)
+        self._kill = threading.Event()
+        self._sleepperiod = 1
+    def run(self):
+        while not self._kill.isSet(): # inspect the event till it is set
+            self._kill.wait(self._sleepperiod) # inspect every period
+        print('end')
+    def join(self, timeout=None):
+        self._stopevent.set(  ) # stop the tread by join method
+        threading.Thread.join(self, timeout)
 '''
 
 '''deprecated
@@ -193,8 +127,9 @@ def run_server(context, port, timeout=1, baudrate=115200, stopbits=1, bytesize=8
     print("Server is offline")
 '''
 
+#------------------------------Collect and Analyze func---------------------------------
 def RPiserver(start, port, slave, wait_data):
-    while not kb_event.isSet():
+    while not config.kb_event.isSet():
         try:
             if port.inWaiting() >= wait_data: # Rpi protocol has 8 bytes ('0603000000170473')
                 # '06' is slave 6
@@ -230,16 +165,16 @@ def RPiserver(start, port, slave, wait_data):
     print('kill RPiserver')
     #barrier_kill.wait()
 
-#------------------------------Collect and Analyze func---------------------------------
+
 def Adam_data_collect(start, port, slave, wait_data):
     #start = time.time()
     count_err = 0
-    while not kb_event.isSet():
+    while not config.kb_event.isSet():
         try:
             slave.time_readings.append(round(time.time()-start, 2))
             port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
 
-            time.sleep(time_out)
+            time.sleep(config.time_out)
 
             # look up the buffer for 21 bytes, which is for 8 channels data length
             if port.inWaiting() >= wait_data:
@@ -268,10 +203,10 @@ def Adam_data_collect(start, port, slave, wait_data):
 def Scale_data_collect(start, port, slave, wait_data):
     #start = time.time()
     count_err = 0
-    while not kb_event.isSet():
+    while not config.kb_event.isSet():
         try:
             slave.time_readings.append(round(time.time()-start, 2))
-            time.sleep(time_out) # wait for the data input to the buffer
+            time.sleep(config.time_out) # wait for the data input to the buffer
             if port.inWaiting() > wait_data:
                 '''
                 check sta, func code, datalen, crc
@@ -297,12 +232,12 @@ def Scale_data_collect(start, port, slave, wait_data):
 
 def MFC_data_comm(start, count_err, port, slave, wait_data):
     #start = time.time()
-    #while not kb_event.isSet():
+    #while not config.kb_event.isSet():
     try:
         slave.time_readings.append(round(time.time()-start, 2))
         port.write(bytes(slave.rtu, 'utf-8')) #string to binary(byte) 
 
-        time.sleep(time_out)
+        time.sleep(config.time_out)
         
         #print(port.inWaiting())
         if port.inWaiting() >= wait_data:
@@ -330,12 +265,12 @@ def MFC_data_comm(start, count_err, port, slave, wait_data):
 
 def GA_data_comm(start, port, slave, wait_data, count_err):
     #start = time.time()
-    #while not kb_event.isSet(): # it is written in the ReadingThreads.py
+    #while not config.kb_event.isSet(): # it is written in the ReadingThreads.py
     try:
         slave.time_readings.append(time.time()-start)
         port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
 
-        time.sleep(time_out)
+        time.sleep(config.time_out)
 
         #print(port.inWaiting())
         if port.inWaiting() >= wait_data:
@@ -362,12 +297,12 @@ def GA_data_comm(start, port, slave, wait_data, count_err):
 
 def TCHeader_comm(start, port, slave, wait_data, count_err):
     #start = time.time()
-    #while not kb_event.isSet(): # it is written in the ReadingThreads.py
+    #while not config.kb_event.isSet(): # it is written in the ReadingThreads.py
     try:
         slave.time_readings.append(time.time()-start)
         port.write(bytes.fromhex(slave.rtu[0])) #hex to binary(byte) 
 
-        time.sleep(time_out)
+        time.sleep(config.time_out)
 
         #print(port.inWaiting())
         #print(port.read(wait_data).hex())
@@ -400,8 +335,8 @@ def TCHeader_comm(start, port, slave, wait_data, count_err):
 
 def Adam_data_analyze(start, slave, server_DB):
     count_err = 0
-    while not kb_event.isSet():
-        if not ticker.wait(sample_time):
+    while not config.kb_event.isSet():
+        if not config.ticker.wait(config.sample_time):
             lst_readings = slave.lst_readings
             time_readings = slave.time_readings
             #print(f'Adam_data_analyze: {lst_readings}')
@@ -436,7 +371,7 @@ def Adam_data_analyze(start, slave, server_DB):
                         )
                     # publish via MQTT
                     #for i in range(8):
-                        #client_mqtt.publish(topic_ADAM_TC[i], readings[i+1])
+                        #client_mqtt.publish(config.topic_ADAM_TC[i], readings[i+1])
                     pass
                 except Exception as e6_1:
                     print ("Adam_data_cast error: " + str(e6_1))
@@ -453,8 +388,8 @@ def Adam_data_analyze(start, slave, server_DB):
 def DFM_data_analyze(start, slave, server_DB):
     count_err = 0
     #start = time.time()
-    while not kb_event.isSet():
-        if not ticker.wait(sample_time_DFM): # for each sample_time, collect data
+    while not config.kb_event.isSet():
+        if not config.ticker.wait(config.sample_time_DFM): # for each sample_time, collect data
             sampling_time = round(time.time()-start, 2)
             try: 
                 time_readings = slave.time_readings
@@ -508,8 +443,8 @@ def DFM_data_analyze(start, slave, server_DB):
 
 def Scale_data_analyze(start, slave, server_DB):
     count_err = 0
-    while not kb_event.isSet():
-        if not ticker.wait(sample_time):
+    while not config.kb_event.isSet():
+        if not config.ticker.wait(config.sample_time):
             lst_readings = slave.lst_readings
             time_readings = slave.time_readings
             #print(f'Scale_data_analyze: {lst_readings}')
@@ -555,8 +490,8 @@ def Scale_data_analyze(start, slave, server_DB):
 
 def GA_data_analyze(start, slave, server_DB):
     count_err = 0
-    while not kb_event.isSet():
-        if not ticker.wait(sample_time):
+    while not config.kb_event.isSet():
+        if not config.ticker.wait(config.sample_time):
             lst_readings = slave.lst_readings
             time_readings = slave.time_readings
             #print(f'GA_data_analyze: {lst_readings}')
@@ -608,8 +543,8 @@ def GA_data_analyze(start, slave, server_DB):
 def MFC_data_analyze(start, slave, server_DB):
     count_err = 0
     #conn = sqlite3.connect(db)
-    while not kb_event.isSet():
-        if not ticker.wait(sample_time):
+    while not config.kb_event.isSet():
+        if not config.ticker.wait(config.sample_time):
             lst_readings = slave.lst_readings
             time_readings = slave.time_readings
             slave.lst_readings = []
@@ -659,8 +594,8 @@ def MFC_data_analyze(start, slave, server_DB):
 
 def TCHeader_analyze(start, slave, server_DB):
     count_err = 0
-    while not kb_event.isSet():
-        if not ticker.wait(sample_time):
+    while not config.kb_event.isSet():
+        if not config.ticker.wait(config.sample_time):
             lst_readings = slave.lst_readings
             time_readings = slave.time_readings
             #print(lst_readings)
@@ -671,7 +606,7 @@ def TCHeader_analyze(start, slave, server_DB):
                     [int(readings[-8:-4],16)/10 # convert from hex to dec 
                     for readings in lst_readings]
                     )
-                #print(arr_readings)
+                print(arr_readings)
                 lst_readings = tuple([np.round(np.sum(arr_readings) / len(lst_readings), 1)])
                 readings = tuple([round(time_readings[-1],2)]) + lst_readings
 

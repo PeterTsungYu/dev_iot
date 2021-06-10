@@ -7,6 +7,7 @@ from datetime import datetime
 import Modbus
 import threading
 import re
+import config
 
 print('Import: succeed')
 
@@ -57,7 +58,7 @@ lst_thread = []
 ## RS232
 def RS232_data_collect(port):
     count_err = 0
-    while not Modbus.kb_event.isSet():
+    while not config.kb_event.isSet():
         count_err = Modbus.TCHeader_comm(start, port, Header_Vap_slave, 7, count_err) # wait for 7 bytes
         #Modbus.MFC_data_collect(start, port, MFC_slave, 49)
     port.close()
@@ -111,8 +112,8 @@ for subthread in lst_thread:
 
 #-------------------------Main Threadingggg-----------------------------------------
 try:
-    while not Modbus.kb_event.isSet():
-        if not Modbus.ticker.wait(Modbus.sample_time):
+    while not config.kb_event.isSet():
+        if not config.ticker.wait(config.sample_time):
         #Modbus.barrier_analyze.wait()
             print("=="*10 + f'Elapsed time: {round((time.time()-start),2)}' + "=="*10)
         #Modbus.barrier_cast.wait()
