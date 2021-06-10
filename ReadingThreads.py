@@ -117,12 +117,12 @@ lst_thread.append(Adam_data_analyze)
 def RS232_data_collect(port):
     count_err = 0
     while not Modbus.kb_event.isSet():
-        count_err = Modbus.GA_data_collect(start, port, GA_slave, 31, count_err)
-        #Modbus.MFC_data_collect(start, port, MFC_slave, 49)
+        count_err = Modbus.GA_data_comm(start, port, GA_slave, 31, count_err)
+        #Modbus.MFC_data_comm(start, port, MFC_slave, 49)
     port.close()
-    print('kill GA_data_collect')
-    print(f'Final GA_data_collect: {count_err} errors occured')
-    #print('kill MFC_data_collect')
+    print('kill GA_data_comm')
+    print(f'Final GA_data_comm: {count_err} errors occured')
+    #print('kill MFC_data_comm')
     #Modbus.barrier_kill.wait()
 
 RS232_data_collect = threading.Thread(

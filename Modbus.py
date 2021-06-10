@@ -78,7 +78,7 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60):
     client.on_message = on_message
     client.connect_async(hostname, port, keepalive)
     return client
-
+'''
 client_0 = connect_mqtt(client_id='client0', hostname='localhost', port=1883, keepalive=60)
 client_0.loop_start()
 client_1 = connect_mqtt(client_id='client1', hostname='localhost', port=1883, keepalive=60)
@@ -112,7 +112,7 @@ for subthread in lst_thread:
 
 while True:
     time.sleep(1)
-
+'''
 
 topic_ADAM_TC = [
     "/rpi/Reformer_TC_07", "/rpi/Reformer_TC_08", "/rpi/Reformer_TC_09", "/rpi/Reformer_TC_10",
@@ -131,7 +131,7 @@ class RTU: # generate the CRC for the complete RTU
 class Slave: # Create Slave data store 
     def __init__(self, idno='', rtu=''):
         self.id = idno # id number of slave
-        self.rtu = rtu # tuple of rtu value
+        self.rtu = rtu # str or a list. list[0]:read, list[1]:write 
         self.lst_readings = [] # record readings
         self.time_readings = [] # record time
         self.readings = [] # for all data 
@@ -222,8 +222,8 @@ def RPiserver(start, port, slave, wait_data):
                     print(f'RPiserver write at {round(time.time()-start, 2)}s : {writing}')
                 port.reset_input_buffer()
             #time.sleep(1)
-        except Exception as e1:
-            print ("RPiserver error: " + str(e1))
+        except Exception as e:
+            print ("RPiserver error: " + str(e))
             time.sleep(1)
 
     port.close()
@@ -254,8 +254,8 @@ def Adam_data_collect(start, port, slave, wait_data):
             else: # if data len is less than the wait data
                 count_err += 1
                 print('XX'*10 + f" {count_err} Adam_data_collect error at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10)
-        except Exception as e2:
-            print('XX'*10 + f" {count_err} Adam_data_collect error at {round((time.time()-start),2)}s: " + str(e2) + 'XX'*10)
+        except Exception as e:
+            print('XX'*10 + f" {count_err} Adam_data_collect error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
             pass
 
@@ -284,8 +284,8 @@ def Scale_data_collect(start, port, slave, wait_data):
             else: # if data len is no data
                 count_err += 1
                 print('XX'*10 + f" {count_err} Scale_data_collect error at {round((time.time()-start),2)}s: data len is no data" + 'XX'*10)
-        except Exception as e3:
-            print('XX'*10 + f" {count_err} Scale_data_collect error at {round((time.time()-start),2)}s: " + str(e3) + 'XX'*10)
+        except Exception as e:
+            print('XX'*10 + f" {count_err} Scale_data_collect error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
             pass
 
@@ -295,7 +295,7 @@ def Scale_data_collect(start, port, slave, wait_data):
     #barrier_kill.wait()
 
 
-def MFC_data_collect(start, count_err, port, slave, wait_data):
+def MFC_data_comm(start, count_err, port, slave, wait_data):
     #start = time.time()
     #while not kb_event.isSet():
     try:
@@ -317,8 +317,8 @@ def MFC_data_collect(start, count_err, port, slave, wait_data):
         else: # if data len is less than the wait data
             count_err += 1
             print('XX'*10 + f" {count_err} MFC_data_collect error at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10)
-    except Exception as e4:
-        print('XX'*10 + f" {count_err} MFC_data_collect error at {round((time.time()-start),2)}s: " + str(e4) + 'XX'*10)
+    except Exception as e:
+        print('XX'*10 + f" {count_err} MFC_data_collect error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
     finally:
         pass
         
@@ -328,7 +328,7 @@ def MFC_data_collect(start, count_err, port, slave, wait_data):
     ##barrier_kill.wait()
 
 
-def GA_data_collect(start, port, slave, wait_data, count_err):
+def GA_data_comm(start, port, slave, wait_data, count_err):
     #start = time.time()
     #while not kb_event.isSet(): # it is written in the ReadingThreads.py
     try:
@@ -350,8 +350,8 @@ def GA_data_collect(start, port, slave, wait_data, count_err):
         else: # if data len is less than the wait data
             count_err += 1
             print('XX'*10 + f" {count_err} GA_data_collect error at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
-    except Exception as e5:
-        print('XX'*10 + f" {count_err} GA_data_collect error at {round((time.time()-start),2)}s: " + str(e5) + 'XX'*10)
+    except Exception as e:
+        print('XX'*10 + f" {count_err} GA_data_collect error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
     finally:
         return count_err
     #port.close()
@@ -360,31 +360,36 @@ def GA_data_collect(start, port, slave, wait_data, count_err):
     ##barrier_kill.wait()
 
 
-def Header_Vap_collect(start, port, slave, wait_data, count_err):
+def TCHeader_comm(start, port, slave, wait_data, count_err):
     #start = time.time()
     #while not kb_event.isSet(): # it is written in the ReadingThreads.py
     try:
         slave.time_readings.append(time.time()-start)
-        port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
+        port.write(bytes.fromhex(slave.rtu[0])) #hex to binary(byte) 
 
         time.sleep(time_out)
 
-        print(port.inWaiting())
+        #print(port.inWaiting())
         #print(port.read(wait_data).hex())
-        if port.inWaiting() >= wait_data:
-            '''
-                check sta, func code, datalen, crc
-            '''  
-            readings = port.read(wait_data).hex()
-            print(readings)
-            slave.lst_readings.append(readings)
-            print('Header_Vap_collect done')
+        if port.inWaiting() >= wait_data: 
+            readings = port.read(wait_data).hex() # after reading, the buffer will be clean
+            crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
+            #print(readings)
+            #print(crc)
+            # check sta, func code, datalen, crc
+            if (readings[0:2] == slave.id) and (readings[2:4] == '03') and ((crc[-2:] + crc[:2]) == readings[-4:]):
+                slave.lst_readings.append(readings)
+                print('Header_Vap_collect done')
+            else:
+                port.reset_input_buffer() # reset the buffer if no read
+                count_err += 1
+                print('XX'*10 + f" {count_err} Header_Vap_collect error at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
         else: # if data len is less than the wait data
             port.reset_input_buffer() # reset the buffer if no read
             count_err += 1
             print('XX'*10 + f" {count_err} Header_Vap_collect error at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
-    except Exception as e11:
-        print('XX'*10 + f" {count_err} Header_Vap_collect error at {round((time.time()-start),2)}s: " + str(e11) + 'XX'*10)
+    except Exception as e:
+        print('XX'*10 + f" {count_err} Header_Vap_collect error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
     finally:
         return count_err
     #port.close()
@@ -417,9 +422,9 @@ def Adam_data_analyze(start, slave, server_DB):
                 #server_DB[0x06].setValues(fx=3, address=0x09, values=[int(i*10) for i in readings[1:]])
                 print(f'Adam_data_analyze done: {readings}')
                 #barrier_analyze.wait()
-            except Exception as e6:
+            except Exception as e:
                 count_err += 1
-                print('XX'*10 + f" {count_err} Adam_data_analyze error at {round((time.time()-start),2)}s: " + str(e6) + 'XX'*5)
+                print('XX'*10 + f" {count_err} Adam_data_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
             finally:
                 pass
                 '''
@@ -475,9 +480,9 @@ def DFM_data_analyze(start, slave, server_DB):
                 server_DB.readings[8] = int(readings[-1]*10)
                 # server_DB[0x06].setValues(fx=3, address=0x08, values=[int(readings[-1]*10)])
                 print(f'DFM_data_analyze done: {readings}')
-            except Exception as e7:
+            except Exception as e:
                 count_err += 1
-                print('XX'*10 + f" {count_err} DFM_data_analyze error at {round((time.time()-start),2)}s: " + str(e7) + 'XX'*5)
+                print('XX'*10 + f" {count_err} DFM_data_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
             finally:
                 pass
                 '''
@@ -522,9 +527,9 @@ def Scale_data_analyze(start, slave, server_DB):
                 #server_DB[0x06].setValues(fx=3, address=0x07, values=[int(readings[-1]*10)])
                 print(f'Scale_data_analyze done: {readings}')
                 #barrier_analyze.wait()
-            except Exception as e8:
+            except Exception as e:
                 count_err += 1
-                print('XX'*10 + f" {count_err} Scale_data_analyze error at {round((time.time()-start),2)}s: " + str(e8) + 'XX'*5)
+                print('XX'*10 + f" {count_err} Scale_data_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
             finally:
                 pass
                 '''
@@ -576,9 +581,9 @@ def GA_data_analyze(start, slave, server_DB):
                 #server_DB[0x06].setValues(fx=3, address=0x01, values=[int(i*10) for i in readings[1:]])
                 print(f'GA_data_analyze done: {readings}')
                 #barrier_analyze.wait()
-            except Exception as e9:
+            except Exception as e:
                 count_err += 1
-                print('XX'*10 + f" {count_err} GA_analyze error at {round((time.time()-start),2)}s: " + str(e9) + 'XX'*5)
+                print('XX'*10 + f" {count_err} GA_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
             finally:
                 pass
                 '''
@@ -627,9 +632,9 @@ def MFC_data_analyze(start, slave, server_DB):
                 #server_DB[0x06].setValues(fx=3, address=0x00, values=[int(readings[-2]*10),])
                 print(f'MFC_data_analyze done: {readings}')
                 #barrier_analyze.wait()
-            except Exception as e10:
+            except Exception as e:
                 count_err += 1
-                print('XX'*10 + f" {count_err} MFC_data_analyze error at {round((time.time()-start),2)}s: " + str(e10) + 'XX'*5)
+                print('XX'*10 + f" {count_err} MFC_data_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
             finally:
                 pass
                 '''
@@ -652,13 +657,13 @@ def MFC_data_analyze(start, slave, server_DB):
     #barrier_kill.wait()
 
 
-def Header_Vap_analyze(start, slave, server_DB):
+def TCHeader_analyze(start, slave, server_DB):
     count_err = 0
     while not kb_event.isSet():
         if not ticker.wait(sample_time):
             lst_readings = slave.lst_readings
             time_readings = slave.time_readings
-            print(lst_readings)
+            #print(lst_readings)
             slave.lst_readings = []
             slave.time_readings = []
             try:           
@@ -666,7 +671,7 @@ def Header_Vap_analyze(start, slave, server_DB):
                     [int(readings[-8:-4],16)/10 # convert from hex to dec 
                     for readings in lst_readings]
                     )
-                print(arr_readings)
+                #print(arr_readings)
                 lst_readings = tuple([np.round(np.sum(arr_readings) / len(lst_readings), 1)])
                 readings = tuple([round(time_readings[-1],2)]) + lst_readings
 
@@ -679,9 +684,9 @@ def Header_Vap_analyze(start, slave, server_DB):
                 #server_DB[0x06].setValues(fx=3, address=0x01, values=[int(i*10) for i in readings[1:]])
                 print(f'Header_Vap_analyze done: {readings}')
                 #barrier_analyze.wait()
-            except Exception as e12:
+            except Exception as e:
                 count_err += 1
-                print('XX'*10 + f" {count_err} Header_Vap_analyze error at {round((time.time()-start),2)}s: " + str(e12) + 'XX'*5)
+                print('XX'*10 + f" {count_err} Header_Vap_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
             finally:
                 pass
                 '''

@@ -32,15 +32,14 @@ RS232_Header_Vap_port = serial.Serial(
     parity='N'
     )
 lst_port.append(RS232_Header_Vap_port)
-# Header Rreading, RTU func code 03
+# Header Rreading, RTU func code 03, PV value site at '008A', data_len is 1 ('0001')
 Header_Vap_RTU_R = Modbus.RTU(Header_Vap_id, '03', '008A', '0001')
-Header_Vap_slave_R = Modbus.Slave(Header_Vap_id, Header_Vap_RTU_R.rtu)
-print(Header_Vap_RTU_R.rtu)
-# Header Writing, RTU func code 06
-Header_Vap_SV = '0000'  
+# Header Writing, RTU func code 06, SV value site at '0000'
+Header_Vap_SV = '0000'  # setting Header value in hex
 Header_Vap_RTU_W = Modbus.RTU(Header_Vap_id, '06', '0000', Header_Vap_SV)
-Header_Vap_slave_W = Modbus.Slave(Header_Vap_id, Header_Vap_RTU_W.rtu)
+Header_Vap_slave = Modbus.Slave(Header_Vap_id, [Header_Vap_RTU_R.rtu, Header_Vap_RTU_W.rtu]) # list[0]:read, list[1]:write
 
+#print(Header_Vap_slave.rtu)
 print('Port setting: succeed')
 
 #-----RPi Server_DB setting----------------------------------------------------------------
@@ -59,11 +58,11 @@ lst_thread = []
 def RS232_data_collect(port):
     count_err = 0
     while not Modbus.kb_event.isSet():
-        count_err = Modbus.Header_Vap_collect(start, port, Header_Vap_slave_R, 7, count_err) # wait for 7 bytes
+        count_err = Modbus.TCHeader_comm(start, port, Header_Vap_slave, 7, count_err) # wait for 7 bytes
         #Modbus.MFC_data_collect(start, port, MFC_slave, 49)
     port.close()
-    print('kill Header_Vap_collect')
-    print(f'Final Header_Vap_collect: {count_err} errors occured')
+    print('kill TCHeader_comm')
+    print(f'Final TCHeader_comm: {count_err} errors occured')
     #print('kill MFC_data_collect')
     #Modbus.barrier_kill.wait()
 
@@ -72,8 +71,8 @@ RS232_data_collect = threading.Thread(
     args=(RS232_Header_Vap_port,)
     )
 Header_Vap_analyze = threading.Thread(
-    target=Modbus.Header_Vap_analyze, 
-    args=(start, Header_Vap_slave_R, RPi_Server,),
+    target=Modbus.TCHeader_analyze, 
+    args=(start, Header_Vap_slave, RPi_Server,),
     )
 '''
 MFC_data_analyze = threading.Thread(
@@ -131,6 +130,6 @@ finally:
     #GPIO.cleanup()
     print(f"Program duration: {time.time() - start}")
     print('kill main thread')
-    print(Header_Vap_slave_R.readings)
+    print(Header_Vap_slave.readings)
     exit()
 
