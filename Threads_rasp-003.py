@@ -60,13 +60,13 @@ start = time.time()
 lst_thread = []
 ## RS232
 def RS232_data_collect(port):
-    count_err = 0
+    TCHeader_count_err = [0,0] # [collect_err, set_err]
     while not config.kb_event.isSet():
-        count_err = Modbus.TCHeader_comm(start, port, Header_Vap_slave, 7, count_err) # wait for 7 bytes
+        TCHeader_count_err = Modbus.TCHeader_comm(start, port, Header_Vap_slave, 7, TCHeader_count_err) # wait for 7 bytes
         #Modbus.MFC_data_collect(start, port, MFC_slave, 49)
     port.close()
     print('kill TCHeader_comm')
-    print(f'Final TCHeader_comm: {count_err} errors occured')
+    print(f'Final TCHeader_comm: {TCHeader_count_err} errors occured')
     #print('kill MFC_data_collect')
     #Modbus.barrier_kill.wait()
 

@@ -276,37 +276,63 @@ def GA_data_comm(start, port, slave, wait_data, count_err):
 def TCHeader_comm(start, port, slave, wait_data, count_err):
     #start = time.time()
     #while not config.kb_event.isSet(): # it is written in the ReadingThreads.py
-        #if not MQTT_config.sub_SV0_event.isSet(): # it is written in the ReadingThreads.py
-        #else (set TCHeader)
-    try:
-        slave.time_readings.append(time.time()-start)
-        port.write(bytes.fromhex(slave.rtu[0])) #hex to binary(byte) 
+    if not MQTT_config.sub_SV0_event.isSet():
+        collect_err = 0
+        try: # try to collect
+            slave.time_readings.append(time.time()-start)
+            port.write(bytes.fromhex(slave.rtu[0])) #hex to binary(byte) 
 
-        time.sleep(config.time_out)
+            time.sleep(config.time_out)
 
-        #print(port.inWaiting())
-        #print(port.read(wait_data).hex())
-        if port.inWaiting() >= wait_data: 
-            readings = port.read(wait_data).hex() # after reading, the buffer will be clean
-            crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
-            #print(readings)
-            #print(crc)
-            # check sta, func code, datalen, crc
-            if (readings[0:2] == slave.id) and (readings[2:4] == '03') and ((crc[-2:] + crc[:2]) == readings[-4:]):
-                slave.lst_readings.append(readings)
-                print('Header_Vap_collect done')
-            else:
+            #print(port.inWaiting())
+            #print(port.read(wait_data).hex())
+            if port.inWaiting() >= wait_data: 
+                readings = port.read(wait_data).hex() # after reading, the buffer will be clean
+                crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
+                #print(readings)
+                #print(crc)
+                # check sta, func code, datalen, crc
+                if (readings[0:2] == slave.id) and (readings[2:4] == '03') and ((crc[-2:] + crc[:2]) == readings[-4:]):
+                    slave.lst_readings.append(readings)
+                    print('Header_collect done')
+                else:
+                    port.reset_input_buffer() # reset the buffer if no read
+                    collect_err += 1
+                    print('XX'*10 + f" {collect_err} Header_collect error at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
+            else: # if data len is less than the wait data
                 port.reset_input_buffer() # reset the buffer if no read
-                count_err += 1
-                print('XX'*10 + f" {count_err} Header_Vap_collect error at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
-        else: # if data len is less than the wait data
-            port.reset_input_buffer() # reset the buffer if no read
-            count_err += 1
-            print('XX'*10 + f" {count_err} Header_Vap_collect error at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
-    except Exception as e:
-        print('XX'*10 + f" {count_err} Header_Vap_collect error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
-    finally:
-        return count_err
+                collect_err += 1
+                print('XX'*10 + f" {collect_err} Header_collect error at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+        except Exception as e:
+            print('XX'*10 + f" {collect_err} Header_collect error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+        finally:
+            count_err[0] += collect_err
+
+    else:
+        set_err = 0
+        try: # try to set value 
+            port.write(bytes.fromhex(slave.rtu[0])) #hex to binary(byte)
+            time.sleep(config.time_out)
+            if port.inWaiting() >= 8: 
+                readings = port.read(wait_data).hex() # after reading, the buffer will be clean
+                crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
+                # check sta, func code, datalen, crc
+                if (readings[0:2] == slave.id) and (readings[2:4] == '06') and ((crc[-2:] + crc[:2]) == readings[-4:]):
+                    print('Header_set done')
+                else:
+                    port.reset_input_buffer() # reset the buffer if no read
+                    set_err += 1
+                    print('XX'*10 + f" {set_err} Header_set error at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
+            else: # if data len is less than the wait data
+                port.reset_input_buffer() # reset the buffer if no read
+                set_err += 1
+                print('XX'*10 + f" {set_err} Header_set error at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+        except Exception as e:
+            print('XX'*10 + f" {set_err} Header_set error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+        finally:
+            count_err[1] += set_err
+            
+    return count_err
     #port.close()
     #print('kill GA_data_collect')
     #print(f'Final GA_data_collect: {count_err} errors occured')

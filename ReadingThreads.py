@@ -119,7 +119,7 @@ lst_thread.append(Adam_data_analyze)
 
 ## RS232
 def RS232_data_collect(port):
-    count_err = 0
+    count_err = [0,0] # [collect_err, set_err]
     while not config.kb_event.isSet():
         count_err = Modbus.GA_data_comm(start, port, GA_slave, 31, count_err)
         #Modbus.MFC_data_comm(start, port, MFC_slave, 49)
