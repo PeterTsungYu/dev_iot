@@ -1,10 +1,14 @@
+#python packages
 import threading
 import signal
+
+#custom modules
 
 #-------------------------Global var--------------------------------------
 time_out = 1 # for collecting data
 sample_time = 2 # for analyzing data
 sample_time_DFM = 60
+
 
 # count down events
 ticker = threading.Event() # for analyzing data
@@ -29,8 +33,5 @@ def terminate(event): # ask user input to stop the program
         event.set()
 
 
-#-------------------------MQTT--------------------------------------
-topic_ADAM_TC = [
-    "/rpi/Reformer_TC_07", "/rpi/Reformer_TC_08", "/rpi/Reformer_TC_09", "/rpi/Reformer_TC_10",
-    "/rpi/Reformer_TC_11", "/rpi/Reformer_TC_12", "/rpi/Reformer_TC_13", "/rpi/Reformer_TC_14"]
+
 

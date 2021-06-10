@@ -1,12 +1,15 @@
 # %%
+# python packages
 import serial
 import RPi.GPIO as GPIO
 import numpy as np
 import time
 from datetime import datetime
-import Modbus
 import threading
 import re
+
+# custome modules
+import Modbus
 import config
 
 print('Import: succeed')

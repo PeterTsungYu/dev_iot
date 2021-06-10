@@ -2,40 +2,18 @@
 # pip3 install numpy 
 ## for numpy, also do this: sudo apt-get install libatlas-base-dev
 # pip3 install pyserial
-# pip3 install paho-mqtt
 
+#python packages
 from crccheck.crc import Crc16Modbus
 import numpy as np
 import serial
 import time
 import re
-import paho.mqtt.client as mqtt
 import random
+
+#custom modules
 import config
-
-#-------------------------MQTT--------------------------------------
-def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60):
-    def on_connect(client, userdata, flags, rc):
-        if rc == 0:
-            print(f"{client_id} Connected to MQTT!")
-        else:
-            print(f"{client_id} Failed to connect, return code %d\n", rc)
-        
-        # Subscribing in on_connect() means that if we lose the connection and
-        # reconnect then subscriptions will be renewed.
-        client.subscribe("nodered", qos=0)
-        client.subscribe([("TCHeader/SV0", 0), ("TCHeader/SV1", 0)])
-
-    # The callback for when a PUBLISH message is received from the server.
-    def on_message(client, userdata, msg):
-        print(msg.topic+" "+str(msg.payload))
-
-    client = mqtt.Client(client_id=client_id, clean_session=True)
-    # client.username_pw_set(username, password)
-    client.on_connect = on_connect
-    client.on_message = on_message
-    client.connect_async(hostname, port, keepalive)
-    return client
+import MQTT_config
 
 #-------------------------RTU & Slave--------------------------------------
 class RTU: # generate the CRC for the complete RTU 
@@ -298,6 +276,8 @@ def GA_data_comm(start, port, slave, wait_data, count_err):
 def TCHeader_comm(start, port, slave, wait_data, count_err):
     #start = time.time()
     #while not config.kb_event.isSet(): # it is written in the ReadingThreads.py
+        #if not MQTT_config.sub_SV0_event.isSet(): # it is written in the ReadingThreads.py
+        #else (set TCHeader)
     try:
         slave.time_readings.append(time.time()-start)
         port.write(bytes.fromhex(slave.rtu[0])) #hex to binary(byte) 
