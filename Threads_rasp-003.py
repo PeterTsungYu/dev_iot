@@ -1,6 +1,5 @@
 # %%
 # python packages
-import serial
 import RPi.GPIO as GPIO
 import numpy as np
 import time
@@ -11,39 +10,20 @@ import re
 # custome modules
 import Modbus
 import config
+import MQTT_config
 
 print('Import: succeed')
 
-#-----------------Serial port setting------------------------------
-# (Optional) Set the USB devices to have a default name
-RS232_Header_Vap_port_path = '/dev/ttyUSB0'
-RS232_pump_port_path = '/dev/ttyUSB'
+
+#-----port and slave setting----------------------------------------------------------------
 lst_port = []
+lst_port.append(config.RS485_TCHeader_1_port)
 
-## device ID
-Header_Vap_id = '01'
-Pump_id = ''
+# TCHeader Rreading, RTU func code 03, PV value site at '008A', data_len is 1 ('0001')
+TCHeader_1_RTU_R = Modbus.RTU(config.TCHeader_1_id, '03', '008A', '0001')
+TCHeader_1_slave = Modbus.Slave(config.TCHeader_1_id, TCHeader_1_RTU_R.rtu,) # list[0]:read, list[1]:write
 
-#-----------------Serial port instances------------------------------
-## RS232
-### set the baudrate of Header_Vap to 19200 
-### set the baudrate of Pump to 19200
-RS232_Header_Vap_port = serial.Serial(
-    port=RS232_Header_Vap_port_path,
-    baudrate=115200, 
-    bytesize=8, 
-    stopbits=1, 
-    parity='N'
-    )
-lst_port.append(RS232_Header_Vap_port)
-# Header Rreading, RTU func code 03, PV value site at '008A', data_len is 1 ('0001')
-Header_Vap_RTU_R = Modbus.RTU(Header_Vap_id, '03', '008A', '0001')
-# Header Writing, RTU func code 06, SV value site at '0000'
-Header_Vap_SV = '0000'  # setting Header value in hex
-Header_Vap_RTU_W = Modbus.RTU(Header_Vap_id, '06', '0000', Header_Vap_SV) #md: subscription value and rtu
-Header_Vap_slave = Modbus.Slave(Header_Vap_id, [Header_Vap_RTU_R.rtu, Header_Vap_RTU_W.rtu]) # list[0]:read, list[1]:write
-
-#print(Header_Vap_slave.rtu)
+#print(TCHeader_1_slave.rtu)
 print('Port setting: succeed')
 
 #-----RPi Server_DB setting----------------------------------------------------------------
@@ -58,11 +38,16 @@ print('=='*30)
 start = time.time()
 
 lst_thread = []
-## RS232
-def RS232_data_collect(port):
-    TCHeader_count_err = [0,0] # [collect_err, set_err]
+## RS485
+def RS485_data_collect(port):
+    TCHeader_0_count_err = [0,0] # [collect_err, set_err]
+    TCHeader_1_count_err = [0,0] # [collect_err, set_err]
     while not config.kb_event.isSet():
-        TCHeader_count_err = Modbus.TCHeader_comm(start, port, Header_Vap_slave, 7, TCHeader_count_err) # wait for 7 bytes
+        TCHeader_count_err = Modbus.TCHeader_comm(
+            start, port, TCHeader_1_slave, 7, TCHeader_1_count_err, 
+            MQTT_config.sub_SV1_event,
+            MQTT_config.sub_SV1,
+            ) # wait for 7 bytes
         #Modbus.MFC_data_collect(start, port, MFC_slave, 49)
     port.close()
     print('kill TCHeader_comm')
@@ -70,13 +55,13 @@ def RS232_data_collect(port):
     #print('kill MFC_data_collect')
     #Modbus.barrier_kill.wait()
 
-RS232_data_collect = threading.Thread(
-    target=RS232_data_collect, 
-    args=(RS232_Header_Vap_port,)
+RS485_data_collect = threading.Thread(
+    target=RS485_data_collect, 
+    args=(config.RS485_TCHeader_1_port,)
     )
-Header_Vap_analyze = threading.Thread(
+TCHeader_1_analyze = threading.Thread(
     target=Modbus.TCHeader_analyze, 
-    args=(start, Header_Vap_slave, RPi_Server,),
+    args=(start, TCHeader_1_slave, RPi_Server,),
     )
 '''
 MFC_data_analyze = threading.Thread(
@@ -84,8 +69,8 @@ MFC_data_analyze = threading.Thread(
     args=(start, MFC_slave, RPi_Server,),
     )
 '''
-lst_thread.append(RS232_data_collect)
-lst_thread.append(Header_Vap_analyze)
+lst_thread.append(RS485_data_collect)
+lst_thread.append(TCHeader_1_analyze)
 #lst_thread.append(MFC_data_analyze)
 
 #-------------------------Open ports--------------------------------------
@@ -134,6 +119,6 @@ finally:
     #GPIO.cleanup()
     print(f"Program duration: {time.time() - start}")
     print('kill main thread')
-    print(Header_Vap_slave.readings)
+    print(TCHeader_1_slave.readings)
     exit()
 

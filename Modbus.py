@@ -106,6 +106,14 @@ def run_server(context, port, timeout=1, baudrate=115200, stopbits=1, bytesize=8
 '''
 
 #------------------------------Collect and Analyze func---------------------------------
+def tohex(value):
+    value = int(value)
+    hex_value = hex(value)[2:]
+    add_zeros = 4 - len(hex_value)
+    hex_value = add_zeros * '0' + hex_value
+    return hex_value
+
+
 def RPiserver(start, port, slave, wait_data):
     while not config.kb_event.isSet():
         try:
@@ -273,14 +281,14 @@ def GA_data_comm(start, port, slave, wait_data, count_err):
     ##barrier_kill.wait()
 
 
-def TCHeader_comm(start, port, slave, wait_data, count_err):
+def TCHeader_comm(start, port, slave, wait_data, count_err, write_event, write_value):
     #start = time.time()
     #while not config.kb_event.isSet(): # it is written in the ReadingThreads.py
-    if not MQTT_config.sub_SV0_event.isSet():
+    if not write_event.isSet():
         collect_err = 0
         try: # try to collect
             slave.time_readings.append(time.time()-start)
-            port.write(bytes.fromhex(slave.rtu[0])) #hex to binary(byte) 
+            port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
 
             time.sleep(config.time_out)
 
@@ -294,43 +302,52 @@ def TCHeader_comm(start, port, slave, wait_data, count_err):
                 # check sta, func code, datalen, crc
                 if (readings[0:2] == slave.id) and (readings[2:4] == '03') and ((crc[-2:] + crc[:2]) == readings[-4:]):
                     slave.lst_readings.append(readings)
-                    print('Header_collect done')
+                    print('TCHeader_collect done')
                 else:
                     port.reset_input_buffer() # reset the buffer if no read
                     collect_err += 1
-                    print('XX'*10 + f" {collect_err} Header_collect error at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
+                    print('XX'*10 + f" {collect_err} TCHeader_collect error at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
             else: # if data len is less than the wait data
                 port.reset_input_buffer() # reset the buffer if no read
                 collect_err += 1
-                print('XX'*10 + f" {collect_err} Header_collect error at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+                print('XX'*10 + f" {collect_err} TCHeader_collect error at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
         except Exception as e:
-            print('XX'*10 + f" {collect_err} Header_collect error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            print('XX'*10 + f" {collect_err} TCHeader_collect error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
             count_err[0] += collect_err
 
     else:
         set_err = 0
-        try: # try to set value 
-            port.write(bytes.fromhex(slave.rtu[1])) #hex to binary(byte) #md: subscription value and rtu
+        try: # try to set value
+            print(write_value)
+            # TCHeader Writing, RTU func code 06, SV value site at '0000'
+            TCHeader_1_SV = tohex(write_value*10)  # setting TCHeader value in hex
+            print(TCHeader_1_SV)
+            TCHeader_1_RTU_W = RTU('01', '06', '0000', TCHeader_1_SV) #md: subscription value and rtu 
+            print(TCHeader_1_RTU_W.rtu)
+
+            port.write(bytes.fromhex(TCHeader_1_RTU_W.rtu)) #hex to binary(byte) #md: subscription value and rtu
             time.sleep(config.time_out)
             if port.inWaiting() >= 8: 
-                readings = port.read(wait_data).hex() # after reading, the buffer will be clean
+                readings = port.read(8).hex() # after reading, the buffer will be clean
+                print(readings)
                 crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
                 # check sta, func code, datalen, crc
                 if (readings[0:2] == slave.id) and (readings[2:4] == '06') and ((crc[-2:] + crc[:2]) == readings[-4:]):
-                    print('Header_set done')
+                    print('TCHeader_set done')
                 else:
                     port.reset_input_buffer() # reset the buffer if no read
                     set_err += 1
-                    print('XX'*10 + f" {set_err} Header_set error at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
+                    print('XX'*10 + f" {set_err} TCHeader_set error at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
             else: # if data len is less than the wait data
                 port.reset_input_buffer() # reset the buffer if no read
                 set_err += 1
-                print('XX'*10 + f" {set_err} Header_set error at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+                print('XX'*10 + f" {set_err} TCHeader_set error at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
         except Exception as e:
-            print('XX'*10 + f" {set_err} Header_set error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            print('XX'*10 + f" {set_err} TCHeader_set error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
             count_err[1] += set_err
+            write_event.clear()
             
     return count_err
     #port.close()
@@ -620,14 +637,14 @@ def TCHeader_analyze(start, slave, server_DB):
                 ## to slave data list
                 slave.readings.append(readings)
                 ## to server database
-                ## 0x17:1f:Header_Vap_TC
+                ## 0x17:1f:TCHeader_1_TC
                 server_DB.readings[17] = [int(i*10) for i in readings[1:]]
                 #server_DB[0x06].setValues(fx=3, address=0x01, values=[int(i*10) for i in readings[1:]])
-                print(f'Header_Vap_analyze done: {readings}')
+                print(f'TCHeader_1_analyze done: {readings}')
                 #barrier_analyze.wait()
             except Exception as e:
                 count_err += 1
-                print('XX'*10 + f" {count_err} Header_Vap_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
+                print('XX'*10 + f" {count_err} TCHeader_1_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
             finally:
                 pass
                 '''
@@ -644,6 +661,6 @@ def TCHeader_analyze(start, slave, server_DB):
                     print(f'GA_data_cast done')
                 '''
 
-    print('kill Header_Vap_analyze')
-    print(f'Final Header_Vap_analyze: {count_err} errors occured')
+    print('kill TCHeader_1_analyze')
+    print(f'Final TCHeader_1_analyze: {count_err} errors occured')
     #barrier_kill.wait()

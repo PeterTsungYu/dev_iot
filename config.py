@@ -1,6 +1,7 @@
 #python packages
 import threading
 import signal
+import serial
 
 #custom modules
 
@@ -18,7 +19,31 @@ ticker = threading.Event() # for analyzing data
 #barrier_cast = threading.Barrier(4) # Adam_data_analyze, Scale_data_analyze, GA_data_analyze, Main thread
 #barrier_kill = threading.Barrier(9) # all threads
 
+#-----------------Serial port setting------------------------------
+# (Optional) Set the USB devices to have a default name
+RS485_TCHeader_1_port_path = '/dev/ttyUSB0'
+RS485_pump_port_path = '/dev/ttyUSB'
 
+
+## device ID
+TCHeader_1_id = '01'
+Pump_id = ''
+
+
+#-----------------Serial port instances------------------------------
+## RS485
+### set the baudrate of TCHeader_1 to 19200 
+### set the baudrate of Pump to 19200
+RS485_TCHeader_1_port = serial.Serial(
+    port=RS485_TCHeader_1_port_path,
+    baudrate=115200, 
+    bytesize=8, 
+    stopbits=1, 
+    parity='N'
+    )
+
+
+#-----------------Interrupt events------------------------------
 # Keyboard interrupt event to kill all the threads (Ctr + C)
 kb_event = threading.Event()
 def signal_handler(signum, frame):
