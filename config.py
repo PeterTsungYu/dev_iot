@@ -6,8 +6,8 @@ import serial
 #custom modules
 
 #-------------------------Global var--------------------------------------
-time_out = 1 # for collecting data
-sample_time = 2 # for analyzing data
+time_out = 0.1 # for collecting data
+sample_time = 1 # for analyzing data
 sample_time_DFM = 60
 
 
@@ -21,21 +21,21 @@ ticker = threading.Event() # for analyzing data
 
 #-----------------Serial port setting------------------------------
 # (Optional) Set the USB devices to have a default name
-RS485_TCHeader_1_port_path = '/dev/ttyUSB0'
-RS485_pump_port_path = '/dev/ttyUSB'
+RS485_port_path = '/dev/ttyUSB0'
+#_port_path = '/dev/ttyUSB'
 
 
 ## device ID
+TCHeader_0_id = '00'
 TCHeader_1_id = '01'
-Pump_id = ''
 
 
 #-----------------Serial port instances------------------------------
 ## RS485
 ### set the baudrate of TCHeader_1 to 19200 
 ### set the baudrate of Pump to 19200
-RS485_TCHeader_1_port = serial.Serial(
-    port=RS485_TCHeader_1_port_path,
+RS485_port = serial.Serial(
+    port=RS485_port_path,
     baudrate=115200, 
     bytesize=8, 
     stopbits=1, 

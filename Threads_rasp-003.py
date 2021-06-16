@@ -17,11 +17,14 @@ print('Import: succeed')
 
 #-----port and slave setting----------------------------------------------------------------
 lst_port = []
-lst_port.append(config.RS485_TCHeader_1_port)
+lst_port.append(config.RS485_port)
 
 # TCHeader Rreading, RTU func code 03, PV value site at '008A', data_len is 1 ('0001')
+TCHeader_0_RTU_R = Modbus.RTU(config.TCHeader_0_id, '03', '008A', '0001')
+TCHeader_0_slave = Modbus.Slave(config.TCHeader_0_id, TCHeader_0_RTU_R.rtu,)
+
 TCHeader_1_RTU_R = Modbus.RTU(config.TCHeader_1_id, '03', '008A', '0001')
-TCHeader_1_slave = Modbus.Slave(config.TCHeader_1_id, TCHeader_1_RTU_R.rtu,) # list[0]:read, list[1]:write
+TCHeader_1_slave = Modbus.Slave(config.TCHeader_1_id, TCHeader_1_RTU_R.rtu,)
 
 #print(TCHeader_1_slave.rtu)
 print('Port setting: succeed')
@@ -37,41 +40,48 @@ print(f'Execution time is {timeit}')
 print('=='*30)
 start = time.time()
 
-lst_thread = []
+
+TCHeader_0_count_err = [0,0] # [collect_err, set_err] #todo: make it global and in a class
+TCHeader_1_count_err = [0,0] # [collect_err, set_err]
 ## RS485
 def RS485_data_collect(port):
-    TCHeader_0_count_err = [0,0] # [collect_err, set_err]
-    TCHeader_1_count_err = [0,0] # [collect_err, set_err]
+    global TCHeader_0_count_err, TCHeader_1_count_err
     while not config.kb_event.isSet():
-        TCHeader_count_err = Modbus.TCHeader_comm(
+        TCHeader_0_count_err = Modbus.TCHeader_comm(
+            start, port, TCHeader_0_slave, 7, TCHeader_0_count_err, 
+            MQTT_config.sub_SV0_event,
+            MQTT_config.sub_SV0,
+            ) # wait for 7 bytes
+        #print(TCHeader_0_count_err)
+        TCHeader_1_count_err = Modbus.TCHeader_comm(
             start, port, TCHeader_1_slave, 7, TCHeader_1_count_err, 
             MQTT_config.sub_SV1_event,
             MQTT_config.sub_SV1,
             ) # wait for 7 bytes
-        #Modbus.MFC_data_collect(start, port, MFC_slave, 49)
+        #print(TCHeader_1_count_err)
     port.close()
     print('kill TCHeader_comm')
-    print(f'Final TCHeader_comm: {TCHeader_count_err} errors occured')
+    print(f'Final TCHeader_comm: {TCHeader_0_count_err} and {TCHeader_1_count_err} errors occured')
     #print('kill MFC_data_collect')
     #Modbus.barrier_kill.wait()
 
 RS485_data_collect = threading.Thread(
     target=RS485_data_collect, 
-    args=(config.RS485_TCHeader_1_port,)
+    args=(config.RS485_port,)
+    )
+TCHeader_0_analyze = threading.Thread(
+    target=Modbus.TCHeader_analyze, 
+    args=(start, TCHeader_0_slave, RPi_Server,),
     )
 TCHeader_1_analyze = threading.Thread(
     target=Modbus.TCHeader_analyze, 
     args=(start, TCHeader_1_slave, RPi_Server,),
     )
-'''
-MFC_data_analyze = threading.Thread(
-    target=Modbus.MFC_data_analyze, 
-    args=(start, MFC_slave, RPi_Server,),
-    )
-'''
+
+lst_thread = []
 lst_thread.append(RS485_data_collect)
+lst_thread.append(TCHeader_0_analyze)
 lst_thread.append(TCHeader_1_analyze)
-#lst_thread.append(MFC_data_analyze)
 
 #-------------------------Open ports--------------------------------------
 try:
@@ -119,6 +129,7 @@ finally:
     #GPIO.cleanup()
     print(f"Program duration: {time.time() - start}")
     print('kill main thread')
+    print(TCHeader_0_slave.readings)
     print(TCHeader_1_slave.readings)
     exit()
 
