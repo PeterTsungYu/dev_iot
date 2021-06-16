@@ -49,14 +49,14 @@ def RS485_data_collect(port):
     while not config.kb_event.isSet():
         TCHeader_0_count_err = Modbus.TCHeader_comm(
             start, port, TCHeader_0_slave, 7, TCHeader_0_count_err, 
-            MQTT_config.sub_SV0_event,
-            MQTT_config.sub_SV0,
+            MQTT_config.sub_Topics['TCHeader/SV0']['event'], #todo: config a general slave class
+            MQTT_config.sub_Topics['TCHeader/SV0']['value'], 
             ) # wait for 7 bytes
         #print(TCHeader_0_count_err)
         TCHeader_1_count_err = Modbus.TCHeader_comm(
             start, port, TCHeader_1_slave, 7, TCHeader_1_count_err, 
-            MQTT_config.sub_SV1_event,
-            MQTT_config.sub_SV1,
+            MQTT_config.sub_Topics['TCHeader/SV1']['event'], #todo: config a general slave class
+            MQTT_config.sub_Topics['TCHeader/SV1']['value'],
             ) # wait for 7 bytes
         #print(TCHeader_1_count_err)
     port.close()
@@ -131,5 +131,6 @@ finally:
     print('kill main thread')
     print(TCHeader_0_slave.readings)
     print(TCHeader_1_slave.readings)
+    print(RPi_Server.readings)
     exit()
 
