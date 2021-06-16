@@ -1,12 +1,22 @@
 # pip3 install paho-mqtt
+
+#python packages
 import paho.mqtt.client as mqtt
 import threading
-import time 
+#import time 
 
-#-------------------------MQTT var--------------------------------------
+#custom modules
+import config
+
+#-------------------------MQTT sub/pub--------------------------------------
 sub_Topics = {
     'TCHeader/SV0':{'value':0, 'event':threading.Event()},
     'TCHeader/SV1':{'value':0, 'event':threading.Event()},
+}
+
+pub_Topics = {
+    'TCHeader/PV0':0,
+    'TCHeader/PV1':10,
 }
 
 #-------------------------MQTT func--------------------------------------
@@ -32,31 +42,32 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
             sub_Topics[msg.topic]['value'] = float(msg.payload)
             sub_Topics[msg.topic]['event'].set()
         
-        """ if msg.topic == "TCHeader/SV0":
-            globals()[sub[sub.index('sub_SV0')]] = float(msg.payload)
-            #print(type(globals()[sub]))
-            globals()[sub_event[sub_event.index('sub_SV0_event')]].set()
-        elif msg.topic == "TCHeader/SV1":
-            globals()[sub[sub.index('sub_SV1')]] = float(msg.payload)
-            globals()[sub_event[sub_event.index('sub_SV1_event')]].set() """
-
+    def on_publish(client, userdata, mid):
+        print(mid)
 
     client = mqtt.Client(client_id=client_id, clean_session=True)
     # client.username_pw_set(username, password)
     client.on_connect = on_connect
     client.on_message = on_message
+    #client.on_publish = on_publish
     client.connect_async(hostname, port, keepalive)
     return client
 
+
+def multi_pub(client):
+    #global pub_Topics
+    while not config.kb_event.isSet():
+        if not config.ticker.wait(config.sample_time):
+            for key, value in pub_Topics.items():
+                client.publish(topic=key, payload=value, qos=0, retain=True)
 
 #-------------------------MQTT instance--------------------------------------
 client_0 = connect_mqtt(
     client_id='client0', hostname='localhost', port=1883, keepalive=60,) 
 client_0.loop_start()
 
-
-#for testing MQTT
-""" while True:
-    print(sub_SV0, sub_SV1)
-    print(sub_SV0_event.isSet(), sub_SV1_event.isSet())
-    time.sleep(2) """
+multi_pub = threading.Thread(
+    target=multi_pub,
+    args=(client_0,),
+    )
+multi_pub.start()

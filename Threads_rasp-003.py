@@ -71,11 +71,11 @@ RS485_data_collect = threading.Thread(
     )
 TCHeader_0_analyze = threading.Thread(
     target=Modbus.TCHeader_analyze, 
-    args=(start, TCHeader_0_slave, RPi_Server,),
+    args=(start, TCHeader_0_slave, RPi_Server, 'TCHeader/PV0',),
     )
 TCHeader_1_analyze = threading.Thread(
     target=Modbus.TCHeader_analyze, 
-    args=(start, TCHeader_1_slave, RPi_Server,),
+    args=(start, TCHeader_1_slave, RPi_Server, 'TCHeader/PV1',),
     )
 
 lst_thread = []

@@ -615,7 +615,7 @@ def MFC_data_analyze(start, slave, server_DB):
     #barrier_kill.wait()
 
 
-def TCHeader_analyze(start, slave, server_DB):
+def TCHeader_analyze(start, slave, server_DB, pub_Topic):
     count_err = 0
     while not config.kb_event.isSet():
         if not config.ticker.wait(config.sample_time):
@@ -636,7 +636,8 @@ def TCHeader_analyze(start, slave, server_DB):
                     readings = tuple([round(time_readings,2)]) + lst_readings
                     #print(slave.id, readings)
 
-                    # casting 
+                    # casting
+                    MQTT_config.pub_Topics[pub_Topic] = readings[-1]
                     ## to slave data list
                     slave.readings.append(readings)
                     ## to server database
