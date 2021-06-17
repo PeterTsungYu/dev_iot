@@ -2,7 +2,7 @@
 import serial
 import numpy as np
 import time
-import Modbus
+#import Modbus
 import threading
 import signal
 import re
@@ -12,7 +12,7 @@ print('Import: succeed')
 # %%
 #-----------------Master(RPi) setting------------------------------
 ser = serial.Serial()
-ser.port = "/dev/ttyUSB0"
+ser.port = "/dev/ttyUSB1"
 
 # According to Adam module spec...60 Hz, O_81
 ser.baudrate = 9600
@@ -23,7 +23,15 @@ ser.parity = serial.PARITY_NONE #set parity check
 #ser.writeTimeout = 0.5     #timeout for write 0.5s
 #------------------------------------------------------------------
 #-----------------ModBus------------------------------
-slave_Scale = Modbus.Slave()
+class Slave: # Create Slave data store 
+    def __init__(self, idno='', rtu=''):
+        self.id = idno # id number of slave
+        self.rtu = rtu # str or a list. list[0]:read, list[1]:write 
+        self.lst_readings = [] # record readings
+        self.time_readings = 0 # record time
+        self.readings = [] # for all data 
+
+slave_Scale = Slave()
 print('Generate Slaves: succeed')
 #------------------------------------------------------------------
 # %%
@@ -31,6 +39,7 @@ def data_collect(port, slave, start, time_out, wait_data):
     #while True:
     try:
         time.sleep(time_out) # wait for the data input to the buffer
+        print(port.inWaiting())
         if port.inWaiting():
             #print(port.inWaiting())
             readings = port.read(port.inWaiting()).decode('utf-8')

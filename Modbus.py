@@ -191,22 +191,19 @@ def Scale_data_collect(start, port, slave, wait_data):
     count_err = 0
     while not config.kb_event.isSet():
         try:
-            slave.time_readings.append(round(time.time()-start, 2))
+            slave.time_readings = time.time()-start
             time.sleep(config.time_out) # wait for the data input to the buffer
             if port.inWaiting() > wait_data:
-                '''
-                check sta, func code, datalen, crc
-                ''' 
                 readings = port.read(port.inWaiting()).decode('utf-8')
                 readings = [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ \-][ .\d]{7}', readings)]
                 slave.lst_readings.append(readings)
-                print('Scale_data_collect done')
+                print(f'Scale_data_collect done: read from slave_{slave.id}')
                 port.reset_input_buffer() # reset the buffer after each reading process
             else: # if data len is no data
                 count_err += 1
-                print('XX'*10 + f" {count_err} Scale_data_collect error at {round((time.time()-start),2)}s: data len is no data" + 'XX'*10)
+                print('XX'*10 + f"Scale_data_collect error: from slave_{slave.id}, err_{count_err} at {round((time.time()-start),2)}s: data len is no data" + 'XX'*10)
         except Exception as e:
-            print('XX'*10 + f" {count_err} Scale_data_collect error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            print('XX'*10 + f"Scale_data_collect error: err_{count_err} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
             pass
 
@@ -464,50 +461,51 @@ def DFM_data_analyze(start, slave, server_DB):
     #barrier_kill.wait()
 
 
-def Scale_data_analyze(start, slave, server_DB):
+def Scale_data_analyze(start, slave, pub_Topic):
     count_err = 0
-    while not config.kb_event.isSet():
-        if not config.ticker.wait(config.sample_time):
-            lst_readings = slave.lst_readings
-            time_readings = slave.time_readings
-            #print(f'Scale_data_analyze: {lst_readings}')
-            slave.lst_readings = []
-            slave.time_readings = []
-            try:
+    while (not config.kb_event.isSet()) and (not config.ticker.wait(config.sample_time_Scale)):
+        lst_readings = slave.lst_readings
+        time_readings = slave.time_readings
+        #print(f'Scale_data_analyze: {lst_readings}')
+        slave.lst_readings = []
+        try:
+            if len(lst_readings) > 0:
+                #print(len(lst_readings))
                 lst_readings = [sum(i)/len(i) for i in lst_readings] # average for 1s' data
-                lst_readings = round(sum(lst_readings) / len(lst_readings), 3) # average for 1min's data
-                readings = tuple([round(time_readings[-1], 2), lst_readings])
+                lst_readings = round((lst_readings[-1] - lst_readings[0]) / config.sample_time_Scale, 3) # average for 1min's data
+                readings = tuple([round(time_readings, 2), lst_readings])
                 
                 # casting
-                #slave.readings.append(readings)
-                # 0x07:1f:Weight
-                server_DB.readings[7] = int(readings[-1]*1000)
-                #server_DB[0x06].setValues(fx=3, address=0x07, values=[int(readings[-1]*10)])
-                print(f'Scale_data_analyze done: {readings}')
+                MQTT_config.pub_Topics[pub_Topic] = readings[-1]
+                ## to slave data list
+                slave.readings.append(readings)
+                print(f'Scale_data_analyze done: record {readings} from slave_{slave.id}')
                 #barrier_analyze.wait()
-            except Exception as e:
-                count_err += 1
-                print('XX'*10 + f" {count_err} Scale_data_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
-            finally:
+            else:
+                print(f'Scale_data_analyze done: record () from slave_{slave.id}')
+        except Exception as e:
+            count_err += 1
+            print('XX'*10 + f" Scale_data_analyze error: from slave_{slave.id}, err_{count_err} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
+        finally:
+            pass
+            '''
+            try:
+                #barrier_cast.wait()
+                
+                conn.execute(
+                    "INSERT INTO Scale(Time, Weight) VALUES (?,?);", 
+                    readings
+                    )
+                
                 pass
-                '''
-                try:
-                    #barrier_cast.wait()
-                    
-                    conn.execute(
-                        "INSERT INTO Scale(Time, Weight) VALUES (?,?);", 
-                        readings
-                        )
-                    
-                    pass
-                except Exception as e8_1:
-                    print ("Scale_data_cast error: " + str(e8_1))
-                finally:
-                    print(f'Scale_data_cast done')
-                '''
+            except Exception as e8_1:
+                print ("Scale_data_cast error: " + str(e8_1))
+            finally:
+                print(f'Scale_data_cast done')
+            '''
 
-    print('kill Scale_data_analyze')
-    print(f'Final Scale_data_analyze: {count_err} errors occured')
+    print(f'kill Scale_data_analyze of slave_{slave.id}')
+    print(f'Final Scale_data_analyze: from slave_{slave.id}, {count_err} errors occured')
     #barrier_kill.wait()
 
 
@@ -617,51 +615,50 @@ def MFC_data_analyze(start, slave, server_DB):
 
 def TCHeader_analyze(start, slave, pub_Topic):
     count_err = 0
-    while not config.kb_event.isSet():
-        if not config.ticker.wait(config.sample_time):
-            #print(slave.id, slave.time_readings, slave.lst_readings)
-            lst_readings = slave.lst_readings
-            time_readings = slave.time_readings
-            #print(slave.id, lst_readings)
-            slave.lst_readings = []
-            try:
-                if len(lst_readings) > 0:
-                    arr_readings = np.array(
-                        [int(readings[-8:-4],16)/10 # convert from hex to dec 
-                        for readings in lst_readings]
-                        )
-                    #print(slave.id, arr_readings)
-                    #print(slave.id, time_readings)
-                    lst_readings = tuple([np.round(np.sum(arr_readings) / len(lst_readings), 1)])
-                    readings = tuple([round(time_readings,2)]) + lst_readings
-                    #print(slave.id, readings)
+    while (not config.kb_event.isSet()) and (not config.ticker.wait(config.sample_time)):
+        #print(slave.id, slave.time_readings, slave.lst_readings)
+        lst_readings = slave.lst_readings
+        time_readings = slave.time_readings
+        #print(slave.id, lst_readings)
+        slave.lst_readings = []
+        try:
+            if len(lst_readings) > 0:
+                arr_readings = np.array(
+                    [int(readings[-8:-4],16)/10 # convert from hex to dec 
+                    for readings in lst_readings]
+                    )
+                #print(slave.id, arr_readings)
+                #print(slave.id, time_readings)
+                lst_readings = tuple([np.round(np.sum(arr_readings) / len(lst_readings), 1)])
+                readings = tuple([round(time_readings,2)]) + lst_readings
+                #print(slave.id, readings)
 
-                    # casting
-                    MQTT_config.pub_Topics[pub_Topic] = readings[-1]
-                    ## to slave data list
-                    slave.readings.append(readings)
-                    print(f'TCHeader_analyze done: record {readings} from slave_{slave.id}')
-                    #barrier_analyze.wait()
-                else:
-                    print(f'TCHeader_analyze done: record () from slave_{slave.id}')
-            except Exception as e:
-                count_err += 1
-                print('XX'*10 + f"TCHeader_analyze error: from slave_{slave.id}, err_{count_err} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
-            finally:
+                # casting
+                MQTT_config.pub_Topics[pub_Topic] = readings[-1]
+                ## to slave data list
+                slave.readings.append(readings)
+                print(f'TCHeader_analyze done: record {readings} from slave_{slave.id}')
+                #barrier_analyze.wait()
+            else:
+                print(f'TCHeader_analyze done: record () from slave_{slave.id}')
+        except Exception as e:
+            count_err += 1
+            print('XX'*10 + f"TCHeader_analyze error: from slave_{slave.id}, err_{count_err} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
+        finally:
+            pass
+            '''
+            try:
+                #barrier_cast.wait()
+                conn.execute(
+                    "INSERT INTO GA(Time, CO, CO2, CH4, H2, N2, HEAT) VALUES (?,?,?,?,?,?,?);", 
+                    readings
+                    )
                 pass
-                '''
-                try:
-                    #barrier_cast.wait()
-                    conn.execute(
-                        "INSERT INTO GA(Time, CO, CO2, CH4, H2, N2, HEAT) VALUES (?,?,?,?,?,?,?);", 
-                        readings
-                        )
-                    pass
-                except Exception as e9_1:
-                    print ("GA_data_cast error: " + str(e9_1))
-                finally:
-                    print(f'GA_data_cast done')
-                '''
+            except Exception as e9_1:
+                print ("GA_data_cast error: " + str(e9_1))
+            finally:
+                print(f'GA_data_cast done')
+            '''
 
     print(f'kill TCHeader_analyze of slave_{slave.id}')
     print(f'Final TCHeader_analyze: from slave_{slave.id}, {count_err} errors occured')
