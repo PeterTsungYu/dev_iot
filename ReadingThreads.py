@@ -1,12 +1,16 @@
 # %%
+# python packages
 import serial
 import RPi.GPIO as GPIO
 import numpy as np
 import time
 from datetime import datetime
-import Modbus
 import threading
 import re
+
+# custome modules
+import Modbus
+import config
 
 print('Import: succeed')
 
@@ -115,14 +119,14 @@ lst_thread.append(Adam_data_analyze)
 
 ## RS232
 def RS232_data_collect(port):
-    count_err = 0
-    while not Modbus.kb_event.isSet():
-        count_err = Modbus.GA_data_collect(start, port, GA_slave, 31, count_err)
-        #Modbus.MFC_data_collect(start, port, MFC_slave, 49)
+    count_err = [0,0] # [collect_err, set_err]
+    while not config.kb_event.isSet():
+        count_err = Modbus.GA_data_comm(start, port, GA_slave, 31, count_err)
+        #Modbus.MFC_data_comm(start, port, MFC_slave, 49)
     port.close()
-    print('kill GA_data_collect')
-    print(f'Final GA_data_collect: {count_err} errors occured')
-    #print('kill MFC_data_collect')
+    print('kill GA_data_comm')
+    print(f'Final GA_data_comm: {count_err} errors occured')
+    #print('kill MFC_data_comm')
     #Modbus.barrier_kill.wait()
 
 RS232_data_collect = threading.Thread(
@@ -208,8 +212,8 @@ GPIO.add_event_detect(channel_DFM, GPIO.RISING, callback=DFM_data_collect)
 
 #-------------------------Main Threadingggg-----------------------------------------
 try:
-    while not Modbus.kb_event.isSet():
-        if not Modbus.ticker.wait(Modbus.sample_time):
+    while not config.kb_event.isSet():
+        if not config.ticker.wait(config.sample_time):
         #Modbus.barrier_analyze.wait()
             print("=="*10 + f'Elapsed time: {round((time.time()-start),2)}' + "=="*10)
         #Modbus.barrier_cast.wait()

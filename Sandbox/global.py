@@ -2,7 +2,7 @@
 # global in nested function
 x = 10
 def add():
-    #global x
+    global x
     #x = 15
        
     def change():
