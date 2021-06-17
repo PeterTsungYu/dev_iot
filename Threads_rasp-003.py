@@ -29,11 +29,6 @@ TCHeader_1_slave = Modbus.Slave(config.TCHeader_1_id, TCHeader_1_RTU_R.rtu,)
 #print(TCHeader_1_slave.rtu)
 print('Port setting: succeed')
 
-#-----RPi Server_DB setting----------------------------------------------------------------
-RPi_Server = Modbus.Slave()
-# initiate the server data sites
-RPi_Server.readings = [0] * 19 # 19 data entries
-
 #-------------------------define Threads and Events-----------------------------------------
 timeit = datetime.now().strftime('%Y_%m_%d_%H_%M')
 print(f'Execution time is {timeit}')
@@ -71,11 +66,11 @@ RS485_data_collect = threading.Thread(
     )
 TCHeader_0_analyze = threading.Thread(
     target=Modbus.TCHeader_analyze, 
-    args=(start, TCHeader_0_slave, RPi_Server, 'TCHeader/PV0',),
+    args=(start, TCHeader_0_slave, 'TCHeader/PV0',),
     )
 TCHeader_1_analyze = threading.Thread(
     target=Modbus.TCHeader_analyze, 
-    args=(start, TCHeader_1_slave, RPi_Server, 'TCHeader/PV1',),
+    args=(start, TCHeader_1_slave, 'TCHeader/PV1',),
     )
 
 lst_thread = []
@@ -129,8 +124,5 @@ finally:
     #GPIO.cleanup()
     print(f"Program duration: {time.time() - start}")
     print('kill main thread')
-    print(TCHeader_0_slave.readings)
-    print(TCHeader_1_slave.readings)
-    print(RPi_Server.readings)
     exit()
 

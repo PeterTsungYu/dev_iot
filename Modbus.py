@@ -615,7 +615,7 @@ def MFC_data_analyze(start, slave, server_DB):
     #barrier_kill.wait()
 
 
-def TCHeader_analyze(start, slave, server_DB, pub_Topic):
+def TCHeader_analyze(start, slave, pub_Topic):
     count_err = 0
     while not config.kb_event.isSet():
         if not config.ticker.wait(config.sample_time):
@@ -640,13 +640,6 @@ def TCHeader_analyze(start, slave, server_DB, pub_Topic):
                     MQTT_config.pub_Topics[pub_Topic] = readings[-1]
                     ## to slave data list
                     slave.readings.append(readings)
-                    ## to server database
-                    ## 0x01:1f:TCHeader_1_PV, 0x02:1f:TCHeader_2_PV
-                    if slave.id == '00': #todo: write database site in a class
-                        server_DB.readings[0] = readings[-1]
-                    elif slave.id == '01':
-                        server_DB.readings[1] = readings[-1]
-                    #server_DB[0x06].setValues(fx=3, address=0x01, values=[int(i*10) for i in readings[1:]])
                     print(f'TCHeader_analyze done: record {readings} from slave_{slave.id}')
                     #barrier_analyze.wait()
                 else:

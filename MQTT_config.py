@@ -38,7 +38,7 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
     def on_message(client, userdata, msg):
         global sub_Topics
         print(msg.topic+ ": " + str(msg.payload) + f">>> {client_id}")
-        if msg.topic != 'nodered':
+        if (msg.topic != 'nodered') and (msg.payload != b''):
             sub_Topics[msg.topic]['value'] = float(msg.payload)
             sub_Topics[msg.topic]['event'].set()
         
