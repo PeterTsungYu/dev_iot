@@ -18,6 +18,7 @@ print('Import: succeed')
 #-----port and slave setting----------------------------------------------------------------
 lst_port = []
 lst_port.append(config.RS485_port)
+lst_port.append(config.Scale_port)
 
 # TCHeader Rreading, RTU func code 03, PV value site at '008A', data_len is 1 ('0001')
 TCHeader_0_RTU_R = Modbus.RTU(config.TCHeader_0_id, '03', '008A', '0001')
@@ -25,6 +26,9 @@ TCHeader_0_slave = Modbus.Slave(config.TCHeader_0_id, TCHeader_0_RTU_R.rtu,)
 
 TCHeader_1_RTU_R = Modbus.RTU(config.TCHeader_1_id, '03', '008A', '0001')
 TCHeader_1_slave = Modbus.Slave(config.TCHeader_1_id, TCHeader_1_RTU_R.rtu,)
+
+# Scale slave
+Scale_slave = Modbus.Slave()
 
 #print(TCHeader_1_slave.rtu)
 print('Port setting: succeed')
@@ -60,6 +64,7 @@ def RS485_data_collect(port):
     #print('kill MFC_data_collect')
     #Modbus.barrier_kill.wait()
 
+# RS485
 RS485_data_collect = threading.Thread(
     target=RS485_data_collect, 
     args=(config.RS485_port,)
@@ -73,10 +78,22 @@ TCHeader_1_analyze = threading.Thread(
     args=(start, TCHeader_1_slave, 'TCHeader/PV1',),
     )
 
+# Scale
+Scale_data_collect = threading.Thread(
+    target=Modbus.Scale_data_collect, 
+    args=(start, config.Scale_port, Scale_slave, 0,),
+    )
+Scale_data_analyze = threading.Thread(
+    target=Modbus.Scale_data_analyze, 
+    args=(start, Scale_slave, 'Scale',),
+    )
+
 lst_thread = []
 lst_thread.append(RS485_data_collect)
 lst_thread.append(TCHeader_0_analyze)
 lst_thread.append(TCHeader_1_analyze)
+lst_thread.append(Scale_data_collect)
+lst_thread.append(Scale_data_analyze)
 
 #-------------------------Open ports--------------------------------------
 try:

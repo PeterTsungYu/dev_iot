@@ -16,7 +16,8 @@ sub_Topics = {
 
 pub_Topics = {
     'TCHeader/PV0':0,
-    'TCHeader/PV1':10,
+    'TCHeader/PV1':0,
+    'Scale':0,
 }
 
 #-------------------------MQTT func--------------------------------------
