@@ -303,13 +303,13 @@ def TCHeader_comm(start, port, slave, wait_data, count_err, write_event, write_v
                 else:
                     port.reset_input_buffer() # reset the buffer if no read
                     collect_err += 1
-                    print('XX'*10 + f"TCHeader_collect error: from slave_{slave.id}, err_{collect_err} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
+                    print('XX'*10 + f"TCHeader_collect error: from slave_{slave.id}, err_{count_err[0] + collect_err} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
             else: # if data len is less than the wait data
                 port.reset_input_buffer() # reset the buffer if no read
                 collect_err += 1
-                print('XX'*10 + f"TCHeader_collect error: from slave_{slave.id}, err_{collect_err} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+                print('XX'*10 + f"TCHeader_collect error: from slave_{slave.id}, err_{count_err[0] + collect_err} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
         except Exception as e:
-            print('XX'*10 + f"TCHeader_collect error: from slave_{slave.id}, err_{collect_err} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            print('XX'*10 + f"TCHeader_collect error: from slave_{slave.id}, err_{count_err[0] + collect_err} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
             count_err[0] += collect_err
 
@@ -335,13 +335,13 @@ def TCHeader_comm(start, port, slave, wait_data, count_err, write_event, write_v
                 else:
                     port.reset_input_buffer() # reset the buffer if no read
                     set_err += 1
-                    print('XX'*10 + f"TCHeader_set error: from slave_{slave.id}, err_{set_err} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
+                    print('XX'*10 + f"TCHeader_set error: from slave_{slave.id}, err_{count_err[1] + set_err} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
             else: # if data len is less than the wait data
                 port.reset_input_buffer() # reset the buffer if no read
                 set_err += 1
-                print('XX'*10 + f"TCHeader_set error: from slave_{slave.id}, err_{set_err} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+                print('XX'*10 + f"TCHeader_set error: from slave_{slave.id}, err_{count_err[1] + set_err} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
         except Exception as e:
-            print('XX'*10 + f"TCHeader_set error: from slave_{slave.id}, err_{set_err} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            print('XX'*10 + f"TCHeader_set error: from slave_{slave.id}, err_{count_err[1] + set_err} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
             count_err[1] += set_err
             write_event.clear()
