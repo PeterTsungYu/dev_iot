@@ -11,6 +11,7 @@ import re
 import Modbus
 import config
 import MQTT_config
+import Mariadb_config
 
 print('Import: succeed')
 
@@ -140,6 +141,11 @@ finally:
     print("=="*30)
     #GPIO.cleanup()
     print(f"Program duration: {time.time() - start}")
+    Mariadb_config.conn.close()
+    print("close connection to MariaDB")
+    MQTT_config.client_0.loop_stop()
+    MQTT_config.client_0.disconnect()
+    print("close connection to MQTT broker")
     print('kill main thread')
     exit()
 

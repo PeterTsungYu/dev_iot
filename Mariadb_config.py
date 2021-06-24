@@ -6,6 +6,7 @@ import sys
 import threading
 import mariadb
 from datetime import datetime
+from dotenv import load_dotenv
 
 #custom modules
 import config
@@ -13,6 +14,7 @@ import MQTT_config
 
 #-------------------------time and tokens--------------------------------------
 time = datetime.now().strftime('%Y_%m_%d_%H')
+load_dotenv()
 username = os.environ.get("db_user")
 password = os.environ.get("db_pwd")
 #print(username, password)
@@ -95,7 +97,7 @@ multi_insert = threading.Thread(
     )
 multi_insert.start()
 
+'''
 while True:
     pass
-
-conn.close()
+'''
