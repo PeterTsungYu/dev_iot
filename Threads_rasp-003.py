@@ -20,6 +20,7 @@ print('Import: succeed')
 lst_port = []
 lst_port.append(config.RS485_port)
 lst_port.append(config.Scale_port)
+lst_port.append(config.ADAM_port)
 
 # TCHeader Rreading, RTU func code 03, PV value site at '008A', data_len is 1 ('0001')
 TCHeader_0_RTU_R = Modbus.RTU(config.TCHeader_0_id, '03', '008A', '0001')
@@ -30,6 +31,11 @@ TCHeader_1_slave = Modbus.Slave(config.TCHeader_1_id, TCHeader_1_RTU_R.rtu,)
 
 # Scale slave
 Scale_slave = Modbus.Slave()
+
+# ADAM_4024_slave, RTU func code 03, channel site at '0000-0003', data_len is 1 ('0001')
+## ch00:+-10V, ch01:4-20mA, ch02:0-20mA, ch03:0-20mA
+ADAM_4024_RTU_R = Modbus.RTU(config.ADAM_4024_id, '03', '0000', '0001') # ch0
+ADAM_4024_slave = Modbus.Slave(config.ADAM_4024_id, ADAM_4024_RTU_R.rtu,)
 
 #print(TCHeader_1_slave.rtu)
 print('Port setting: succeed')
@@ -89,12 +95,39 @@ Scale_data_analyze = threading.Thread(
     args=(start, Scale_slave, 'Scale',),
     )
 
+# ADAM
+ADAM_4024_count_err = [0,0] # [collect_err, set_err] #todo: make it global and in a class
+def ADAM_data_collect(port):
+    global ADAM_4024_count_err
+    while not config.kb_event.isSet():
+        ADAM_4024_count_err = Modbus.ADAM_4024_comm(
+            start, port, ADAM_4024_slave, 7, ADAM_4024_count_err, 
+            MQTT_config.sub_Topics['ADAM_4024/ch00']['event'], #todo: config a general slave class
+            MQTT_config.sub_Topics['ADAM_4024/ch00']['value'], 
+            ) # wait for 7 bytes == 7 Hex numbers
+    port.close()
+    print('kill ADAM_4024_comm')
+    print(f'Final ADAM_4024_comm: {ADAM_4024_count_err} errors occured')
+    
+# RS485
+ADAM_data_collect = threading.Thread(
+    target=ADAM_data_collect, 
+    args=(config.ADAM_port,)
+    )
+ADAM_4024_analyze = threading.Thread(
+    target=Modbus.ADAM_4024_analyze, 
+    args=(start, ADAM_4024_slave, 'ADAM_4024/ch00',),
+    )
+
+
 lst_thread = []
 lst_thread.append(RS485_data_collect)
 lst_thread.append(TCHeader_0_analyze)
 lst_thread.append(TCHeader_1_analyze)
 lst_thread.append(Scale_data_collect)
 lst_thread.append(Scale_data_analyze)
+lst_thread.append(ADAM_data_collect)
+lst_thread.append(ADAM_4024_analyze)
 
 #-------------------------Open ports--------------------------------------
 try:

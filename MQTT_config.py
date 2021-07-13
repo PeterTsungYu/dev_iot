@@ -12,12 +12,14 @@ import config
 sub_Topics = {
     'TCHeader/SV0':{'value':0, 'event':threading.Event()},
     'TCHeader/SV1':{'value':0, 'event':threading.Event()},
+    'ADAM_4024/ch00':{'value':0, 'event':threading.Event()},
 }
 
 pub_Topics = {
     'TCHeader/PV0':0,
-    'TCHeader/PV1':1,
-    'Scale':2,
+    'TCHeader/PV1':0,
+    'Scale':0,
+    'ADAM_4024/ch00':0
 }
 
 #-------------------------MQTT func--------------------------------------

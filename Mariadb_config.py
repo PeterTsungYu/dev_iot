@@ -1,4 +1,5 @@
 # pip3 install mariadb
+# pip3 install python-dotenv
 
 #python packages
 import os
@@ -17,7 +18,7 @@ time = datetime.now().strftime('%Y_%m_%d_%H')
 load_dotenv()
 username = os.environ.get("db_user")
 password = os.environ.get("db_pwd")
-#print(username, password)
+print(username, password)
 
 #-------------------------mariadb conn--------------------------------------
 try:
@@ -27,7 +28,7 @@ try:
         password=password,
         host="rasp-002.local",
         port=3306,
-        database="Catalyst",
+        database="catalyst",
         autocommit=True
     )
 
@@ -62,9 +63,11 @@ insertSchema = [
     f'INSERT INTO platform_{time} (',
     'TCHeader_SV0,',
     'TCHeader_SV1,',
+    'ADAM_4024_ch00,',
     'TCHeader_PV0,',
     'TCHeader_PV1,',
     'Scale',
+    'ADAM_4024_PV',
     ') ',
     'VALUES (?, ?, ?, ?, ?)'
     ]
