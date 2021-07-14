@@ -23,8 +23,8 @@ ticker = threading.Event() # for analyzing data
 # (Optional) Set the USB devices to have a default name
 #_port_path = '/dev/ttyUSB'
 RS485_port_path = '/dev/ttyUSB1'
-Scale_port_path = '/dev/ttyUSB2'
-ADAM_port_path = '/dev/ttyUSB0'
+Scale_port_path = '/dev/ttyUSB0'
+ADAM_port_path = '/dev/ttyUSB2'
 
 ## device ID
 TCHeader_0_id = '00'
