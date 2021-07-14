@@ -27,7 +27,7 @@ try:
         password=password,
         host="rasp-002.local",
         port=3306,
-        database="Catalyst",
+        database="catalyst",
         autocommit=True
     )
 
