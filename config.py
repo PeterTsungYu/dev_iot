@@ -6,8 +6,8 @@ import serial
 #custom modules
 
 #-------------------------Global var--------------------------------------
-time_out = 1 # for collecting data
-sample_time = 1 # for analyzing data
+time_out = 0.1 # for collecting data
+sample_time = 2 # for analyzing data
 sample_time_Scale = 5
 sample_time_DFM = 60
 
@@ -44,8 +44,8 @@ RS485_port = serial.Serial(
 
 ## Scale USB
 Scale_port = serial.Serial(
-    port=ADAM_port_path,
-    baudrate=115200, 
+    port=Scale_port_path,
+    baudrate=9600,
     bytesize=8, 
     stopbits=1, 
     parity='N'
@@ -54,8 +54,8 @@ Scale_port = serial.Serial(
 ## ADAM 
 ### ch00:+-10V, ch01:4-20mA, ch02:0-20mA, ch03:0-20mA
 ADAM_port = serial.Serial(
-    port=Scale_port_path,
-    baudrate=9600, 
+    port=ADAM_port_path,
+    baudrate=115200, 
     bytesize=8, 
     stopbits=1, 
     parity='N'

@@ -537,7 +537,7 @@ def Scale_data_analyze(start, slave, pub_Topic):
     while (not config.kb_event.isSet()) and (not config.ticker.wait(config.sample_time_Scale)):
         lst_readings = slave.lst_readings
         time_readings = slave.time_readings
-        print(f'Scale_data_analyze: {lst_readings}')
+        #print(f'Scale_data_analyze: {lst_readings}')
         slave.lst_readings = []
         try:
             if len(lst_readings) > 0:

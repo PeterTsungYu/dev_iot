@@ -44,9 +44,11 @@ TableSchema = [
     'Id int NOT NULL AUTO_INCREMENT,',
     'TCHeader_SV0 FLOAT,',
     'TCHeader_SV1 FLOAT,',
+    'ADAM_4024_SV0 FLOAT,',
     'TCHeader_PV0 FLOAT,',
     'TCHeader_PV1 FLOAT,',
     'Scale FLOAT,',
+    'ADAM_4024_PV0 FLOAT,',
     'PRIMARY KEY (Id)',
     ')'
     ]
@@ -63,13 +65,13 @@ insertSchema = [
     f'INSERT INTO platform_{time} (',
     'TCHeader_SV0,',
     'TCHeader_SV1,',
-    'ADAM_4024_ch00,',
+    'ADAM_4024_SV0,',
     'TCHeader_PV0,',
     'TCHeader_PV1,',
-    'Scale',
-    'ADAM_4024_PV',
+    'Scale,',
+    'ADAM_4024_PV0',
     ') ',
-    'VALUES (?, ?, ?, ?, ?)'
+    'VALUES (?, ?, ?, ?, ?, ?, ?)'
     ]
 def multi_insert(cur):
     while not config.kb_event.isSet():
@@ -98,7 +100,7 @@ multi_insert = threading.Thread(
     target=multi_insert,
     args=(cur,),
     )
-#multi_insert.start()
+multi_insert.start()
 
 '''
 while True:

@@ -102,8 +102,8 @@ def ADAM_data_collect(port):
     while not config.kb_event.isSet():
         ADAM_4024_count_err = Modbus.ADAM_4024_comm(
             start, port, ADAM_4024_slave, 7, ADAM_4024_count_err, 
-            MQTT_config.sub_Topics['ADAM_4024/ch00']['event'], #todo: config a general slave class
-            MQTT_config.sub_Topics['ADAM_4024/ch00']['value'], 
+            MQTT_config.sub_Topics['ADAM_4024/SV0']['event'], #todo: config a general slave class
+            MQTT_config.sub_Topics['ADAM_4024/SV0']['value'], 
             ) # wait for 7 bytes == 7 Hex numbers
     port.close()
     print('kill ADAM_4024_comm')
@@ -116,18 +116,18 @@ ADAM_data_collect = threading.Thread(
     )
 ADAM_4024_analyze = threading.Thread(
     target=Modbus.ADAM_4024_analyze, 
-    args=(start, ADAM_4024_slave, 'ADAM_4024/ch00',),
+    args=(start, ADAM_4024_slave, 'ADAM_4024/PV0',),
     )
 
 
 lst_thread = []
-#lst_thread.append(RS485_data_collect)
-#lst_thread.append(TCHeader_0_analyze)
-#lst_thread.append(TCHeader_1_analyze)
+lst_thread.append(RS485_data_collect)
+lst_thread.append(TCHeader_0_analyze)
+lst_thread.append(TCHeader_1_analyze)
 lst_thread.append(Scale_data_collect)
 lst_thread.append(Scale_data_analyze)
-#lst_thread.append(ADAM_data_collect)
-#lst_thread.append(ADAM_4024_analyze)
+lst_thread.append(ADAM_data_collect)
+lst_thread.append(ADAM_4024_analyze)
 
 #-------------------------Open ports--------------------------------------
 try:
