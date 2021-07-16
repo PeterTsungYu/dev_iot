@@ -18,7 +18,7 @@ sub_Topics = {
 pub_Topics = {
     'TCHeader/PV0':0,
     'TCHeader/PV1':0,
-    'Scale':0,
+    'Scale':2,
     'ADAM_4024/ch00':0
 }
 
@@ -73,4 +73,4 @@ multi_pub = threading.Thread(
     target=multi_pub,
     args=(client_0,),
     )
-multi_pub.start()
+#multi_pub.start()

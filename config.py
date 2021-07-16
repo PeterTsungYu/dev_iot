@@ -6,9 +6,9 @@ import serial
 #custom modules
 
 #-------------------------Global var--------------------------------------
-time_out = 0.5 # for collecting data
+time_out = 1 # for collecting data
 sample_time = 1 # for analyzing data
-sample_time_Scale = 2
+sample_time_Scale = 5
 sample_time_DFM = 60
 
 # count down events

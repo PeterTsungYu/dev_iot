@@ -98,7 +98,7 @@ multi_insert = threading.Thread(
     target=multi_insert,
     args=(cur,),
     )
-multi_insert.start()
+#multi_insert.start()
 
 '''
 while True:

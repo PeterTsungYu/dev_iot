@@ -121,13 +121,13 @@ ADAM_4024_analyze = threading.Thread(
 
 
 lst_thread = []
-lst_thread.append(RS485_data_collect)
-lst_thread.append(TCHeader_0_analyze)
-lst_thread.append(TCHeader_1_analyze)
+#lst_thread.append(RS485_data_collect)
+#lst_thread.append(TCHeader_0_analyze)
+#lst_thread.append(TCHeader_1_analyze)
 lst_thread.append(Scale_data_collect)
 lst_thread.append(Scale_data_analyze)
-lst_thread.append(ADAM_data_collect)
-lst_thread.append(ADAM_4024_analyze)
+#lst_thread.append(ADAM_data_collect)
+#lst_thread.append(ADAM_4024_analyze)
 
 #-------------------------Open ports--------------------------------------
 try:
