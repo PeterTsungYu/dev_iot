@@ -61,6 +61,7 @@ def multi_pub(client):
     #global pub_Topics
     while not config.kb_event.isSet():
         if not config.ticker.wait(config.sample_time):
+            print(pub_Topics)
             for key, value in pub_Topics.items():
                 client.publish(topic=key, payload=value, qos=0, retain=True)
 

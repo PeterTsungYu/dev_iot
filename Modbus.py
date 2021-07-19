@@ -733,15 +733,17 @@ def ADAM_4024_analyze(start, slave, pub_Topic):
         slave.lst_readings = []
         try:
             if len(lst_readings) > 0:
+                print(lst_readings)
                 arr_readings = np.array(
-                    [int(readings[-8:-4],16)/(2^12)*20-10 # convert from hex to dec 
+                    [int(readings[-8:-4],16)/(2**12)*20-10 # convert from hex to dec 
                     for readings in lst_readings]
                     )
                 #print(slave.id, arr_readings)
                 #print(slave.id, time_readings)
                 lst_readings = tuple([np.round(np.sum(arr_readings) / len(lst_readings), 1)])
                 readings = tuple([round(time_readings,2)]) + lst_readings
-                #print(slave.id, readings)
+                print(lst_readings)
+                print(slave.id, readings)
 
                 # casting
                 MQTT_config.pub_Topics[pub_Topic] = readings[-1]

@@ -6,7 +6,7 @@ import serial
 #custom modules
 
 #-------------------------Global var--------------------------------------
-time_out = 0.1 # for collecting data
+time_out = 1 # for collecting data
 sample_time = 2 # for analyzing data
 sample_time_Scale = 5
 sample_time_DFM = 60
@@ -22,8 +22,8 @@ ticker = threading.Event() # for analyzing data
 #-----------------Serial port setting------------------------------
 # (Optional) Set the USB devices to have a default name
 #_port_path = '/dev/ttyUSB'
-RS485_port_path = '/dev/ttyUSB1'
-Scale_port_path = '/dev/ttyUSB0'
+RS485_port_path = '/dev/ttyUSB0'
+Scale_port_path = '/dev/ttyUSB1'
 ADAM_port_path = '/dev/ttyUSB2'
 
 ## device ID
