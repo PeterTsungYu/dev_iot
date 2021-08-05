@@ -12,12 +12,14 @@ import config
 sub_Topics = {
     'TCHeader/SV0':{'value':0, 'event':threading.Event()},
     'TCHeader/SV1':{'value':0, 'event':threading.Event()},
+    'ADAM_4024/SV0':{'value':0, 'event':threading.Event()},
 }
 
 pub_Topics = {
     'TCHeader/PV0':0,
-    'TCHeader/PV1':1,
-    'Scale':2,
+    'TCHeader/PV1':0,
+    'Scale':0,
+    'ADAM_4024/PV0':0
 }
 
 #-------------------------MQTT func--------------------------------------
@@ -59,6 +61,7 @@ def multi_pub(client):
     #global pub_Topics
     while not config.kb_event.isSet():
         if not config.ticker.wait(config.sample_time):
+            print(pub_Topics)
             for key, value in pub_Topics.items():
                 client.publish(topic=key, payload=value, qos=0, retain=True)
 

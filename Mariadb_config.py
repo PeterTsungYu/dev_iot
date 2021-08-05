@@ -1,4 +1,5 @@
 # pip3 install mariadb
+# pip3 install python-dotenv
 
 #python packages
 import os
@@ -17,7 +18,7 @@ time = datetime.now().strftime('%Y_%m_%d_%H')
 load_dotenv()
 username = os.environ.get("db_user")
 password = os.environ.get("db_pwd")
-#print(username, password)
+print(username, password)
 
 #-------------------------mariadb conn--------------------------------------
 try:
@@ -43,9 +44,11 @@ TableSchema = [
     'Id int NOT NULL AUTO_INCREMENT,',
     'TCHeader_SV0 FLOAT,',
     'TCHeader_SV1 FLOAT,',
+    'ADAM_4024_SV0 FLOAT,',
     'TCHeader_PV0 FLOAT,',
     'TCHeader_PV1 FLOAT,',
     'Scale FLOAT,',
+    'ADAM_4024_PV0 FLOAT,',
     'PRIMARY KEY (Id)',
     ')'
     ]
@@ -62,11 +65,13 @@ insertSchema = [
     f'INSERT INTO platform_{time} (',
     'TCHeader_SV0,',
     'TCHeader_SV1,',
+    'ADAM_4024_SV0,',
     'TCHeader_PV0,',
     'TCHeader_PV1,',
-    'Scale',
+    'Scale,',
+    'ADAM_4024_PV0',
     ') ',
-    'VALUES (?, ?, ?, ?, ?)'
+    'VALUES (?, ?, ?, ?, ?, ?, ?)'
     ]
 def multi_insert(cur):
     while not config.kb_event.isSet():
