@@ -152,7 +152,7 @@ def RPiserver(start, port, slave, wait_data):
     #barrier_kill.wait()
 
 
-def Adam_data_collect(start, port, slave, wait_data):
+def ADAM_TC_collect(start, port, slave, wait_data):
     #start = time.time()
     count_err = 0
     while not config.kb_event.isSet():
@@ -170,19 +170,19 @@ def Adam_data_collect(start, port, slave, wait_data):
                 readings = port.read(wait_data).hex()
                 #print(readings)
                 slave.lst_readings.append(readings)
-                print('Adam_data_collect: done')
+                print('ADAM_TC_collect: done')
                 port.reset_input_buffer() # reset the buffer after each reading process
             else: # if data len is less than the wait data
                 count_err += 1
-                print('XX'*10 + f" {count_err} Adam_data_collect error at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10)
+                print('XX'*10 + f" {count_err} ADAM_TC_collect error at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10)
         except Exception as e:
-            print('XX'*10 + f" {count_err} Adam_data_collect error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            print('XX'*10 + f" {count_err} ADAM_TC_collect error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
             pass
 
     port.close()
-    print('kill Adam_data_collect')
-    print(f'Final Adam_data_collect: {count_err} errors occured')
+    print('kill ADAM_TC_collect')
+    print(f'Final ADAM_TC_collect: {count_err} errors occured')
     #barrier_kill.wait()
 
 
@@ -353,13 +353,13 @@ def TCHeader_comm(start, port, slave, wait_data, count_err, write_event, write_v
     ##barrier_kill.wait()
 
 
-def Adam_data_analyze(start, slave, server_DB):
+def ADAM_TC_analyze(start, slave):
     count_err = 0
     while not config.kb_event.isSet():
         if not config.ticker.wait(config.sample_time):
             lst_readings = slave.lst_readings
             time_readings = slave.time_readings
-            #print(f'Adam_data_analyze: {lst_readings}')
+            #print(f'ADAM_TC_analyze: {lst_readings}')
             slave.lst_readings = []
             slave.time_readings = []
             try:
@@ -370,38 +370,16 @@ def Adam_data_analyze(start, slave, server_DB):
                 #print(readings)
 
                 # casting
-                #slave.readings.append(readings)
-                # RTU write to master
-                # 0x09:1f:TC_0, 0x10:1f:TC_1, 0x11:1f:TC_2, 0x12:1f:TC_3, 0x13:1f:TC_4, 0x14:1f:TC_5, 0x15:1f:TC_6, 0x16:1f:TC_7
-                server_DB.readings[9:17] = [int(i*10) for i in readings[1:]]
-                #server_DB[0x06].setValues(fx=3, address=0x09, values=[int(i*10) for i in readings[1:]])
-                print(f'Adam_data_analyze done: {readings}')
+                print(f'ADAM_TC_analyze done: {readings}')
                 #barrier_analyze.wait()
             except Exception as e:
                 count_err += 1
-                print('XX'*10 + f" {count_err} Adam_data_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
+                print('XX'*10 + f" {count_err} ADAM_TC_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
             finally:
                 pass
-                '''
-                try:
-                    #barrier_cast.wait()
-                    conn.execute(
-                        "INSERT INTO ADAM_TC(Time, TC_0, TC_1, TC_2, TC_3, TC_4, TC_5, TC_6, TC_7) VALUES (?,?,?,?,?,?,?,?,?);", 
-                        readings
-                        )
-                    # publish via MQTT
-                    #for i in range(8):
-                        #client_mqtt.publish(config.topic_ADAM_TC[i], readings[i+1])
-                    pass
-                except Exception as e6_1:
-                    print ("Adam_data_cast error: " + str(e6_1))
-                finally:
-                    print(f'Adam_data_cast done')
-                    #print(None/2)
-                '''
                     
-    print('kill Adam_data_analyze')
-    print(f'Final Adam_data_analyze: {count_err} errors occured')
+    print('kill ADAM_TC_analyze')
+    print(f'Final ADAM_TC_analyze: {count_err} errors occured')
     #barrier_kill.wait()
 
 
@@ -580,7 +558,7 @@ def Scale_data_analyze(start, slave, pub_Topic):
     #barrier_kill.wait()
 
 
-def GA_data_analyze(start, slave, server_DB):
+def GA_data_analyze(start, slave):
     count_err = 0
     while not config.kb_event.isSet():
         if not config.ticker.wait(config.sample_time):
@@ -602,10 +580,6 @@ def GA_data_analyze(start, slave, server_DB):
                 readings = tuple([round(time_readings[-1],2)]) + lst_readings
                 
                 # casting
-                #slave.readings.append(readings)
-                # 0x01:1f:CO, 0x02:1f:CO2, 0x03:1f:CH4, 0x04:1f:H2, 0x05:1f:N2, 0x06:1f:HEAT
-                server_DB.readings[1:7] = [int(i*10) for i in readings[1:]]
-                #server_DB[0x06].setValues(fx=3, address=0x01, values=[int(i*10) for i in readings[1:]])
                 print(f'GA_data_analyze done: {readings}')
                 #barrier_analyze.wait()
             except Exception as e:

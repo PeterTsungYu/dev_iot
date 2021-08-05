@@ -2,6 +2,7 @@
 import threading
 import signal
 import serial
+import RPi.GPIO as GPIO
 
 #custom modules
 
@@ -15,28 +16,32 @@ sample_time_DFM = 60
 ticker = threading.Event() # for analyzing data
 
 # #barrier event for syncing all threads
-#barrier_analyze = threading.Barrier(4) # Adam_data_analyze, Scale_data_analyze, GA_data_analyze, Main thread
-#barrier_cast = threading.Barrier(4) # Adam_data_analyze, Scale_data_analyze, GA_data_analyze, Main thread
+#barrier_analyze = threading.Barrier(4) # ADAM_TC_analyze, Scale_data_analyze, GA_data_analyze, Main thread
+#barrier_cast = threading.Barrier(4) # ADAM_TC_analyze, Scale_data_analyze, GA_data_analyze, Main thread
 #barrier_kill = threading.Barrier(9) # all threads
 
 #-----------------Serial port setting------------------------------
 # (Optional) Set the USB devices to have a default name
 #_port_path = '/dev/ttyUSB'
-RS485_port_path = '/dev/ttyUSB0'
-Scale_port_path = '/dev/ttyUSB1'
-ADAM_port_path = '/dev/ttyUSB2'
+RS485_port_path = '/dev/ttyUSB_RS485' # for monitoring (TC from ADAM)
+Scale_port_path = '/dev/ttyUSB_Scale' # for monitoring Scale
+RS232_port_path = '/dev/ttyUSB_RS232' # for monitoring GA
+Setup_port_path = '/dev/ttyUSB_PC' # for controling (ADAM, TCHeader)
 
 ## device ID
-TCHeader_0_id = '00'
-TCHeader_1_id = '01'
-ADAM_4024_id = '01'
+TCHeader_1_id = '01' # ReformerTP EVA_Header @ Setup_port_path
+TCHeader_2_id = '02' # ReformerTP BR_Header @ Setup_port_path
+ADAM_4024_id = '03' # ReformerTP ADAM_4024 for setting @ Setup_port_path
+ADAM_4017_id = '04' # ReformerTP ADAM_4017+ for monitoring via oltage and current @ Setup_port_path
+ADAM_TC_id = '03' # ReformerTP ADAM_4018+ for monitoring temp @ RS485_port_path
+GA_id = '11' # ReformerTP GA for monitoring gas conc. @ RS232_port_path
 
 #-----------------Serial port instances------------------------------
 ## RS485
-### set the baudrate of TCHeader_1 to 19200 
+### set the baudrate to 19200 
 RS485_port = serial.Serial(
     port=RS485_port_path,
-    baudrate=115200, 
+    baudrate=19200, 
     bytesize=8, 
     stopbits=1, 
     parity='N'
@@ -51,16 +56,32 @@ Scale_port = serial.Serial(
     parity='N'
     )
 
-## ADAM 
-### ch00:+-10V, ch01:4-20mA, ch02:0-20mA, ch03:0-20mA
-ADAM_port = serial.Serial(
-    port=ADAM_port_path,
+## RS232
+### set the baudrate of GA & MFC to 9600
+RS232_port = serial.Serial(
+    port=RS232_port_path,
+    baudrate=9600, 
+    bytesize=8, 
+    stopbits=1, 
+    parity='N'
+    )
+
+## Setup port 
+Setup_port = serial.Serial(
+    port=Setup_port_path,
     baudrate=115200, 
     bytesize=8, 
     stopbits=1, 
     parity='N'
     )
-### set the baudrate of Pump to 19200
+
+#-----GPIO port setting----------------------------------------------------------------
+## DFM
+# read High as 3.3V
+channel_DFM = 18
+channel_DFM_re = 23
+GPIO.setmode(GPIO.BCM)
+
 #-----------------Interrupt events------------------------------
 # Keyboard interrupt event to kill all the threads (Ctr + C)
 kb_event = threading.Event()
