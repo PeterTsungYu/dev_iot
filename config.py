@@ -29,13 +29,15 @@ RS232_port_path = '/dev/ttyUSB_RS232' # for monitoring GA
 Setup_port_path = '/dev/ttyUSB_PC' # for controling (ADAM, TCHeader)
 
 ## device ID
-TCHeader_1_id = '01' # ReformerTP EVA_Header @ Setup_port_path
-TCHeader_2_id = '02' # ReformerTP BR_Header @ Setup_port_path
+Header_EVA_id = '01' # ReformerTP EVA_Header @ Setup_port_path
+Header_BR_id = '02' # ReformerTP BR_Header @ Setup_port_path
 ADAM_SET_id = '03' # ReformerTP ADAM_4024 for setting @ Setup_port_path
 ADAM_READ_id = '04' # ReformerTP ADAM_4017+ for monitoring via oltage and current @ Setup_port_path
 ADAM_TC_id = '03' # ReformerTP ADAM_4018+ for monitoring temp @ RS485_port_path
 GA_id = '11' # ReformerTP GA for monitoring gas conc. @ RS232_port_path
-# scale has no id
+Scale_id = '06'
+DFM_id = '07'
+DFM_AOG = '08'
 
 #-----------------Serial port instances------------------------------
 ## RS485

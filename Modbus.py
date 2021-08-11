@@ -26,7 +26,9 @@ class RTU: # generate the CRC for the complete RTU
 
 
 class Slave: # Create Slave data store 
-    def __init__(self, idno='', rtu=''):
+    def __init__(self, name='', port='', idno='', rtu=''):
+        self.name=name
+        self.port=port
         self.id = idno # id number of slave
         self.rtu = rtu # str or a list. list[0]:read, list[1]:write 
         self.lst_readings = [] # record readings
@@ -71,21 +73,21 @@ def ADAM_TC_collect(start, port, slave, wait_data, collect_err):
                     print(f'ADAM_TC_collect done: read from slave_{slave.id}')
                 else:
                     port.reset_input_buffer() # reset the buffer if no read
-                    MQTT_config.pub_Topics[collect_err] += 1
-                    print('XX'*10 + f"ADAM_TC_collect error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[collect_err]} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
+                    MQTT_config.err_Topics.pub_values[collect_err] += 1
+                    print('XX'*10 + f"ADAM_TC_collect error: from slave_{slave.id}, err_{MQTT_config.err_Topics.pub_values[collect_err]} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
             else: # if data len is less than the wait data
                 port.reset_input_buffer() # reset the buffer if no read
-                MQTT_config.pub_Topics[collect_err] += 1
-                print('XX'*10 + f"ADAM_TC_collect error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[collect_err]} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+                MQTT_config.err_Topics.pub_values[collect_err] += 1
+                print('XX'*10 + f"ADAM_TC_collect error: from slave_{slave.id}, err_{MQTT_config.err_Topics.pub_values[collect_err]} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
         except Exception as e:
-            MQTT_config.pub_Topics[collect_err] += 1
-            print('XX'*10 + f" {MQTT_config.pub_Topics[collect_err]} ADAM_TC_collect error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            MQTT_config.err_Topics.pub_values[collect_err] += 1
+            print('XX'*10 + f" {MQTT_config.err_Topics.pub_values[collect_err]} ADAM_TC_collect error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
             pass
 
     port.close()
     print('kill ADAM_TC_collect')
-    print(f'Final ADAM_TC_collect: {MQTT_config.pub_Topics[collect_err]} errors occured')
+    print(f'Final ADAM_TC_collect: {MQTT_config.err_Topics.pub_values[collect_err]} errors occured')
     #barrier_kill.wait()
 
 
@@ -108,21 +110,21 @@ def ADAM_READ_collect(start, port, slave, wait_data, collect_err):
                     print(f'ADAM_READ_collect done: read from slave_{slave.id}')
                 else:
                     port.reset_input_buffer() # reset the buffer if no read
-                    MQTT_config.pub_Topics[collect_err] += 1
-                    print('XX'*10 + f"ADAM_READ_collect error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[collect_err]} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
+                    MQTT_config.err_Topics.pub_values[collect_err] += 1
+                    print('XX'*10 + f"ADAM_READ_collect error: from slave_{slave.id}, err_{MQTT_config.err_Topics.pub_values[collect_err]} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
             else: # if data len is less than the wait data
                 port.reset_input_buffer() # reset the buffer if no read
-                MQTT_config.pub_Topics[collect_err] += 1
-                print('XX'*10 + f"ADAM_READ_collect error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[collect_err]} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+                MQTT_config.err_Topics.pub_values[collect_err] += 1
+                print('XX'*10 + f"ADAM_READ_collect error: from slave_{slave.id}, err_{MQTT_config.err_Topics.pub_values[collect_err]} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
         except Exception as e:
-            MQTT_config.pub_Topics[collect_err] += 1
-            print('XX'*10 + f" {MQTT_config.pub_Topics[collect_err]} ADAM_READ_collect error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            MQTT_config.err_Topics.pub_values[collect_err] += 1
+            print('XX'*10 + f" {MQTT_config.err_Topics.pub_values[collect_err]} ADAM_READ_collect error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
             pass
 
     port.close()
     print('kill ADAM_READ_collect')
-    print(f'Final ADAM_READ_collect: {MQTT_config.pub_Topics[collect_err]} errors occured')
+    print(f'Final ADAM_READ_collect: {MQTT_config.err_Topics.pub_values[collect_err]} errors occured')
     #barrier_kill.wait()
 
 
@@ -139,17 +141,17 @@ def Scale_data_collect(start, port, slave, wait_data, collect_err):
                 print(f'Scale_data_collect done: read from slave_{slave.id}')
                 port.reset_input_buffer() # reset the buffer after each reading process
             else: # if data len is no data
-                MQTT_config.pub_Topics[collect_err] += 1
-                print('XX'*10 + f"Scale_data_collect error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[collect_err]} at {round((time.time()-start),2)}s: data len is no data" + 'XX'*10)
+                MQTT_config.err_Topics.pub_values[collect_err] += 1
+                print('XX'*10 + f"Scale_data_collect error: from slave_{slave.id}, err_{MQTT_config.err_Topics.pub_values[collect_err]} at {round((time.time()-start),2)}s: data len is no data" + 'XX'*10)
         except Exception as e:
-            MQTT_config.pub_Topics[collect_err] += 1
-            print('XX'*10 + f"Scale_data_collect error: err_{MQTT_config.pub_Topics[collect_err]} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            MQTT_config.err_Topics.pub_values[collect_err] += 1
+            print('XX'*10 + f"Scale_data_collect error: err_{MQTT_config.err_Topics.pub_values[collect_err]} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
             pass
 
     port.close()
     print('kill Scale_data_collect')
-    print(f'Final Scale_data_collect: {MQTT_config.pub_Topics[collect_err]} errors occured')
+    print(f'Final Scale_data_collect: {MQTT_config.err_Topics.pub_values[collect_err]} errors occured')
     #barrier_kill.wait()
 
 
@@ -172,15 +174,15 @@ def GA_data_collect(start, port, slave, wait_data, collect_err):
                 print(f'ADAM_READ_collect done: read from slave_{slave.id}')
             else:
                 port.reset_input_buffer() # reset the buffer if no read
-                MQTT_config.pub_Topics[collect_err] += 1
-                print('XX'*10 + f"ADAM_READ_collect error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[collect_err]} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
+                MQTT_config.err_Topics.pub_values[collect_err] += 1
+                print('XX'*10 + f"ADAM_READ_collect error: from slave_{slave.id}, err_{MQTT_config.err_Topics.pub_values[collect_err]} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
         else: # if data len is less than the wait data
             port.reset_input_buffer() # reset the buffer if no read
-            MQTT_config.pub_Topics[collect_err] += 1
-            print('XX'*10 + f"ADAM_READ_collect error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[collect_err]} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+            MQTT_config.err_Topics.pub_values[collect_err] += 1
+            print('XX'*10 + f"ADAM_READ_collect error: from slave_{slave.id}, err_{MQTT_config.err_Topics.pub_values[collect_err]} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
     except Exception as e:
-        MQTT_config.pub_Topics[collect_err] += 1
-        print('XX'*10 + f" {MQTT_config.pub_Topics[collect_err]} GA_data_collect error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+        MQTT_config.err_Topics.pub_values[collect_err] += 1
+        print('XX'*10 + f" {MQTT_config.err_Topics.pub_values[collect_err]} GA_data_collect error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
     finally:
         pass
     #port.close()
@@ -212,15 +214,15 @@ def TCHeader_comm(start, port, slave, wait_data, collect_err, set_err, write_eve
                     print(f'TCHeader_collect done: read from slave_{slave.id}')
                 else:
                     port.reset_input_buffer() # reset the buffer if no read
-                    MQTT_config.pub_Topics[collect_err] += 1
-                    print('XX'*10 + f"TCHeader_collect error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[collect_err]} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
+                    MQTT_config.err_Topics.pub_values[collect_err] += 1
+                    print('XX'*10 + f"TCHeader_collect error: from slave_{slave.id}, err_{MQTT_config.err_Topics.pub_values[collect_err]} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
             else: # if data len is less than the wait data
                 port.reset_input_buffer() # reset the buffer if no read
-                MQTT_config.pub_Topics[collect_err] += 1
-                print('XX'*10 + f"TCHeader_collect error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[collect_err]} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+                MQTT_config.err_Topics.pub_values[collect_err] += 1
+                print('XX'*10 + f"TCHeader_collect error: from slave_{slave.id}, err_{MQTT_config.err_Topics.pub_values[collect_err]} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
         except Exception as e:
-            MQTT_config.pub_Topics[collect_err] += 1
-            print('XX'*10 + f"TCHeader_collect error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[collect_err]} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            MQTT_config.err_Topics.pub_values[collect_err] += 1
+            print('XX'*10 + f"TCHeader_collect error: from slave_{slave.id}, err_{MQTT_config.err_Topics.pub_values[collect_err]} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
             pass
 
@@ -244,15 +246,15 @@ def TCHeader_comm(start, port, slave, wait_data, collect_err, set_err, write_eve
                     print(f'TCHeader_set done: write {write_value} to slave_{slave.id}')
                 else:
                     port.reset_input_buffer() # reset the buffer if no read
-                    MQTT_config.pub_Topics[set_err] += 1
-                    print('XX'*10 + f"TCHeader_set error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[set_err]} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
+                    MQTT_config.err_Topics.pub_values[set_err] += 1
+                    print('XX'*10 + f"TCHeader_set error: from slave_{slave.id}, err_{MQTT_config.err_Topics.pub_values[set_err]} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
             else: # if data len is less than the wait data
                 port.reset_input_buffer() # reset the buffer if no read
-                MQTT_config.pub_Topics[set_err] += 1
-                print('XX'*10 + f"TCHeader_set error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[set_err]} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+                MQTT_config.err_Topics.pub_values[set_err] += 1
+                print('XX'*10 + f"TCHeader_set error: from slave_{slave.id}, err_{MQTT_config.err_Topics.pub_values[set_err]} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
         except Exception as e:
-            MQTT_config.pub_Topics[set_err] += 1
-            print('XX'*10 + f"TCHeader_set error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[set_err]} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            MQTT_config.err_Topics.pub_values[set_err] += 1
+            print('XX'*10 + f"TCHeader_set error: from slave_{slave.id}, err_{MQTT_config.err_Topics.pub_values[set_err]} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
             write_event.clear()
 
@@ -281,15 +283,15 @@ def ADAM_SET_comm(start, port, slave, wait_data, collect_err, set_err, write_eve
                     print(f'ADAM_collect done: read from slave_{slave.id}')
                 else:
                     port.reset_input_buffer() # reset the buffer if no read
-                    MQTT_config.pub_Topics[collect_err] += 1
-                    print('XX'*10 + f"ADAM_collect error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[collect_err]} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
+                    MQTT_config.err_Topics.pub_values[collect_err] += 1
+                    print('XX'*10 + f"ADAM_collect error: from slave_{slave.id}, err_{MQTT_config.err_Topics.pub_values[collect_err]} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
             else: # if data len is less than the wait data
                 port.reset_input_buffer() # reset the buffer if no read
-                MQTT_config.pub_Topics[collect_err] += 1
-                print('XX'*10 + f"ADAM_collect error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[collect_err]} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+                MQTT_config.err_Topics.pub_values[collect_err] += 1
+                print('XX'*10 + f"ADAM_collect error: from slave_{slave.id}, err_{MQTT_config.err_Topics.pub_values[collect_err]} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
         except Exception as e:
-            MQTT_config.pub_Topics[collect_err] += 1
-            print('XX'*10 + f"ADAM_collect error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[collect_err]} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            MQTT_config.err_Topics.pub_values[collect_err] += 1
+            print('XX'*10 + f"ADAM_collect error: from slave_{slave.id}, err_{MQTT_config.err_Topics.pub_values[collect_err]} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
             pass
 
@@ -313,15 +315,15 @@ def ADAM_SET_comm(start, port, slave, wait_data, collect_err, set_err, write_eve
                     print(f'ADAM_set done: write {write_value} to slave_{slave.id}')
                 else:
                     port.reset_input_buffer() # reset the buffer if no read
-                    MQTT_config.pub_Topics[set_err] += 1
-                    print('XX'*10 + f"ADAM_set error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[set_err]} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
+                    MQTT_config.err_Topics.pub_values[set_err] += 1
+                    print('XX'*10 + f"ADAM_set error: from slave_{slave.id}, err_{MQTT_config.err_Topics.pub_values[set_err]} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
             else: # if data len is less than the wait data
                 port.reset_input_buffer() # reset the buffer if no read
-                MQTT_config.pub_Topics[set_err] += 1
-                print('XX'*10 + f"ADAM_set error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[set_err]} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+                MQTT_config.err_Topics.pub_values[set_err] += 1
+                print('XX'*10 + f"ADAM_set error: from slave_{slave.id}, err_{MQTT_config.err_Topics.pub_values[set_err]} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
         except Exception as e:
-            MQTT_config.pub_Topics[set_err] += 1
-            print('XX'*10 + f"ADAM_set error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[set_err]} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            MQTT_config.err_Topics.pub_values[set_err] += 1
+            print('XX'*10 + f"ADAM_set error: from slave_{slave.id}, err_{MQTT_config.err_Topics.pub_values[set_err]} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
             write_event.clear()
 
@@ -342,19 +344,20 @@ def ADAM_TC_analyze(start, slave, pub_Topic, analyze_err):
                 #print(readings)
 
                 # casting
+                #slave.port
                 MQTT_config.pub_Topics[pub_Topic] = readings[-1]
                 ## to slave data list
                 slave.readings.append(readings)
                 print(f'ADAM_TC_analyze done: record {readings} from slave_{slave.id}')
 
             except Exception as e:
-                MQTT_config.pub_Topics[analyze_err] += 1
-                print('XX'*10 + f" {MQTT_config.pub_Topics[analyze_err]} ADAM_TC_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
+                MQTT_config.err_Topics.pub_values[analyze_err] += 1
+                print('XX'*10 + f" {MQTT_config.err_Topics.pub_values[analyze_err]} ADAM_TC_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
             finally:
                 pass
                     
     print('kill ADAM_TC_analyze')
-    print(f'Final ADAM_TC_analyze: {MQTT_config.pub_Topics[analyze_err]} errors occured')
+    print(f'Final ADAM_TC_analyze: {MQTT_config.err_Topics.pub_values[analyze_err]} errors occured')
     #barrier_kill.wait()
 
 # revise
@@ -421,13 +424,13 @@ def DFM_data_analyze(start, slave, pub_Topic, analyze_err):
                 print(f'DFM_data_analyze done: record {readings} from slave_{slave.id}')
 
             except Exception as e:
-                MQTT_config.pub_Topics[analyze_err] += 1
-                print('XX'*10 + f" {MQTT_config.pub_Topics[analyze_err]} DFM_data_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
+                MQTT_config.err_Topics.pub_values[analyze_err] += 1
+                print('XX'*10 + f" {MQTT_config.err_Topics.pub_values[analyze_err]} DFM_data_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
             finally:
                 pass
 
     print('kill DFM_data_analyze')
-    print(f'Final DFM_data_analyze: {MQTT_config.pub_Topics[analyze_err]} errors occured')
+    print(f'Final DFM_data_analyze: {MQTT_config.err_Topics.pub_values[analyze_err]} errors occured')
     #barrier_kill.wait()
 
 
@@ -462,13 +465,13 @@ def DFM_AOG_data_analyze(start, slave, pub_Topic, analyze_err):
                 print(f'DFM_AOG_data_analyze done: record {readings} from slave_{slave.id}')
 
             except Exception as e7:
-                MQTT_config.pub_Topics[analyze_err] += 1
-                print('XX'*10 + f" {MQTT_config.pub_Topics[analyze_err]} DFM_AOG_data_analyze error at {round((time.time()-start),2)}s: " + str(e7) + 'XX'*5)
+                MQTT_config.err_Topics.pub_values[analyze_err] += 1
+                print('XX'*10 + f" {MQTT_config.err_Topics.pub_values[analyze_err]} DFM_AOG_data_analyze error at {round((time.time()-start),2)}s: " + str(e7) + 'XX'*5)
             finally:
                 pass
 
     print('kill DFM_AOG_data_analyze')
-    print(f'Final DFM_AOG_data_analyze: {MQTT_config.pub_Topics[analyze_err]} errors occured')
+    print(f'Final DFM_AOG_data_analyze: {MQTT_config.err_Topics.pub_values[analyze_err]} errors occured')
     #barrier_kill.wait()
 
 
@@ -494,13 +497,13 @@ def Scale_data_analyze(start, slave, pub_Topic, analyze_err):
             else:
                 print(f'Scale_data_analyze done: record () from slave_{slave.id}')
         except Exception as e:
-            MQTT_config.pub_Topics[analyze_err] += 1
-            print('XX'*10 + f" Scale_data_analyze error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[analyze_err]} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
+            MQTT_config.err_Topics.pub_values[analyze_err] += 1
+            print('XX'*10 + f" Scale_data_analyze error: from slave_{slave.id}, err_{MQTT_config.err_Topics.pub_values[analyze_err]} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
         finally:
             pass
 
     print(f'kill Scale_data_analyze of slave_{slave.id}')
-    print(f'Final Scale_data_analyze: from slave_{slave.id}, {MQTT_config.pub_Topics[analyze_err]} errors occured')
+    print(f'Final Scale_data_analyze: from slave_{slave.id}, {MQTT_config.err_Topics.pub_values[analyze_err]} errors occured')
     #barrier_kill.wait()
 
 
@@ -531,13 +534,13 @@ def GA_data_analyze(start, slave, pub_Topic, analyze_err):
                 print(f'GA_data_analyze done: record {readings} from slave_{slave.id}')
 
             except Exception as e:
-                MQTT_config.pub_Topics[analyze_err] += 1
-                print('XX'*10 + f" {MQTT_config.pub_Topics[analyze_err]} GA_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
+                MQTT_config.err_Topics.pub_values[analyze_err] += 1
+                print('XX'*10 + f" {MQTT_config.err_Topics.pub_values[analyze_err]} GA_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
             finally:
                 pass
 
     print('kill GA_data_analyze')
-    print(f'Final GA_data_analyze: {MQTT_config.pub_Topics[analyze_err]} errors occured')
+    print(f'Final GA_data_analyze: {MQTT_config.err_Topics.pub_values[analyze_err]} errors occured')
     #barrier_kill.wait()
 
 
@@ -569,13 +572,13 @@ def TCHeader_analyze(start, slave, pub_Topic, analyze_err):
             else:
                 print(f'TCHeader_analyze done: record () from slave_{slave.id}')
         except Exception as e:
-            MQTT_config.pub_Topics[analyze_err] += 1
-            print('XX'*10 + f"TCHeader_analyze error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[analyze_err]} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
+            MQTT_config.err_Topics.pub_values[analyze_err] += 1
+            print('XX'*10 + f"TCHeader_analyze error: from slave_{slave.id}, err_{MQTT_config.err_Topics.pub_values[analyze_err]} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
         finally:
             pass
 
     print(f'kill TCHeader_analyze of slave_{slave.id}')
-    print(f'Final TCHeader_analyze: from slave_{slave.id}, {MQTT_config.pub_Topics[analyze_err]} errors occured')
+    print(f'Final TCHeader_analyze: from slave_{slave.id}, {MQTT_config.err_Topics.pub_values[analyze_err]} errors occured')
     #barrier_kill.wait()
 
 
@@ -609,11 +612,11 @@ def ADAM_SET_analyze(start, slave, pub_Topic, analyze_err):
             else:
                 print(f'ADAM_analyze done: record () from slave_{slave.id}')
         except Exception as e:
-            MQTT_config.pub_Topics[analyze_err] += 1
-            print('XX'*10 + f"ADAM_analyze error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[analyze_err]} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
+            MQTT_config.err_Topics.pub_values[analyze_err] += 1
+            print('XX'*10 + f"ADAM_analyze error: from slave_{slave.id}, err_{MQTT_config.err_Topics.pub_values[analyze_err]} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
         finally:
             pass
 
     print(f'kill ADAM_analyze of slave_{slave.id}')
-    print(f'Final ADAM_analyze: from slave_{slave.id}, {MQTT_config.pub_Topics[analyze_err]} errors occured')
+    print(f'Final ADAM_analyze: from slave_{slave.id}, {MQTT_config.err_Topics.pub_values[analyze_err]} errors occured')
     #barrier_kill.wait()

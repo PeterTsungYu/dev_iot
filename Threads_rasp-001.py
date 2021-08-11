@@ -23,35 +23,71 @@ lst_port.append(config.Setup_port)
 # ADAM_TC
 # RTU func code 03, PV value site starts at '0000', data_len is 8 ('0008')
 ADAM_TC_RTU = Modbus.RTU(config.ADAM_TC_id, '03', '0000', '0008')
-ADAM_TC_slave = Modbus.Slave(config.ADAM_TC_id, ADAM_TC_RTU.rtu)
+ADAM_TC_slave = Modbus.Slave(name='ADAM_TC', 
+                            port='RS485_port', 
+                            idno=config.ADAM_TC_id, 
+                            rtu=ADAM_TC_RTU.rtu
+                            )
 
 # GA slave
 GA_RTU = '11 01 60 8E'
-GA_slave = Modbus.Slave(config.GA_id, GA_RTU)
+GA_slave = Modbus.Slave(name='GA', 
+                        port='RS232_port', 
+                        idno=config.GA_id, 
+                        rtu=GA_RTU
+                        )
 
 # Scale slave
-Scale_slave = Modbus.Slave()
+Scale_slave = Modbus.Slave(name='Scale', 
+                            port='Scale_port', 
+                            idno=config.Scale_id, 
+                            rtu=''
+                            )
 
 # TCHeader Rreading, RTU func code 03, PV value site at '008A', data_len is 1 ('0001')
-TCHeader_0_RTU_R = Modbus.RTU(config.TCHeader_1_id, '03', '008A', '0001')
-TCHeader_0_slave = Modbus.Slave(config.TCHeader_1_id, TCHeader_0_RTU_R.rtu,)
+Header_EVA_RTU_R = Modbus.RTU(config.Header_EVA_id, '03', '008A', '0001')
+Header_EVA_slave = Modbus.Slave(name='Header_EVA', 
+                                port='Setup_port', 
+                                idno=config.Header_EVA_id, 
+                                rtu=Header_EVA_RTU_R.rtu
+                                )
 
-TCHeader_1_RTU_R = Modbus.RTU(config.TCHeader_2_id, '03', '008A', '0001')
-TCHeader_1_slave = Modbus.Slave(config.TCHeader_2_id, TCHeader_1_RTU_R.rtu,)
+Header_BR_RTU_R = Modbus.RTU(config.Header_BR_id, '03', '008A', '0001')
+Header_BR_slave = Modbus.Slave(name='Header_BR', 
+                                port='Setup_port', 
+                                idno=config.Header_BR_id, 
+                                rtu=Header_BR_RTU_R.rtu
+                                )
 
 # ADAM_SET_slave, RTU func code 03, channel site at '0000-0003', data_len is 4 ('0004')
 ## ch00:+-10V, ch01:0-5V, ch02:0-5V, ch03:0-5V
 ADAM_SET_RTU_R = Modbus.RTU(config.ADAM_SET_id, '03', '0000', '0004') # only ch0
-ADAM_SET_slave = Modbus.Slave(config.ADAM_SET_id, ADAM_SET_RTU_R.rtu,)
+ADAM_SET_slave = Modbus.Slave(name='ADAM_SET', 
+                                port='Setup_port', 
+                                idno=config.ADAM_SET_id, 
+                                rtu=ADAM_SET_RTU_R.rtu
+                                )
 
 # ADAM_READ_slave, RTU func code 03, channel site at '0000-0008', data_len is 8 ('0008')
 ## ch00:4-20mA, ch01:0-5V, ch04:0-5V, ch05:0-5V, ch06:0-5V
 ADAM_READ_RTU_R = Modbus.RTU(config.ADAM_READ_id, '03', '0000', '0008') # only ch0
-ADAM_READ_slave = Modbus.Slave(config.ADAM_READ_id, ADAM_READ_RTU_R.rtu,)
+ADAM_READ_slave = Modbus.Slave(name='ADAM_READ', 
+                                port='Setup_port', 
+                                idno=config.ADAM_READ_id, 
+                                rtu=ADAM_READ_RTU_R.rtu
+                                )
 
 # DFMs' slaves
-DFM_slave = Modbus.Slave()
-DFM_AOG_slave = Modbus.Slave()
+DFM_slave = Modbus.Slave(name='DFM', 
+                        port='GPIO_port', 
+                        idno=config.DFM_id, 
+                        rtu=''
+                        )
+DFM_AOG_slave = Modbus.Slave(name='DFM_AOG', 
+                        port='GPIO_port', 
+                        idno=config.DFM_AOG_id, 
+                        rtu=''
+                        )
 
 print('Port setting: succeed')
 
@@ -93,20 +129,20 @@ Scale_data_analyze = threading.Thread(
 
 # add READ
 def Setup_data_collect(port):
-    global TCHeader_0_collect_err, TCHeader_1_collect_err, ADAM_SET_collect_err
+    global Header_EVA_collect_err, Header_BR_collect_err, ADAM_SET_collect_err
     while not config.kb_event.isSet():
-        TCHeader_0_collect_err = Modbus.TCHeader_comm(
-            start, port, TCHeader_0_slave, 7, TCHeader_0_collect_err, 
-            MQTT_config.sub_Topics['TCHeader_0_SV']['event'], #todo: config a general slave class
-            MQTT_config.sub_Topics['TCHeader_0_SV']['value'], 
+        Header_EVA_collect_err = Modbus.TCHeader_comm(
+            start, port, Header_EVA_slave, 7, Header_EVA_collect_err, 
+            MQTT_config.sub_Topics['Header_EVA_SV']['event'], #todo: config a general slave class
+            MQTT_config.sub_Topics['Header_EVA_SV']['value'], 
             ) # wait for 7 bytes
-        #print(TCHeader_0_collect_err)
-        TCHeader_1_collect_err = Modbus.TCHeader_comm(
-            start, port, TCHeader_1_slave, 7, TCHeader_1_collect_err, 
-            MQTT_config.sub_Topics['TCHeader_1_SV']['event'], #todo: config a general slave class
-            MQTT_config.sub_Topics['TCHeader_1_SV']['value'],
+        #print(Header_EVA_collect_err)
+        Header_BR_collect_err = Modbus.TCHeader_comm(
+            start, port, Header_BR_slave, 7, Header_BR_collect_err, 
+            MQTT_config.sub_Topics['Header_BR_SV']['event'], #todo: config a general slave class
+            MQTT_config.sub_Topics['Header_BR_SV']['value'],
             ) # wait for 7 bytes
-        #print(TCHeader_1_collect_err)
+        #print(Header_BR_collect_err)
         ADAM_SET_collect_err = Modbus.ADAM_SET_comm(
             start, port, ADAM_SET_slave, 7, ADAM_SET_collect_err, 
             MQTT_config.sub_Topics['ADAM_SET_SV0']['event'], #todo: config a general slave class
@@ -114,7 +150,7 @@ def Setup_data_collect(port):
             ) # wait for 7 bytes == 7 Hex numbers
     port.close()
     print('kill TCHeader_comm')
-    print(f'Final TCHeader_comm: {TCHeader_0_collect_err} and {TCHeader_1_collect_err} errors occured')
+    print(f'Final TCHeader_comm: {Header_EVA_collect_err} and {Header_BR_collect_err} errors occured')
     print('kill ADAM_SET_comm')
     print(f'Final ADAM_SET_comm: {ADAM_SET_collect_err} errors occured')
     
@@ -122,13 +158,13 @@ Setup_data_collect = threading.Thread(
     target=Setup_data_collect, 
     args=(config.RS485_port,)
     )
-TCHeader_0_analyze = threading.Thread(
+Header_EVA_analyze = threading.Thread(
     target=Modbus.TCHeader_analyze, 
-    args=(start, TCHeader_0_slave, 'TCHeader_0_PV',),
+    args=(start, Header_EVA_slave, 'Header_EVA_PV',),
     )
-TCHeader_1_analyze = threading.Thread(
+Header_BR_analyze = threading.Thread(
     target=Modbus.TCHeader_analyze, 
-    args=(start, TCHeader_1_slave, 'TCHeader_1_PV',),
+    args=(start, Header_BR_slave, 'Header_BR_PV',),
     )
 ADAM_SET_analyze = threading.Thread(
     target=Modbus.ADAM_SET_analyze, 
@@ -160,8 +196,8 @@ lst_thread.append(GA_data_analyze)
 lst_thread.append(Scale_data_collect)
 lst_thread.append(Scale_data_analyze)
 lst_thread.append(Setup_data_collect)
-lst_thread.append(TCHeader_0_analyze)
-lst_thread.append(TCHeader_1_analyze)
+lst_thread.append(Header_EVA_analyze)
+lst_thread.append(Header_BR_analyze)
 lst_thread.append(ADAM_SET_analyze)
 lst_thread.append(DFM_data_analyze)
 lst_thread.append(DFM_AOG_data_analyze)

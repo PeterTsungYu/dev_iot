@@ -42,11 +42,11 @@ Scale_port_Topics = port_Topics(name='Scale_port_Topics',
 
 Setup_port_Topics = port_Topics(name='Setup_port_Topics', 
                                 sub_topics=[
-                                    'Header_EVA_SV', 'Header_BR_SV', # Header EVA(TCHeader_0_SV), Header BR(TCHeader_1_SV),
+                                    'Header_EVA_SV', 'Header_BR_SV', # Header EVA(Header_EVA_SV), Header BR(Header_BR_SV),
                                     'PCB_SET_SV', 'Pump_SET_SV', 'Air_MFC_SET_SV', 'H2_MFC_SET_SV' # PCB(ADAM_SET_SV0), Pump(ADAM_SET_SV1), Air_MFC(ADAM_SET_SV2), H2_MFC(ADAM_SET_SV3)
                                 ],
                                 pub_topics=[
-                                    'Header_EVA_PV', 'Header_BR_PV', # Header EVA(TCHeader_0_PV), Header BR(TCHeader_1_PV),
+                                    'Header_EVA_PV', 'Header_BR_PV', # Header EVA(Header_EVA_PV), Header BR(Header_BR_PV),
                                     'PCB_SET_PV', 'Pump_SET_PV', 'Air_MFC_SET_PV', 'H2_MFC_SET_PV', # PCB(ADAM_SET_PV0), Pump(ADAM_SET_PV1), Air_MFC(ADAM_SET_PV2), H2_MFC(ADAM_SET_PV3)
                                     'SMC_0_PV', 'SMC_1_PV', 'ADAM_READ_PV2', 'ADAM_READ_PV3', 'Pump_PV', 'Air_MFC_PV', 'H2_MFC_PV', 'ADAM_READ_PV7' # ADAM_READ_PV0 (SMC), ADAM_READ_PV1 (SMC), ADAM_READ_PV2, ADAM_READ_PV3, ADAM_READ_PV4(pump), ADAM_READ_PV5(Air_MFC), ADAM_READ_PV6(H2_MFC), ADAM_READ_PV7
                                 ])
@@ -85,7 +85,7 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
         # reconnect then subscriptions will be renewed.
         client.subscribe("nodered", qos=0)
         client.subscribe([(u,0) for i in lst_port_Topics for u in i.sub_topics])
-        #client.subscribe([("TCHeader_0_SV", 0), ("TCHeader_1_SV", 0)])
+        #client.subscribe([("Header_EVA_SV", 0), ("Header_BR_SV", 0)])
 
     # The callback for when a SUB message is received
     def on_message(client, userdata, msg):
