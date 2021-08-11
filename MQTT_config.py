@@ -71,74 +71,11 @@ err_Topics = port_Topics(name='err_Topics',
                             'DFM_AOG_data_collect_err', 'DFM_AOG_data_analyze_err'
                         ])
 
-sub_Topics = {
-    'TCHeader_0_SV':{'value':0, 'event':threading.Event()}, # Header EVA
-    'TCHeader_1_SV':{'value':0, 'event':threading.Event()}, # Header BR
-    'ADAM_SET_SV0':{'value':0, 'event':threading.Event()}, # PCB
-    'ADAM_SET_SV1':{'value':0, 'event':threading.Event()}, # pump
-    'ADAM_SET_SV2':{'value':0, 'event':threading.Event()}, # Air_MFC
-    'ADAM_SET_SV3':{'value':0, 'event':threading.Event()}, # H2_MFC
-}
-
-pub_Topics = {
-    'TCHeader_0_PV':0, # Header EVA
-    'TCHeader_1_PV':0, # Header BR
-    'Scale':0, 
-    'ADAM_SET_PV0':0, # PCB
-    'ADAM_SET_PV1':0, # pump
-    'ADAM_SET_PV2':0, # Air_MFC
-    'ADAM_SET_PV3':0, # H2_MFC
-    'ADAM_READ_PV0':0, # SMC
-    'ADAM_READ_PV1':0, # SMC
-    'ADAM_READ_PV2':0, 
-    'ADAM_READ_PV3':0,
-    'ADAM_READ_PV4':0, # pump
-    'ADAM_READ_PV5':0, # Air_MFC
-    'ADAM_READ_PV6':0, # H2_MFC
-    'ADAM_READ_PV7':0,
-    'ADAM_TC_PV0':0, # TC7
-    'ADAM_TC_PV1':0, # TC8
-    'ADAM_TC_PV2':0, # TC9
-    'ADAM_TC_PV3':0, # TC10
-    'ADAM_TC_PV4':0, # TC11
-    'ADAM_TC_PV5':0, # EVA_out
-    'ADAM_TC_PV6':0, # RAD_in
-    'ADAM_TC_PV7':0, # RAD_out
-    'GA_CO':0,
-    'GA_CO2':0,
-    'GA_CH4':0,
-    'GA_H2':0,
-    'GA_N2':0,
-    'GA_HEAT':0,
-    'DFM_RichGas':0,
-    'DFM_AOG':0,
-    'ADAM_TC_collect_err':0,
-    'ADAM_TC_analyze_err':0,
-    'GA_data_collect_err':0,
-    'GA_data_analyze_err':0,
-    'Scale_collect_err':0,
-    'Scale_analyze_err':0,
-    'TCHeader_0_collect_err':0,
-    'TCHeader_0_set_err':0,
-    'TCHeader_0_analyze_err':0,
-    'TCHeader_1_collect_err':0,
-    'TCHeader_1_set_err':0,
-    'TCHeader_1_analyze_err':0,
-    'ADAM_SET_collect_err':0,
-    'ADAM_SET_set_err':0,
-    'ADAM_SET_analyze_err':0,
-    'ADAM_READ_collect_err':0,
-    'ADAM_READ_analyze_err':0,
-    'DFM_data_collect_err':0,
-    'DFM_data_analyze_err':0,
-    'DFM_AOG_data_collect_err':0,
-    'DFM_AOG_data_analyze_err':0,
-}
+lst_port_Topics = [RS485_port_Topics, RS232_port_Topics, Scale_port_Topics, Setup_port_Topics, GPIO_port_Topics, err_Topics]
 
 #-------------------------MQTT func--------------------------------------
 def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
     def on_connect(client, userdata, flags, rc):
-        global sub_Topics
         if rc == 0:
             print(f"Connected to MQTT!" + f">>> {client_id}")
         else:
@@ -147,16 +84,15 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
         # Subscribing in on_connect() means that if we lose the connection and
         # reconnect then subscriptions will be renewed.
         client.subscribe("nodered", qos=0)
-        client.subscribe([(i,0) for i in sub_Topics.keys()])
+        client.subscribe([(u,0) for i in lst_port_Topics for u in i.sub_topics])
         #client.subscribe([("TCHeader_0_SV", 0), ("TCHeader_1_SV", 0)])
 
     # The callback for when a SUB message is received
     def on_message(client, userdata, msg):
-        global sub_Topics
         print(msg.topic+ ": " + str(msg.payload) + f">>> {client_id}")
         if (msg.topic != 'nodered') and (msg.payload != b''):
-            sub_Topics[msg.topic]['value'] = float(msg.payload)
-            sub_Topics[msg.topic]['event'].set()
+            Setup_port_Topics.sub_values[msg.topic] = float(msg.payload)
+            Setup_port_Topics.sub_events[msg.topic].set()
         
     def on_publish(client, userdata, mid):
         print(mid)
@@ -171,12 +107,13 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
 
 
 def multi_pub(client):
-    #global pub_Topics
     while not config.kb_event.isSet():
         if not config.ticker.wait(config.sample_time):
-            print(pub_Topics)
-            for key, value in pub_Topics.items():
-                client.publish(topic=key, payload=value, qos=0, retain=True)
+            #print(pub_Topics)
+            for port_topic in lst_port_Topics:
+                for key, value in port_topic.pub_values.items():
+                    client.publish(topic=key, payload=value, qos=0, retain=True)
+            print(f"pub succeed {client._client_id} >>> localhost")
 
 #-------------------------MQTT instance--------------------------------------
 client_0 = connect_mqtt(
