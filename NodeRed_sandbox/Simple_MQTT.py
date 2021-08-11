@@ -42,7 +42,7 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60, sub_t
         # reconnect then subscriptions will be renewed.
         client.subscribe("nodered", qos=0)
         client.subscribe(sub_topic)
-        #client.subscribe([("TCHeader/SV0", 0), ("TCHeader/SV1", 0)])
+        #client.subscribe([("TCHeader_0_SV", 0), ("TCHeader_1_SV", 0)])
 
     # The callback for when a SUB message is received
     def on_message(client, userdata, msg):
@@ -60,10 +60,10 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60, sub_t
     client.connect_async(hostname, port, keepalive)
     return client
 
-client_0 = connect_mqtt(client_id='client0', hostname='localhost', port=1883, keepalive=60, sub_topic=[("TCHeader/SV0", 0),], sub="sub_SV0", sub_event="sub_SV0_event",)
+client_0 = connect_mqtt(client_id='client0', hostname='localhost', port=1883, keepalive=60, sub_topic=[("TCHeader_0_SV", 0),], sub="sub_SV0", sub_event="sub_SV0_event",)
 client_0.loop_start()
 #print(threading.enumerate())
-client_1 = connect_mqtt(client_id='client1', hostname='localhost', port=1883, keepalive=60, sub_topic=[("TCHeader/SV1", 0),], sub="sub_SV1", sub_event="sub_SV1_event",)
+client_1 = connect_mqtt(client_id='client1', hostname='localhost', port=1883, keepalive=60, sub_topic=[("TCHeader_1_SV", 0),], sub="sub_SV1", sub_event="sub_SV1_event",)
 client_1.loop_start()
 #print(threading.enumerate())
 
@@ -72,11 +72,11 @@ lst_thread = []
 
 def pub_0(client=client_0):
     while True:
-        client.publish(topic='TCHeader/PV0', payload=random.random(), qos=0, retain=True)
+        client.publish(topic='TCHeader_0_PV', payload=random.random(), qos=0, retain=True)
         time.sleep(2)
 def pub_1(client=client_1):
     while True:
-        client.publish(topic='TCHeader/PV1', payload=random.random(), qos=0, retain=True)
+        client.publish(topic='TCHeader_1_PV', payload=random.random(), qos=0, retain=True)
         time.sleep(2)
 
 payload_0 = random.random()

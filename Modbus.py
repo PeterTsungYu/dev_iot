@@ -33,77 +33,15 @@ class Slave: # Create Slave data store
         self.time_readings = 0 # record time
         self.readings = [] # for all data 
 
-'''deprecated 
-def gen_Slave(RTU):
-    slave = Slave(RTU.id, RTU.rtu)
-    return slave
-'''
+#------------------------------Port func---------------------------------
+def RS232_data_collect(start, port, slave, *funcs):
+    while not config.kb_event.isSet():
+        for func in funcs:
+            func(start, port, slave, 31, collect_err)
+    port.close()
+    print('kill GA_data_collect')
+    print(f'Final GA_data_collect: {collect_err} errors occured')
 
-'''
-class SlaveThread(threading.Thread): # deprecated 
-    def __init__(self, name='SlaveThread'):
-        threading.Thread.__init__(self, name=name)
-        self._kill = threading.Event()
-        self._sleepperiod = 1
-    def run(self):
-        while not self._kill.isSet(): # inspect the event till it is set
-            self._kill.wait(self._sleepperiod) # inspect every period
-        print('end')
-    def join(self, timeout=None):
-        self._stopevent.set(  ) # stop the tread by join method
-        threading.Thread.join(self, timeout)
-'''
-
-'''deprecated
-from pymodbus.datastore import ModbusSequentialDataBlock
-from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
-
-def serverDB_gen(slave_id=0x00):
-    register_block = ModbusSequentialDataBlock(0x00, [0x00]*0x17) # each address can hold from a range 0x00 to 0xffff
-    store = ModbusSlaveContext(
-        #di=ModbusSequentialDataBlock(0, [1]*100),
-        #co=ModbusSequentialDataBlock(0, [2]*100),
-        hr=register_block, # holding register block, for func = 3, 6, 16
-        #ir=ModbusSequentialDataBlock(0, [4]*100),
-        zero_mode=True
-        )
-    context = ModbusServerContext(
-        slaves={slave_id:store,}, # collection of slaves; here only slave 6
-        single=False
-        )
-    print("Succeed to generate a server context")
-    return context
-'''
-'''deprecated
-from pymodbus.device import ModbusDeviceIdentification
-from pymodbus.server.asynchronous import StartSerialServer
-from pymodbus.transaction import ModbusRtuFramer
-from pymodbus.server.asynchronous import StopServer
-
-def run_server(context, port, timeout=1, baudrate=115200, stopbits=1, bytesize=8, parity='N'):
-    
-    identity = ModbusDeviceIdentification()
-    identity.VendorName = 'RPi'
-    identity.ProductCode = 'RPi'
-    identity.VendorUrl = ''
-    identity.ProductName = 'RPi Server'
-    identity.ModelName = 'RPi Server'
-    identity.MajorMinorRevision = '0.0.1'
-
-    StartSerialServer(
-        context, 
-        framer=ModbusRtuFramer,
-        identity=identity,  
-        port=port, 
-        timeout=timeout, 
-        baudrate=baudrate,
-        stopbits=stopbits,
-        bytesize=bytesize,
-        parity=parity, 
-        )
-
-    print("Server is offline")
-'''
 
 #------------------------------Collect and Analyze func---------------------------------
 def tohex(value):
@@ -114,47 +52,8 @@ def tohex(value):
     return hex_value
 
 
-def RPiserver(start, port, slave, wait_data):
-    while not config.kb_event.isSet():
-        try:
-            if port.inWaiting() >= wait_data: # Rpi protocol has 8 bytes ('0603000000170473')
-                # '06' is slave 6
-                # '03' is func code 
-                # 17*2 data entries
-                writing = '0603' + hex(34)[2:]
-                #print(slave.readings)
-                for i in slave.readings:
-                    i = hex(i)
-                    if len(i) != 6: # ex. 0x10
-                        i = '0'*(6-len(i)) + i[2:]
-                    elif len(i) == 6: # ex. 0x10
-                        i = i[2:]
-                    writing = writing + i
-                crc = Crc16Modbus.calchex(bytearray.fromhex(writing)) # ex. bytearray.fromhex('0010'), two-by-two digits in the bytearray
-                writing_RTU = writing + crc[-2:] + crc[:2]
-                #print(writing)
-
-                readings = port.read(port.inWaiting()).hex()
-                #print(readings)
-                if slave.rtu in readings: # Rpi protocol, '06 03 0000 0017 0473'
-                    port.write(bytes.fromhex(writing_RTU)) #hex to binary(byte)
-                    readings = '' 
-                    print(slave.readings)
-                    print(f'RPiserver write at {round(time.time()-start, 2)}s : {writing}')
-                port.reset_input_buffer()
-            #time.sleep(1)
-        except Exception as e:
-            print ("RPiserver error: " + str(e))
-            time.sleep(1)
-
-    port.close()
-    print('kill RPiserver')
-    #barrier_kill.wait()
-
-
-def ADAM_TC_collect(start, port, slave, wait_data):
+def ADAM_TC_collect(start, port, slave, wait_data, collect_err):
     #start = time.time()
-    count_err = 0
     while not config.kb_event.isSet():
         try:
             slave.time_readings.append(round(time.time()-start, 2))
@@ -163,32 +62,72 @@ def ADAM_TC_collect(start, port, slave, wait_data):
             time.sleep(config.time_out)
 
             # look up the buffer for 21 bytes, which is for 8 channels data length
-            if port.inWaiting() >= wait_data:
-                '''
-                check sta, func code, datalen, crc
-                ''' 
-                readings = port.read(wait_data).hex()
-                #print(readings)
-                slave.lst_readings.append(readings)
-                print('ADAM_TC_collect: done')
-                port.reset_input_buffer() # reset the buffer after each reading process
+            if port.inWaiting() >= wait_data: 
+                readings = port.read(wait_data).hex() # after reading, the buffer will be clean
+                crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
+                # check sta, func code, datalen, crc
+                if (readings[0:2] == slave.id) and (readings[2:4] == '03') and ((crc[-2:] + crc[:2]) == readings[-4:]):
+                    slave.lst_readings.append(readings)
+                    print(f'ADAM_TC_collect done: read from slave_{slave.id}')
+                else:
+                    port.reset_input_buffer() # reset the buffer if no read
+                    MQTT_config.pub_Topics[collect_err] += 1
+                    print('XX'*10 + f"ADAM_TC_collect error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[collect_err]} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
             else: # if data len is less than the wait data
-                count_err += 1
-                print('XX'*10 + f" {count_err} ADAM_TC_collect error at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10)
+                port.reset_input_buffer() # reset the buffer if no read
+                MQTT_config.pub_Topics[collect_err] += 1
+                print('XX'*10 + f"ADAM_TC_collect error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[collect_err]} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
         except Exception as e:
-            print('XX'*10 + f" {count_err} ADAM_TC_collect error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            MQTT_config.pub_Topics[collect_err] += 1
+            print('XX'*10 + f" {MQTT_config.pub_Topics[collect_err]} ADAM_TC_collect error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
             pass
 
     port.close()
     print('kill ADAM_TC_collect')
-    print(f'Final ADAM_TC_collect: {count_err} errors occured')
+    print(f'Final ADAM_TC_collect: {MQTT_config.pub_Topics[collect_err]} errors occured')
     #barrier_kill.wait()
 
 
-def Scale_data_collect(start, port, slave, wait_data):
+def ADAM_READ_collect(start, port, slave, wait_data, collect_err):
     #start = time.time()
-    count_err = 0
+    while not config.kb_event.isSet():
+        try:
+            slave.time_readings.append(round(time.time()-start, 2))
+            port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
+
+            time.sleep(config.time_out)
+
+            # look up the buffer for 21 bytes, which is for 8 channels data length
+            if port.inWaiting() >= wait_data: 
+                readings = port.read(wait_data).hex() # after reading, the buffer will be clean
+                crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
+                # check sta, func code, datalen, crc
+                if (readings[0:2] == slave.id) and (readings[2:4] == '03') and ((crc[-2:] + crc[:2]) == readings[-4:]):
+                    slave.lst_readings.append(readings)
+                    print(f'ADAM_READ_collect done: read from slave_{slave.id}')
+                else:
+                    port.reset_input_buffer() # reset the buffer if no read
+                    MQTT_config.pub_Topics[collect_err] += 1
+                    print('XX'*10 + f"ADAM_READ_collect error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[collect_err]} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
+            else: # if data len is less than the wait data
+                port.reset_input_buffer() # reset the buffer if no read
+                MQTT_config.pub_Topics[collect_err] += 1
+                print('XX'*10 + f"ADAM_READ_collect error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[collect_err]} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+        except Exception as e:
+            MQTT_config.pub_Topics[collect_err] += 1
+            print('XX'*10 + f" {MQTT_config.pub_Topics[collect_err]} ADAM_READ_collect error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+        finally:
+            pass
+
+    port.close()
+    print('kill ADAM_READ_collect')
+    print(f'Final ADAM_READ_collect: {MQTT_config.pub_Topics[collect_err]} errors occured')
+    #barrier_kill.wait()
+
+
+def Scale_data_collect(start, port, slave, wait_data, collect_err):
+    #start = time.time()
     while not config.kb_event.isSet():
         try:
             slave.time_readings = time.time()-start
@@ -200,53 +139,21 @@ def Scale_data_collect(start, port, slave, wait_data):
                 print(f'Scale_data_collect done: read from slave_{slave.id}')
                 port.reset_input_buffer() # reset the buffer after each reading process
             else: # if data len is no data
-                count_err += 1
-                print('XX'*10 + f"Scale_data_collect error: from slave_{slave.id}, err_{count_err} at {round((time.time()-start),2)}s: data len is no data" + 'XX'*10)
+                MQTT_config.pub_Topics[collect_err] += 1
+                print('XX'*10 + f"Scale_data_collect error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[collect_err]} at {round((time.time()-start),2)}s: data len is no data" + 'XX'*10)
         except Exception as e:
-            print('XX'*10 + f"Scale_data_collect error: err_{count_err} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            MQTT_config.pub_Topics[collect_err] += 1
+            print('XX'*10 + f"Scale_data_collect error: err_{MQTT_config.pub_Topics[collect_err]} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
             pass
 
     port.close()
     print('kill Scale_data_collect')
-    print(f'Final Scale_data_collect: {count_err} errors occured')
+    print(f'Final Scale_data_collect: {MQTT_config.pub_Topics[collect_err]} errors occured')
     #barrier_kill.wait()
 
 
-def MFC_data_comm(start, count_err, port, slave, wait_data):
-    #start = time.time()
-    #while not config.kb_event.isSet():
-    try:
-        slave.time_readings.append(round(time.time()-start, 2))
-        port.write(bytes(slave.rtu, 'utf-8')) #string to binary(byte) 
-
-        time.sleep(config.time_out)
-        
-        #print(port.inWaiting())
-        if port.inWaiting() >= wait_data:
-            '''
-                check sta, func code, datalen, crc
-            ''' 
-            readings = port.read(port.inWaiting()).decode('utf-8')
-            #print(readings)
-            slave.lst_readings.append(readings)
-            print('MFC_data_collect done')
-            port.reset_input_buffer() # reset the buffer after each reading process
-        else: # if data len is less than the wait data
-            count_err += 1
-            print('XX'*10 + f" {count_err} MFC_data_collect error at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10)
-    except Exception as e:
-        print('XX'*10 + f" {count_err} MFC_data_collect error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
-    finally:
-        pass
-        
-    #port.close()
-    #print('kill MFC_data_collect')
-    #print(f'Final MFC_data_collect: {count_err} errors occured')
-    ##barrier_kill.wait()
-
-
-def GA_data_comm(start, port, slave, wait_data, count_err):
+def GA_data_collect(start, port, slave, wait_data, collect_err):
     #start = time.time()
     #while not config.kb_event.isSet(): # it is written in the ReadingThreads.py
     try:
@@ -256,33 +163,36 @@ def GA_data_comm(start, port, slave, wait_data, count_err):
         time.sleep(config.time_out)
 
         #print(port.inWaiting())
-        if port.inWaiting() >= wait_data:
-            '''
-                check sta, func code, datalen, crc
-            '''  
-            readings = port.read(wait_data).hex()
-            #print(len(readings))
-            slave.lst_readings.append(readings)
-            print('GA_data_collect done')
-            port.reset_input_buffer() # reset the buffer after each reading process
+        if port.inWaiting() >= wait_data: 
+            readings = port.read(wait_data).hex() # after reading, the buffer will be clean
+            crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
+            # check sta, func code, datalen, crc
+            if (readings[0:2] == slave.id) and (readings[2:4] == '03') and ((crc[-2:] + crc[:2]) == readings[-4:]):
+                slave.lst_readings.append(readings)
+                print(f'ADAM_READ_collect done: read from slave_{slave.id}')
+            else:
+                port.reset_input_buffer() # reset the buffer if no read
+                MQTT_config.pub_Topics[collect_err] += 1
+                print('XX'*10 + f"ADAM_READ_collect error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[collect_err]} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
         else: # if data len is less than the wait data
-            count_err += 1
-            print('XX'*10 + f" {count_err} GA_data_collect error at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+            port.reset_input_buffer() # reset the buffer if no read
+            MQTT_config.pub_Topics[collect_err] += 1
+            print('XX'*10 + f"ADAM_READ_collect error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[collect_err]} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
     except Exception as e:
-        print('XX'*10 + f" {count_err} GA_data_collect error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+        MQTT_config.pub_Topics[collect_err] += 1
+        print('XX'*10 + f" {MQTT_config.pub_Topics[collect_err]} GA_data_collect error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
     finally:
-        return count_err
+        pass
     #port.close()
     #print('kill GA_data_collect')
-    #print(f'Final GA_data_collect: {count_err} errors occured')
+    #print(f'Final GA_data_collect: {collect_err} errors occured')
     ##barrier_kill.wait()
 
 
-def TCHeader_comm(start, port, slave, wait_data, count_err, write_event, write_value):
+def TCHeader_comm(start, port, slave, wait_data, collect_err, set_err, write_event, write_value):
     #start = time.time()
     #while not config.kb_event.isSet(): # it is written in the ReadingThreads.py
     if not write_event.isSet():
-        collect_err = 0
         try: # try to collect
             slave.time_readings = time.time()-start
             port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
@@ -302,19 +212,19 @@ def TCHeader_comm(start, port, slave, wait_data, count_err, write_event, write_v
                     print(f'TCHeader_collect done: read from slave_{slave.id}')
                 else:
                     port.reset_input_buffer() # reset the buffer if no read
-                    collect_err += 1
-                    print('XX'*10 + f"TCHeader_collect error: from slave_{slave.id}, err_{count_err[0] + collect_err} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
+                    MQTT_config.pub_Topics[collect_err] += 1
+                    print('XX'*10 + f"TCHeader_collect error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[collect_err]} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
             else: # if data len is less than the wait data
                 port.reset_input_buffer() # reset the buffer if no read
-                collect_err += 1
-                print('XX'*10 + f"TCHeader_collect error: from slave_{slave.id}, err_{count_err[0] + collect_err} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+                MQTT_config.pub_Topics[collect_err] += 1
+                print('XX'*10 + f"TCHeader_collect error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[collect_err]} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
         except Exception as e:
-            print('XX'*10 + f"TCHeader_collect error: from slave_{slave.id}, err_{count_err[0] + collect_err} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            MQTT_config.pub_Topics[collect_err] += 1
+            print('XX'*10 + f"TCHeader_collect error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[collect_err]} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
-            count_err[0] += collect_err
+            pass
 
     else:
-        set_err = 0
         try: # try to set value
             #print(write_value)
             # TCHeader Writing, RTU func code 06, SV value site at '0000'
@@ -334,60 +244,24 @@ def TCHeader_comm(start, port, slave, wait_data, count_err, write_event, write_v
                     print(f'TCHeader_set done: write {write_value} to slave_{slave.id}')
                 else:
                     port.reset_input_buffer() # reset the buffer if no read
-                    set_err += 1
-                    print('XX'*10 + f"TCHeader_set error: from slave_{slave.id}, err_{count_err[1] + set_err} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
+                    MQTT_config.pub_Topics[set_err] += 1
+                    print('XX'*10 + f"TCHeader_set error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[set_err]} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
             else: # if data len is less than the wait data
                 port.reset_input_buffer() # reset the buffer if no read
-                set_err += 1
-                print('XX'*10 + f"TCHeader_set error: from slave_{slave.id}, err_{count_err[1] + set_err} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+                MQTT_config.pub_Topics[set_err] += 1
+                print('XX'*10 + f"TCHeader_set error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[set_err]} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
         except Exception as e:
-            print('XX'*10 + f"TCHeader_set error: from slave_{slave.id}, err_{count_err[1] + set_err} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            MQTT_config.pub_Topics[set_err] += 1
+            print('XX'*10 + f"TCHeader_set error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[set_err]} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
-            count_err[1] += set_err
             write_event.clear()
-            
-    return count_err
-    #port.close()
-    #print('kill GA_data_collect')
-    #print(f'Final GA_data_collect: {count_err} errors occured')
-    ##barrier_kill.wait()
 
 
-def ADAM_TC_analyze(start, slave):
-    count_err = 0
-    while not config.kb_event.isSet():
-        if not config.ticker.wait(config.sample_time):
-            lst_readings = slave.lst_readings
-            time_readings = slave.time_readings
-            #print(f'ADAM_TC_analyze: {lst_readings}')
-            slave.lst_readings = []
-            slave.time_readings = []
-            try:
-                arr_readings = np.array([[int(reading[i-4:i],16) for i in range(10,len(reading)-2,4)] for reading in lst_readings])
-                lst_readings = tuple(np.round(1370/65535*(np.sum(arr_readings, axis=0) / len(lst_readings)), 1))
-                #print(lst_readings)
-                readings = tuple([round(time_readings[-1],2)]) + lst_readings
-                #print(readings)
 
-                # casting
-                print(f'ADAM_TC_analyze done: {readings}')
-                #barrier_analyze.wait()
-            except Exception as e:
-                count_err += 1
-                print('XX'*10 + f" {count_err} ADAM_TC_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
-            finally:
-                pass
-                    
-    print('kill ADAM_TC_analyze')
-    print(f'Final ADAM_TC_analyze: {count_err} errors occured')
-    #barrier_kill.wait()
-
-
-def ADAM_4024_comm(start, port, slave, wait_data, count_err, write_event, write_value):
+def ADAM_SET_comm(start, port, slave, wait_data, collect_err, set_err, write_event, write_value):
     #start = time.time()
     #while not config.kb_event.isSet(): # it is written in the ReadingThreads.py
     if not write_event.isSet():
-        collect_err = 0
         try: # try to collect
             slave.time_readings = time.time()-start
             port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
@@ -407,19 +281,19 @@ def ADAM_4024_comm(start, port, slave, wait_data, count_err, write_event, write_
                     print(f'ADAM_collect done: read from slave_{slave.id}')
                 else:
                     port.reset_input_buffer() # reset the buffer if no read
-                    collect_err += 1
-                    print('XX'*10 + f"ADAM_collect error: from slave_{slave.id}, err_{count_err[0] + collect_err} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
+                    MQTT_config.pub_Topics[collect_err] += 1
+                    print('XX'*10 + f"ADAM_collect error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[collect_err]} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
             else: # if data len is less than the wait data
                 port.reset_input_buffer() # reset the buffer if no read
-                collect_err += 1
-                print('XX'*10 + f"ADAM_collect error: from slave_{slave.id}, err_{count_err[0] + collect_err} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+                MQTT_config.pub_Topics[collect_err] += 1
+                print('XX'*10 + f"ADAM_collect error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[collect_err]} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
         except Exception as e:
-            print('XX'*10 + f"ADAM_collect error: from slave_{slave.id}, err_{count_err[0] + collect_err} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            MQTT_config.pub_Topics[collect_err] += 1
+            print('XX'*10 + f"ADAM_collect error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[collect_err]} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
-            count_err[0] += collect_err
+            pass
 
     else:
-        set_err = 0
         try: # try to set value
             #print(write_value)
             # TCHeader Writing, RTU func code 06, SV value site at '0000'
@@ -439,23 +313,85 @@ def ADAM_4024_comm(start, port, slave, wait_data, count_err, write_event, write_
                     print(f'ADAM_set done: write {write_value} to slave_{slave.id}')
                 else:
                     port.reset_input_buffer() # reset the buffer if no read
-                    set_err += 1
-                    print('XX'*10 + f"ADAM_set error: from slave_{slave.id}, err_{count_err[1] + set_err} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
+                    MQTT_config.pub_Topics[set_err] += 1
+                    print('XX'*10 + f"ADAM_set error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[set_err]} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
             else: # if data len is less than the wait data
                 port.reset_input_buffer() # reset the buffer if no read
-                set_err += 1
-                print('XX'*10 + f"ADAM_set error: from slave_{slave.id}, err_{count_err[1] + set_err} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+                MQTT_config.pub_Topics[set_err] += 1
+                print('XX'*10 + f"ADAM_set error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[set_err]} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
         except Exception as e:
-            print('XX'*10 + f"ADAM_set error: from slave_{slave.id}, err_{count_err[1] + set_err} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            MQTT_config.pub_Topics[set_err] += 1
+            print('XX'*10 + f"ADAM_set error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[set_err]} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
-            count_err[1] += set_err
             write_event.clear()
-            
-    return count_err
 
 
-def DFM_data_analyze(start, slave, server_DB):
-    count_err = 0
+def ADAM_TC_analyze(start, slave, pub_Topic, analyze_err):
+    while not config.kb_event.isSet():
+        if not config.ticker.wait(config.sample_time):
+            lst_readings = slave.lst_readings
+            time_readings = slave.time_readings
+            #print(f'ADAM_TC_analyze: {lst_readings}')
+            slave.lst_readings = []
+            slave.time_readings = []
+            try:
+                arr_readings = np.array([[int(reading[i-4:i],16) for i in range(10,len(reading)-2,4)] for reading in lst_readings])
+                lst_readings = tuple(np.round(1370/65535*(np.sum(arr_readings, axis=0) / len(lst_readings)), 1))
+                #print(lst_readings)
+                readings = tuple([round(time_readings[-1],2)]) + lst_readings
+                #print(readings)
+
+                # casting
+                MQTT_config.pub_Topics[pub_Topic] = readings[-1]
+                ## to slave data list
+                slave.readings.append(readings)
+                print(f'ADAM_TC_analyze done: record {readings} from slave_{slave.id}')
+
+            except Exception as e:
+                MQTT_config.pub_Topics[analyze_err] += 1
+                print('XX'*10 + f" {MQTT_config.pub_Topics[analyze_err]} ADAM_TC_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
+            finally:
+                pass
+                    
+    print('kill ADAM_TC_analyze')
+    print(f'Final ADAM_TC_analyze: {MQTT_config.pub_Topics[analyze_err]} errors occured')
+    #barrier_kill.wait()
+
+# revise
+def ADAM_READ_analyze(start, slave, pub_Topic):
+    collect_err = 0
+    while not config.kb_event.isSet():
+        if not config.ticker.wait(config.sample_time):
+            lst_readings = slave.lst_readings
+            time_readings = slave.time_readings
+            #print(f'ADAM_TC_analyze: {lst_readings}')
+            slave.lst_readings = []
+            slave.time_readings = []
+            try:
+                arr_readings = np.array([[int(reading[i-4:i],16) for i in range(10,len(reading)-2,4)] for reading in lst_readings])
+                lst_readings = tuple(np.round(1370/65535*(np.sum(arr_readings, axis=0) / len(lst_readings)), 1))
+                #print(lst_readings)
+                readings = tuple([round(time_readings[-1],2)]) + lst_readings
+                #print(readings)
+
+                # casting
+                MQTT_config.pub_Topics[pub_Topic] = readings[-1]
+                ## to slave data list
+                slave.readings.append(readings)
+                print(f'ADAM_READ_analyze done: record {readings} from slave_{slave.id}')
+
+            except Exception as e:
+                collect_err += 1
+                print('XX'*10 + f" {collect_err} ADAM_READ_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
+            finally:
+                pass
+                    
+    print('kill ADAM_READ_analyze')
+    print(f'Final ADAM_READ_analyze: {collect_err} errors occured')
+    #barrier_kill.wait()
+
+
+def DFM_data_analyze(start, slave, pub_Topic, analyze_err):
     #start = time.time()
     while not config.kb_event.isSet():
         if not config.ticker.wait(config.sample_time_DFM): # for each sample_time, collect data
@@ -479,39 +415,64 @@ def DFM_data_analyze(start, slave, server_DB):
                 readings = tuple([sampling_time, _average])
                 
                 # casting
-                #slave.readings.append(readings)
-                # 0x08:1f:DFM_flowrate
-                server_DB.readings[8] = int(readings[-1]*10)
-                # server_DB[0x06].setValues(fx=3, address=0x08, values=[int(readings[-1]*10)])
-                print(f'DFM_data_analyze done: {readings}')
+                MQTT_config.pub_Topics[pub_Topic] = readings[-1]
+                ## to slave data list
+                slave.readings.append(readings)
+                print(f'DFM_data_analyze done: record {readings} from slave_{slave.id}')
+
             except Exception as e:
-                count_err += 1
-                print('XX'*10 + f" {count_err} DFM_data_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
+                MQTT_config.pub_Topics[analyze_err] += 1
+                print('XX'*10 + f" {MQTT_config.pub_Topics[analyze_err]} DFM_data_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
             finally:
                 pass
-                '''
-                try:
-            
-                    conn.execute(
-                        "INSERT INTO DFM(Time, FlowRate) VALUES (?,?);", 
-                        readings
-                        )
-                    
-                    pass
-                except Exception as e_71:
-                    print ("DFM_data_cast error: " + str(e7_1))
-                finally:
-                    print(f'DFM_data_cast done')
-                    ##barrier_cast.wait()
-                '''
 
     print('kill DFM_data_analyze')
-    print(f'Final DFM_data_analyze: {count_err} errors occured')
+    print(f'Final DFM_data_analyze: {MQTT_config.pub_Topics[analyze_err]} errors occured')
     #barrier_kill.wait()
 
 
-def Scale_data_analyze(start, slave, pub_Topic):
-    count_err = 0
+def DFM_AOG_data_analyze(start, slave, pub_Topic, analyze_err):
+    #start = time.time()
+    while not config.kb_event.isSet():
+        if not config.ticker.wait(config.sample_time_DFM): # for each sample_time, collect data
+            sampling_time = round(time.time()-start, 2)
+            try: 
+                time_readings = slave.time_readings
+                slave.time_readings = []
+                average_interval_lst = []
+                # calc average min flow rate by each interval 
+                for interval in range(5, 30, 5):
+                #for interval in range(30, 55, 5):
+                    flow_rate_interval_lst = []
+                    # for each interval, calculate the average flow rate
+                    for i in range(interval, len(time_readings), interval):
+                        # flow rate in [liter/s]
+                        # 0.01 liter / pulse
+                        flow_rate = 60 * 0.01 * (interval-1) / (time_readings[i-1] - time_readings[i-interval])
+                        flow_rate_interval_lst.append(round(flow_rate, 2)) 
+                    average_flow_rate_interval = round(sum(flow_rate_interval_lst) / len(flow_rate_interval_lst), 2)          
+                    average_interval_lst.append(average_flow_rate_interval)
+                    _average = round(sum(average_interval_lst) / len(average_interval_lst), 1)
+                readings = tuple([sampling_time, _average])
+                
+                # casting
+                MQTT_config.pub_Topics[pub_Topic] = readings[-1]
+                ## to slave data list
+                slave.readings.append(readings)
+                print(f'DFM_AOG_data_analyze done: record {readings} from slave_{slave.id}')
+
+            except Exception as e7:
+                MQTT_config.pub_Topics[analyze_err] += 1
+                print('XX'*10 + f" {MQTT_config.pub_Topics[analyze_err]} DFM_AOG_data_analyze error at {round((time.time()-start),2)}s: " + str(e7) + 'XX'*5)
+            finally:
+                pass
+
+    print('kill DFM_AOG_data_analyze')
+    print(f'Final DFM_AOG_data_analyze: {MQTT_config.pub_Topics[analyze_err]} errors occured')
+    #barrier_kill.wait()
+
+
+def Scale_data_analyze(start, slave, pub_Topic, analyze_err):
     while (not config.kb_event.isSet()) and (not config.ticker.wait(config.sample_time_Scale)):
         lst_readings = slave.lst_readings
         time_readings = slave.time_readings
@@ -533,33 +494,17 @@ def Scale_data_analyze(start, slave, pub_Topic):
             else:
                 print(f'Scale_data_analyze done: record () from slave_{slave.id}')
         except Exception as e:
-            count_err += 1
-            print('XX'*10 + f" Scale_data_analyze error: from slave_{slave.id}, err_{count_err} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
+            MQTT_config.pub_Topics[analyze_err] += 1
+            print('XX'*10 + f" Scale_data_analyze error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[analyze_err]} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
         finally:
             pass
-            '''
-            try:
-                #barrier_cast.wait()
-                
-                conn.execute(
-                    "INSERT INTO Scale(Time, Weight) VALUES (?,?);", 
-                    readings
-                    )
-                
-                pass
-            except Exception as e8_1:
-                print ("Scale_data_cast error: " + str(e8_1))
-            finally:
-                print(f'Scale_data_cast done')
-            '''
 
     print(f'kill Scale_data_analyze of slave_{slave.id}')
-    print(f'Final Scale_data_analyze: from slave_{slave.id}, {count_err} errors occured')
+    print(f'Final Scale_data_analyze: from slave_{slave.id}, {MQTT_config.pub_Topics[analyze_err]} errors occured')
     #barrier_kill.wait()
 
 
-def GA_data_analyze(start, slave):
-    count_err = 0
+def GA_data_analyze(start, slave, pub_Topic, analyze_err):
     while not config.kb_event.isSet():
         if not config.ticker.wait(config.sample_time):
             lst_readings = slave.lst_readings
@@ -580,86 +525,23 @@ def GA_data_analyze(start, slave):
                 readings = tuple([round(time_readings[-1],2)]) + lst_readings
                 
                 # casting
-                print(f'GA_data_analyze done: {readings}')
-                #barrier_analyze.wait()
+                MQTT_config.pub_Topics[pub_Topic] = readings[-1]
+                ## to slave data list
+                slave.readings.append(readings)
+                print(f'GA_data_analyze done: record {readings} from slave_{slave.id}')
+
             except Exception as e:
-                count_err += 1
-                print('XX'*10 + f" {count_err} GA_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
+                MQTT_config.pub_Topics[analyze_err] += 1
+                print('XX'*10 + f" {MQTT_config.pub_Topics[analyze_err]} GA_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
             finally:
                 pass
-                '''
-                try:
-                    #barrier_cast.wait()
-                    conn.execute(
-                        "INSERT INTO GA(Time, CO, CO2, CH4, H2, N2, HEAT) VALUES (?,?,?,?,?,?,?);", 
-                        readings
-                        )
-                    pass
-                except Exception as e9_1:
-                    print ("GA_data_cast error: " + str(e9_1))
-                finally:
-                    print(f'GA_data_cast done')
-                '''
 
     print('kill GA_data_analyze')
-    print(f'Final GA_data_analyze: {count_err} errors occured')
+    print(f'Final GA_data_analyze: {MQTT_config.pub_Topics[analyze_err]} errors occured')
     #barrier_kill.wait()
 
 
-def MFC_data_analyze(start, slave, server_DB):
-    count_err = 0
-    #conn = sqlite3.connect(db)
-    while not config.kb_event.isSet():
-        if not config.ticker.wait(config.sample_time):
-            lst_readings = slave.lst_readings
-            time_readings = slave.time_readings
-            slave.lst_readings = []
-            slave.time_readings = []
-            try:
-                arr_readings = np.array(
-                    [
-                        (lambda i: [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ +\-][\d.]{6}', i)])(readings) 
-                        for readings in lst_readings
-                    ]
-                    )
-                #print(arr_readings)
-                lst_readings = tuple(np.round(np.sum(arr_readings, axis=0) / len(lst_readings), 1))
-                readings = tuple(time_readings[-1:]) + lst_readings
-                
-                # CASTING
-                #slave.readings.append(readings)
-                # 0x00:1f:MFC_MassFlow
-                server_DB.readings[0] = int(readings[-2]*10)
-                #server_DB[0x06].setValues(fx=3, address=0x00, values=[int(readings[-2]*10),])
-                print(f'MFC_data_analyze done: {readings}')
-                #barrier_analyze.wait()
-            except Exception as e:
-                count_err += 1
-                print('XX'*10 + f" {count_err} MFC_data_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
-            finally:
-                pass
-                '''
-                try:
-                    #barrier_cast.wait()
-                    conn.execute(
-                        "INSERT INTO MFC(Time, Pressure, Temper, VolFlow, MassFlow, Setpoint) VALUES (?,?,?,?,?,?);", 
-                        readings
-                        )
-                    conn.commit()
-                    pass
-                except Exception as e10_1:
-                    print ("MFC_data_cast error: " + str(e10_1))
-                finally:
-                    print(f'MFC_data_cast done')
-                '''
-
-    print('kill MFC_data_analyze')
-    print(f'Final MFC_data_analyze: {count_err} errors occured')
-    #barrier_kill.wait()
-
-
-def TCHeader_analyze(start, slave, pub_Topic):
-    count_err = 0
+def TCHeader_analyze(start, slave, pub_Topic, analyze_err):
     while (not config.kb_event.isSet()) and (not config.ticker.wait(config.sample_time)):
         #print(slave.id, slave.time_readings, slave.lst_readings)
         lst_readings = slave.lst_readings
@@ -687,18 +569,17 @@ def TCHeader_analyze(start, slave, pub_Topic):
             else:
                 print(f'TCHeader_analyze done: record () from slave_{slave.id}')
         except Exception as e:
-            count_err += 1
-            print('XX'*10 + f"TCHeader_analyze error: from slave_{slave.id}, err_{count_err} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
+            MQTT_config.pub_Topics[analyze_err] += 1
+            print('XX'*10 + f"TCHeader_analyze error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[analyze_err]} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
         finally:
             pass
 
     print(f'kill TCHeader_analyze of slave_{slave.id}')
-    print(f'Final TCHeader_analyze: from slave_{slave.id}, {count_err} errors occured')
+    print(f'Final TCHeader_analyze: from slave_{slave.id}, {MQTT_config.pub_Topics[analyze_err]} errors occured')
     #barrier_kill.wait()
 
 
-def ADAM_4024_analyze(start, slave, pub_Topic):
-    count_err = 0
+def ADAM_SET_analyze(start, slave, pub_Topic, analyze_err):
     while (not config.kb_event.isSet()) and (not config.ticker.wait(config.sample_time)):
         #print(slave.id, slave.time_readings, slave.lst_readings)
         lst_readings = slave.lst_readings
@@ -728,11 +609,11 @@ def ADAM_4024_analyze(start, slave, pub_Topic):
             else:
                 print(f'ADAM_analyze done: record () from slave_{slave.id}')
         except Exception as e:
-            count_err += 1
-            print('XX'*10 + f"ADAM_analyze error: from slave_{slave.id}, err_{count_err} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
+            MQTT_config.pub_Topics[analyze_err] += 1
+            print('XX'*10 + f"ADAM_analyze error: from slave_{slave.id}, err_{MQTT_config.pub_Topics[analyze_err]} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
         finally:
             pass
 
     print(f'kill ADAM_analyze of slave_{slave.id}')
-    print(f'Final ADAM_analyze: from slave_{slave.id}, {count_err} errors occured')
+    print(f'Final ADAM_analyze: from slave_{slave.id}, {MQTT_config.pub_Topics[analyze_err]} errors occured')
     #barrier_kill.wait()

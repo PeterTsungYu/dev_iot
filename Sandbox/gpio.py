@@ -99,7 +99,7 @@ for pulse_times in pulse_times_min: # [[1st min pulse_times], [2nd min pulse_tim
 
 #print(average_min_lst)
 result = np.mean(np.array(average_min_lst), axis=1)
-np.savetxt('DFM_result.csv', result, delimiter=',')
+np.savetxt('DFM_AOGsult.csv', result, delimiter=',')
 print(result)
 
 # %%

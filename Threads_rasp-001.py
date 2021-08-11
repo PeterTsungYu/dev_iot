@@ -39,14 +39,19 @@ TCHeader_0_slave = Modbus.Slave(config.TCHeader_1_id, TCHeader_0_RTU_R.rtu,)
 TCHeader_1_RTU_R = Modbus.RTU(config.TCHeader_2_id, '03', '008A', '0001')
 TCHeader_1_slave = Modbus.Slave(config.TCHeader_2_id, TCHeader_1_RTU_R.rtu,)
 
-# ADAM_4024_slave, RTU func code 03, channel site at '0000-0003', data_len is 1 ('0001')
-## ch00:+-10V, ch01:4-20mA, ch02:0-20mA, ch03:0-20mA
-ADAM_4024_RTU_R = Modbus.RTU(config.ADAM_4024_id, '03', '0000', '0001') # ch0
-ADAM_4024_slave = Modbus.Slave(config.ADAM_4024_id, ADAM_4024_RTU_R.rtu,)
+# ADAM_SET_slave, RTU func code 03, channel site at '0000-0003', data_len is 4 ('0004')
+## ch00:+-10V, ch01:0-5V, ch02:0-5V, ch03:0-5V
+ADAM_SET_RTU_R = Modbus.RTU(config.ADAM_SET_id, '03', '0000', '0004') # only ch0
+ADAM_SET_slave = Modbus.Slave(config.ADAM_SET_id, ADAM_SET_RTU_R.rtu,)
+
+# ADAM_READ_slave, RTU func code 03, channel site at '0000-0008', data_len is 8 ('0008')
+## ch00:4-20mA, ch01:0-5V, ch04:0-5V, ch05:0-5V, ch06:0-5V
+ADAM_READ_RTU_R = Modbus.RTU(config.ADAM_READ_id, '03', '0000', '0008') # only ch0
+ADAM_READ_slave = Modbus.Slave(config.ADAM_READ_id, ADAM_READ_RTU_R.rtu,)
 
 # DFMs' slaves
 DFM_slave = Modbus.Slave()
-DFM_re_slave = Modbus.Slave()
+DFM_AOG_slave = Modbus.Slave()
 
 print('Port setting: succeed')
 
@@ -67,16 +72,8 @@ ADAM_TC_analyze = threading.Thread(
     )
 
 ## RS232_port
-def RS232_data_collect(port):
-    count_err = [0,0] # [collect_err, set_err]
-    while not config.kb_event.isSet():
-        count_err = Modbus.GA_data_comm(start, port, GA_slave, 31, count_err)
-    port.close()
-    print('kill GA_data_comm')
-    print(f'Final GA_data_comm: {count_err} errors occured')
-
 RS232_data_collect = threading.Thread(
-    target=RS232_data_collect, 
+    target=Modbus.RS232_data_collect, 
     args=(config.RS232_port,)
     )
 GA_data_analyze = threading.Thread(
@@ -94,35 +91,32 @@ Scale_data_analyze = threading.Thread(
     args=(start, Scale_slave, 'Scale',),
     )
 
-# Setup_port
-TCHeader_0_count_err = [0,0] # [collect_err, set_err] #todo: make it global and in a class
-TCHeader_1_count_err = [0,0] # [collect_err, set_err]
-ADAM_4024_count_err = [0,0] # [collect_err, set_err] #todo: make it global and in a class
+# add READ
 def Setup_data_collect(port):
-    global TCHeader_0_count_err, TCHeader_1_count_err, ADAM_4024_count_err
+    global TCHeader_0_collect_err, TCHeader_1_collect_err, ADAM_SET_collect_err
     while not config.kb_event.isSet():
-        TCHeader_0_count_err = Modbus.TCHeader_comm(
-            start, port, TCHeader_0_slave, 7, TCHeader_0_count_err, 
-            MQTT_config.sub_Topics['TCHeader/SV0']['event'], #todo: config a general slave class
-            MQTT_config.sub_Topics['TCHeader/SV0']['value'], 
+        TCHeader_0_collect_err = Modbus.TCHeader_comm(
+            start, port, TCHeader_0_slave, 7, TCHeader_0_collect_err, 
+            MQTT_config.sub_Topics['TCHeader_0_SV']['event'], #todo: config a general slave class
+            MQTT_config.sub_Topics['TCHeader_0_SV']['value'], 
             ) # wait for 7 bytes
-        #print(TCHeader_0_count_err)
-        TCHeader_1_count_err = Modbus.TCHeader_comm(
-            start, port, TCHeader_1_slave, 7, TCHeader_1_count_err, 
-            MQTT_config.sub_Topics['TCHeader/SV1']['event'], #todo: config a general slave class
-            MQTT_config.sub_Topics['TCHeader/SV1']['value'],
+        #print(TCHeader_0_collect_err)
+        TCHeader_1_collect_err = Modbus.TCHeader_comm(
+            start, port, TCHeader_1_slave, 7, TCHeader_1_collect_err, 
+            MQTT_config.sub_Topics['TCHeader_1_SV']['event'], #todo: config a general slave class
+            MQTT_config.sub_Topics['TCHeader_1_SV']['value'],
             ) # wait for 7 bytes
-        #print(TCHeader_1_count_err)
-        ADAM_4024_count_err = Modbus.ADAM_4024_comm(
-            start, port, ADAM_4024_slave, 7, ADAM_4024_count_err, 
-            MQTT_config.sub_Topics['ADAM_4024/SV0']['event'], #todo: config a general slave class
-            MQTT_config.sub_Topics['ADAM_4024/SV0']['value'], 
+        #print(TCHeader_1_collect_err)
+        ADAM_SET_collect_err = Modbus.ADAM_SET_comm(
+            start, port, ADAM_SET_slave, 7, ADAM_SET_collect_err, 
+            MQTT_config.sub_Topics['ADAM_SET_SV0']['event'], #todo: config a general slave class
+            MQTT_config.sub_Topics['ADAM_SET_SV0']['value'], 
             ) # wait for 7 bytes == 7 Hex numbers
     port.close()
     print('kill TCHeader_comm')
-    print(f'Final TCHeader_comm: {TCHeader_0_count_err} and {TCHeader_1_count_err} errors occured')
-    print('kill ADAM_4024_comm')
-    print(f'Final ADAM_4024_comm: {ADAM_4024_count_err} errors occured')
+    print(f'Final TCHeader_comm: {TCHeader_0_collect_err} and {TCHeader_1_collect_err} errors occured')
+    print('kill ADAM_SET_comm')
+    print(f'Final ADAM_SET_comm: {ADAM_SET_collect_err} errors occured')
     
 Setup_data_collect = threading.Thread(
     target=Setup_data_collect, 
@@ -130,16 +124,17 @@ Setup_data_collect = threading.Thread(
     )
 TCHeader_0_analyze = threading.Thread(
     target=Modbus.TCHeader_analyze, 
-    args=(start, TCHeader_0_slave, 'TCHeader/PV0',),
+    args=(start, TCHeader_0_slave, 'TCHeader_0_PV',),
     )
 TCHeader_1_analyze = threading.Thread(
     target=Modbus.TCHeader_analyze, 
-    args=(start, TCHeader_1_slave, 'TCHeader/PV1',),
+    args=(start, TCHeader_1_slave, 'TCHeader_1_PV',),
     )
-ADAM_4024_analyze = threading.Thread(
-    target=Modbus.ADAM_4024_analyze, 
-    args=(start, ADAM_4024_slave, 'ADAM_4024/PV0',),
+ADAM_SET_analyze = threading.Thread(
+    target=Modbus.ADAM_SET_analyze, 
+    args=(start, ADAM_SET_slave, 'ADAM_SET_PV0',),
     )
+# add READ func
 
 ## GPIO_port
 # Edge detection
@@ -150,11 +145,11 @@ DFM_data_analyze = threading.Thread(
     args=(start, DFM_slave,),
     )
 
-def DFM_re_data_collect():
-    DFM_re_slave.time_readings.append(time.time())
-DFM_re_data_analyze = threading.Thread(
-    target=Modbus.DFM_re_data_analyze, 
-    args=(start, DFM_re_slave,),
+def DFM_AOG_data_collect():
+    DFM_AOG_slave.time_readings.append(time.time())
+DFM_AOG_data_analyze = threading.Thread(
+    target=Modbus.DFM_AOG_data_analyze, 
+    args=(start, DFM_AOG_slave,),
     )
 
 lst_thread = []
@@ -167,9 +162,9 @@ lst_thread.append(Scale_data_analyze)
 lst_thread.append(Setup_data_collect)
 lst_thread.append(TCHeader_0_analyze)
 lst_thread.append(TCHeader_1_analyze)
-lst_thread.append(ADAM_4024_analyze)
+lst_thread.append(ADAM_SET_analyze)
 lst_thread.append(DFM_data_analyze)
-lst_thread.append(DFM_re_data_analyze)
+lst_thread.append(DFM_AOG_data_analyze)
 
 #-------------------------Open ports--------------------------------------
 try:
@@ -181,7 +176,7 @@ try:
     print('serial ports open')
     
     GPIO.setup(config.channel_DFM, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-    GPIO.setup(config.channel_DFM_re, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+    GPIO.setup(config.channel_DFM_AOG, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     print('GPIO ports open')
     
 except Exception as ex:
@@ -195,7 +190,7 @@ for subthread in lst_thread:
     subthread.start()
 
 GPIO.add_event_detect(config.channel_DFM, GPIO.RISING, callback=DFM_data_collect)
-GPIO.add_event_detect(config.channel_DFM_re, GPIO.RISING, callback=DFM_re_data_collect)
+GPIO.add_event_detect(config.channel_DFM_AOG, GPIO.RISING, callback=DFM_AOG_data_collect)
 
 #-------------------------Main Threadingggg-----------------------------------------
 try:

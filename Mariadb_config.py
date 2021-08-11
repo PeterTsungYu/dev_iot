@@ -28,7 +28,7 @@ try:
         password=password,
         host="rasp-002.local",
         port=3306,
-        database="catalyst",
+        database="reformer",
         autocommit=True
     )
 
@@ -42,13 +42,43 @@ except mariadb.Error as e:
 TableSchema = [
     f'create table platform_{time} (',
     'Id int NOT NULL AUTO_INCREMENT,',
-    'TCHeader_SV0 FLOAT,',
-    'TCHeader_SV1 FLOAT,',
-    'ADAM_4024_SV0 FLOAT,',
-    'TCHeader_PV0 FLOAT,',
-    'TCHeader_PV1 FLOAT,',
+    'TCHeader_0_SV FLOAT,',
+    'TCHeader_1_SV FLOAT,',
+    'ADAM_SET_SV0 FLOAT,',
+    'ADAM_SET_SV1 FLOAT,',
+    'ADAM_SET_SV2 FLOAT,',
+    'ADAM_SET_SV3 FLOAT,',
+    'TCHeader_0_PV FLOAT,',
+    'TCHeader_1_PV FLOAT,',
     'Scale FLOAT,',
-    'ADAM_4024_PV0 FLOAT,',
+    'ADAM_SET_PV0 FLOAT,',
+    'ADAM_SET_PV1 FLOAT,',
+    'ADAM_SET_PV2 FLOAT,',
+    'ADAM_SET_PV3 FLOAT,',
+    'ADAM_READ_PV0 FLOAT,',
+    'ADAM_READ_PV1 FLOAT,',
+    'ADAM_READ_PV2 FLOAT,',
+    'ADAM_READ_PV3 FLOAT,',
+    'ADAM_READ_PV4 FLOAT,',
+    'ADAM_READ_PV5 FLOAT,',
+    'ADAM_READ_PV6 FLOAT,',
+    'ADAM_READ_PV7 FLOAT,',
+    'ADAM_TC_PV0 FLOAT,',
+    'ADAM_TC_PV1 FLOAT,',
+    'ADAM_TC_PV2 FLOAT,',
+    'ADAM_TC_PV3 FLOAT,',
+    'ADAM_TC_PV4 FLOAT,',
+    'ADAM_TC_PV5 FLOAT,',
+    'ADAM_TC_PV6 FLOAT,',
+    'ADAM_TC_PV7 FLOAT,',
+    'GA_CO FLOAT,',
+    'GA_CO2 FLOAT,',
+    'GA_CH4 FLOAT,',
+    'GA_H2 FLOAT,',
+    'GA_N2 FLOAT,',
+    'GA_HEAT FLOAT,',
+    'DFM_RichGas FLOAT,',
+    'DFM_AOG FLOAT,',
     'PRIMARY KEY (Id)',
     ')'
     ]
@@ -63,13 +93,43 @@ except mariadb.Error as e:
 #-------------------------db func--------------------------------------
 insertSchema = [
     f'INSERT INTO platform_{time} (',
-    'TCHeader_SV0,',
-    'TCHeader_SV1,',
-    'ADAM_4024_SV0,',
-    'TCHeader_PV0,',
-    'TCHeader_PV1,',
+    'TCHeader_0_SV,',
+    'TCHeader_1_SV,',
+    'ADAM_SET_SV0,',
+    'ADAM_SET_SV1,',
+    'ADAM_SET_SV2,',
+    'ADAM_SET_SV3,',
+    'TCHeader_0_PV,',
+    'TCHeader_1_PV,',
     'Scale,',
-    'ADAM_4024_PV0',
+    'ADAM_SET_PV0',
+    'ADAM_SET_PV1',
+    'ADAM_SET_PV2',
+    'ADAM_SET_PV3',
+    'ADAM_READ_PV0',
+    'ADAM_READ_PV1',
+    'ADAM_READ_PV2',
+    'ADAM_READ_PV3',
+    'ADAM_READ_PV4',
+    'ADAM_READ_PV5',
+    'ADAM_READ_PV6',
+    'ADAM_READ_PV7',
+    'ADAM_TC_PV0',
+    'ADAM_TC_PV1',
+    'ADAM_TC_PV2',
+    'ADAM_TC_PV3',
+    'ADAM_TC_PV4',
+    'ADAM_TC_PV5',
+    'ADAM_TC_PV6',
+    'ADAM_TC_PV7',
+    'GA_CO',
+    'GA_CO2',
+    'GA_CH4',
+    'GA_H2',
+    'GA_N2',
+    'GA_HEAT',
+    'DFM_RichGas',
+    'DFM_AOG',
     ') ',
     'VALUES (?, ?, ?, ?, ?, ?, ?)'
     ]
@@ -85,15 +145,6 @@ def multi_insert(cur):
                 print(f"Successfully added entry to database. Last Inserted ID: {cur.lastrowid}")
             except mariadb.Error as e:
                 print(f"Error adding entry to database: {e}")
-        
-
-def get_data(last_name):
-    try:
-      cur.execute("SELECT first_name, last_name FROM employees WHERE last_name=?", (last_name,))
-      for (first_name, last_name) in cur:
-        print(f"Successfully retrieved {first_name}, {last_name}")
-    except database.Error as e:
-      print(f"Error retrieving entry from database: {e}")
 
 #-------------------------main--------------------------------------
 multi_insert = threading.Thread(
