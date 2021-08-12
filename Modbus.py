@@ -4,7 +4,6 @@
 # pip3 install pyserial
 
 #python packages
-from crccheck.crc import Crc16Modbus
 import numpy as np
 import serial
 import time
@@ -14,26 +13,6 @@ import random
 #custom modules
 import config
 import MQTT_config
-
-#-------------------------RTU & Slave--------------------------------------
-class RTU: # generate the CRC for the complete RTU 
-    def __init__(self, idno='', func_code='', data_site='', data_len=''):
-        self.id = idno # id number of slave
-        self.data_len = data_len
-        data_struc = idno + func_code + data_site + data_len
-        crc = Crc16Modbus.calchex(bytearray.fromhex(data_struc))
-        self.rtu = data_struc + crc[-2:] + crc[:2]
-
-
-class Slave: # Create Slave data store 
-    def __init__(self, name='', port='', idno='', rtu=''):
-        self.name=name
-        self.port=port
-        self.id = idno # id number of slave
-        self.rtu = rtu # str or a list. list[0]:read, list[1]:write 
-        self.lst_readings = [] # record readings
-        self.time_readings = 0 # record time
-        self.readings = [] # for all data 
 
 #------------------------------Port func---------------------------------
 def RS232_data_collect(start, port, slave, *funcs):
