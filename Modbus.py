@@ -25,14 +25,6 @@ def RS232_data_collect(start, port, slave, *funcs):
 
 
 #------------------------------Collect and Analyze func---------------------------------
-def tohex(value):
-    value = int(value)
-    hex_value = hex(value)[2:]
-    add_zeros = 4 - len(hex_value)
-    hex_value = add_zeros * '0' + hex_value
-    return hex_value
-
-
 def ADAM_TC_collect(start, port, slave, wait_data, collect_err):
     #start = time.time()
     while not config.kb_event.isSet():
@@ -207,14 +199,7 @@ def TCHeader_comm(start, port, slave, wait_data, collect_err, set_err, write_eve
 
     else:
         try: # try to set value
-            #print(write_value)
-            # TCHeader Writing, RTU func code 06, SV value site at '0000'
-            TCHeader_SV = tohex(write_value*10)  # setting TCHeader value in hex
-            #print(TCHeader_SV)
-            TCHeader_RTU_W = RTU(slave.id, '06', '0000', TCHeader_SV) #md: subscription value and rtu 
-            #print(TCHeader_RTU_W.rtu)
-
-            port.write(bytes.fromhex(TCHeader_RTU_W.rtu)) #hex to binary(byte) #md: subscription value and rtu
+            port.write(bytes.fromhex(slave.write_rtu(write_value*10))) #hex to binary(byte) #md: subscription value and rtu
             time.sleep(config.time_out)
             if port.inWaiting() >= 8: 
                 readings = port.read(8).hex() # after reading, the buffer will be clean
