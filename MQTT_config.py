@@ -6,10 +6,11 @@ import threading
 #import time 
 
 #custom modules
+import params
 import config
 
 #-------------------------MQTT sub/pub--------------------------------------
-lst_port_Topics = [RS485_port_Topics, RS232_port_Topics, Scale_port_Topics, Setup_port_Topics, GPIO_port_Topics, err_Topics]
+lst_port_Topics = [config.RS485_port, config.RS232_port, config.Scale_port, config.Setup_port, config.GPIO_port]
 
 #-------------------------MQTT func--------------------------------------
 def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
@@ -29,8 +30,8 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
     def on_message(client, userdata, msg):
         print(msg.topic+ ": " + str(msg.payload) + f">>> {client_id}")
         if (msg.topic != 'nodered') and (msg.payload != b''):
-            Setup_port_Topics.sub_values[msg.topic] = float(msg.payload)
-            Setup_port_Topics.sub_events[msg.topic].set()
+            config.Setup_port.sub_values[msg.topic] = float(msg.payload)
+            config.Setup_port.sub_events[msg.topic].set()
         
     def on_publish(client, userdata, mid):
         print(mid)
@@ -45,8 +46,8 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
 
 
 def multi_pub(client):
-    while not config.kb_event.isSet():
-        if not config.ticker.wait(config.sample_time):
+    while not params.kb_event.isSet():
+        if not params.ticker.wait(params.sample_time):
             #print(pub_Topics)
             for port_topic in lst_port_Topics:
                 for key, value in port_topic.pub_values.items():

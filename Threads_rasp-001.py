@@ -6,6 +6,7 @@ import threading
 import RPi.GPIO as GPIO
 
 # custome modules
+import params
 import Modbus
 import config
 import MQTT_config
@@ -59,7 +60,7 @@ Scale_data_analyze = threading.Thread(
 # add READ
 def Setup_data_collect(port):
     global Header_EVA_collect_err, Header_BR_collect_err, ADAM_SET_collect_err
-    while not config.kb_event.isSet():
+    while not params.kb_event.isSet():
         Header_EVA_collect_err = Modbus.TCHeader_comm(
             start, port, Header_EVA_slave, 7, Header_EVA_collect_err, 
             MQTT_config.sub_Topics['Header_EVA_SV']['event'], #todo: config a general slave class
@@ -159,8 +160,8 @@ GPIO.add_event_detect(config.channel_DFM_AOG, GPIO.RISING, callback=DFM_AOG_data
 
 #-------------------------Main Threadingggg-----------------------------------------
 try:
-    while not config.kb_event.isSet():
-        if not config.ticker.wait(config.sample_time):
+    while not params.kb_event.isSet():
+        if not params.ticker.wait(params.sample_time):
             print("=="*10 + f'Elapsed time: {round((time.time()-start),2)}' + "=="*10)
         
 except KeyboardInterrupt: 

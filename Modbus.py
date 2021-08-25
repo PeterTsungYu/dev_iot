@@ -5,18 +5,16 @@
 
 #python packages
 import numpy as np
-import serial
 import time
 import re
-import random
+from crccheck.crc import Crc16Modbus
 
 #custom modules
-import config
-import MQTT_config
+import params
 
 #------------------------------Port func---------------------------------
 def RS232_data_collect(start, port, slave, *funcs):
-    while not config.kb_event.isSet():
+    while not params.kb_event.isSet():
         for func in funcs:
             func(start, port, slave, 31, collect_err)
     port.close()
@@ -27,12 +25,12 @@ def RS232_data_collect(start, port, slave, *funcs):
 #------------------------------Collect and Analyze func---------------------------------
 def ADAM_TC_collect(start, port, slave, wait_data, collect_err):
     #start = time.time()
-    while not config.kb_event.isSet():
+    while not params.kb_event.isSet():
         try:
             slave.time_readings.append(round(time.time()-start, 2))
             port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
 
-            time.sleep(config.time_out)
+            time.sleep(params.time_out)
 
             # look up the buffer for 21 bytes, which is for 8 channels data length
             if port.inWaiting() >= wait_data: 
@@ -64,12 +62,12 @@ def ADAM_TC_collect(start, port, slave, wait_data, collect_err):
 
 def ADAM_READ_collect(start, port, slave, wait_data, collect_err):
     #start = time.time()
-    while not config.kb_event.isSet():
+    while not params.kb_event.isSet():
         try:
             slave.time_readings.append(round(time.time()-start, 2))
             port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
 
-            time.sleep(config.time_out)
+            time.sleep(params.time_out)
 
             # look up the buffer for 21 bytes, which is for 8 channels data length
             if port.inWaiting() >= wait_data: 
@@ -101,10 +99,10 @@ def ADAM_READ_collect(start, port, slave, wait_data, collect_err):
 
 def Scale_data_collect(start, port, slave, wait_data, collect_err):
     #start = time.time()
-    while not config.kb_event.isSet():
+    while not params.kb_event.isSet():
         try:
             slave.time_readings = time.time()-start
-            time.sleep(config.time_out) # wait for the data input to the buffer
+            time.sleep(params.time_out) # wait for the data input to the buffer
             if port.inWaiting() > wait_data:
                 readings = port.read(port.inWaiting()).decode('utf-8')
                 readings = [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ \-][ .\d]{7}', readings)]
@@ -128,12 +126,12 @@ def Scale_data_collect(start, port, slave, wait_data, collect_err):
 
 def GA_data_collect(start, port, slave, wait_data, collect_err):
     #start = time.time()
-    #while not config.kb_event.isSet(): # it is written in the ReadingThreads.py
+    #while not params.kb_event.isSet(): # it is written in the ReadingThreads.py
     try:
         slave.time_readings.append(time.time()-start)
         port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
 
-        time.sleep(config.time_out)
+        time.sleep(params.time_out)
 
         #print(port.inWaiting())
         if port.inWaiting() >= wait_data: 
@@ -164,13 +162,13 @@ def GA_data_collect(start, port, slave, wait_data, collect_err):
 
 def TCHeader_comm(start, port, slave, wait_data, collect_err, set_err, write_event, write_value):
     #start = time.time()
-    #while not config.kb_event.isSet(): # it is written in the ReadingThreads.py
+    #while not params.kb_event.isSet(): # it is written in the ReadingThreads.py
     if not write_event.isSet():
         try: # try to collect
             slave.time_readings = time.time()-start
             port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
 
-            time.sleep(config.time_out)
+            time.sleep(params.time_out)
 
             #print(port.inWaiting())
             #print(port.read(wait_data).hex())
@@ -200,7 +198,7 @@ def TCHeader_comm(start, port, slave, wait_data, collect_err, set_err, write_eve
     else:
         try: # try to set value
             port.write(bytes.fromhex(slave.write_rtu(write_value*10))) #hex to binary(byte) #md: subscription value and rtu
-            time.sleep(config.time_out)
+            time.sleep(params.time_out)
             if port.inWaiting() >= 8: 
                 readings = port.read(8).hex() # after reading, the buffer will be clean
                 #print(readings)
@@ -226,13 +224,13 @@ def TCHeader_comm(start, port, slave, wait_data, collect_err, set_err, write_eve
 
 def ADAM_SET_comm(start, port, slave, wait_data, collect_err, set_err, write_event, write_value):
     #start = time.time()
-    #while not config.kb_event.isSet(): # it is written in the ReadingThreads.py
+    #while not params.kb_event.isSet(): # it is written in the ReadingThreads.py
     if not write_event.isSet():
         try: # try to collect
             slave.time_readings = time.time()-start
             port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
 
-            time.sleep(config.time_out)
+            time.sleep(params.time_out)
 
             #print(port.inWaiting())
             #print(port.read(wait_data).hex())
@@ -269,7 +267,7 @@ def ADAM_SET_comm(start, port, slave, wait_data, collect_err, set_err, write_eve
             #print(TCHeader_RTU_W.rtu)
 
             port.write(bytes.fromhex(_RTU_W.rtu)) #hex to binary(byte) #md: subscription value and rtu
-            time.sleep(config.time_out)
+            time.sleep(params.time_out)
             if port.inWaiting() >= 8: 
                 readings = port.read(8).hex() # after reading, the buffer will be clean
                 #print(readings)
@@ -293,8 +291,8 @@ def ADAM_SET_comm(start, port, slave, wait_data, collect_err, set_err, write_eve
 
 
 def ADAM_TC_analyze(start, slave, pub_Topic, analyze_err):
-    while not config.kb_event.isSet():
-        if not config.ticker.wait(config.sample_time):
+    while not params.kb_event.isSet():
+        if not params.ticker.wait(params.sample_time):
             lst_readings = slave.lst_readings
             time_readings = slave.time_readings
             #print(f'ADAM_TC_analyze: {lst_readings}')
@@ -327,8 +325,8 @@ def ADAM_TC_analyze(start, slave, pub_Topic, analyze_err):
 # revise
 def ADAM_READ_analyze(start, slave, pub_Topic):
     collect_err = 0
-    while not config.kb_event.isSet():
-        if not config.ticker.wait(config.sample_time):
+    while not params.kb_event.isSet():
+        if not params.ticker.wait(params.sample_time):
             lst_readings = slave.lst_readings
             time_readings = slave.time_readings
             #print(f'ADAM_TC_analyze: {lst_readings}')
@@ -360,8 +358,8 @@ def ADAM_READ_analyze(start, slave, pub_Topic):
 
 def DFM_data_analyze(start, slave, pub_Topic, analyze_err):
     #start = time.time()
-    while not config.kb_event.isSet():
-        if not config.ticker.wait(config.sample_time_DFM): # for each sample_time, collect data
+    while not params.kb_event.isSet():
+        if not params.ticker.wait(params.sample_time_DFM): # for each sample_time, collect data
             sampling_time = round(time.time()-start, 2)
             try: 
                 time_readings = slave.time_readings
@@ -400,8 +398,8 @@ def DFM_data_analyze(start, slave, pub_Topic, analyze_err):
 
 def DFM_AOG_data_analyze(start, slave, pub_Topic, analyze_err):
     #start = time.time()
-    while not config.kb_event.isSet():
-        if not config.ticker.wait(config.sample_time_DFM): # for each sample_time, collect data
+    while not params.kb_event.isSet():
+        if not params.ticker.wait(params.sample_time_DFM): # for each sample_time, collect data
             sampling_time = round(time.time()-start, 2)
             try: 
                 time_readings = slave.time_readings
@@ -440,7 +438,7 @@ def DFM_AOG_data_analyze(start, slave, pub_Topic, analyze_err):
 
 
 def Scale_data_analyze(start, slave, pub_Topic, analyze_err):
-    while (not config.kb_event.isSet()) and (not config.ticker.wait(config.sample_time_Scale)):
+    while (not params.kb_event.isSet()) and (not params.ticker.wait(params.sample_time_Scale)):
         lst_readings = slave.lst_readings
         time_readings = slave.time_readings
         #print(f'Scale_data_analyze: {lst_readings}')
@@ -449,7 +447,7 @@ def Scale_data_analyze(start, slave, pub_Topic, analyze_err):
             if len(lst_readings) > 0:
                 #print(len(lst_readings))
                 lst_readings = [sum(i)/len(i) for i in lst_readings] # average for 1s' data
-                lst_readings = round((lst_readings[-1] - lst_readings[0]) / config.sample_time_Scale, 3) # average for 1min's data
+                lst_readings = round((lst_readings[-1] - lst_readings[0]) / params.sample_time_Scale, 3) # average for 1min's data
                 readings = tuple([round(time_readings, 2), lst_readings])
                 
                 # casting
@@ -472,8 +470,8 @@ def Scale_data_analyze(start, slave, pub_Topic, analyze_err):
 
 
 def GA_data_analyze(start, slave, pub_Topic, analyze_err):
-    while not config.kb_event.isSet():
-        if not config.ticker.wait(config.sample_time):
+    while not params.kb_event.isSet():
+        if not params.ticker.wait(params.sample_time):
             lst_readings = slave.lst_readings
             time_readings = slave.time_readings
             #print(f'GA_data_analyze: {lst_readings}')
@@ -509,7 +507,7 @@ def GA_data_analyze(start, slave, pub_Topic, analyze_err):
 
 
 def TCHeader_analyze(start, slave, pub_Topic, analyze_err):
-    while (not config.kb_event.isSet()) and (not config.ticker.wait(config.sample_time)):
+    while (not params.kb_event.isSet()) and (not params.ticker.wait(params.sample_time)):
         #print(slave.id, slave.time_readings, slave.lst_readings)
         lst_readings = slave.lst_readings
         time_readings = slave.time_readings
@@ -547,7 +545,7 @@ def TCHeader_analyze(start, slave, pub_Topic, analyze_err):
 
 
 def ADAM_SET_analyze(start, slave, pub_Topic, analyze_err):
-    while (not config.kb_event.isSet()) and (not config.ticker.wait(config.sample_time)):
+    while (not params.kb_event.isSet()) and (not params.ticker.wait(params.sample_time)):
         #print(slave.id, slave.time_readings, slave.lst_readings)
         lst_readings = slave.lst_readings
         time_readings = slave.time_readings

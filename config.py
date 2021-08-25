@@ -1,20 +1,11 @@
 #python packages
 import threading
-import signal
 import serial
 import RPi.GPIO as GPIO
 from crccheck.crc import Crc16Modbus
 
 #custom modules
-
-#-------------------------Global var--------------------------------------
-time_out          = 1 # for collecting data
-sample_time       = 2 # for analyzing data
-sample_time_Scale = 5
-sample_time_DFM   = 60
-
-# count down events
-ticker = threading.Event() # for analyzing data
+import Modbus
 
 #-----------------Serial port and DeviceID------------------------------
 #_port_path = '/dev/ttyUSB'
@@ -53,16 +44,21 @@ class device_port:
     def __init__(self, *slaves, port):
         self.port = port
         self.slaves = slaves
-        sub_topics=[]
-        pub_topics=[]
-        err_topics=[]
+        self.sub_topics=[]
+        self.pub_topics=[]
+        self.err_topics=[]
+        self.sub_values = {i:0 for i in self.sub_topics}
+        self.sub_events = {i:threading.Event() for i in self.sub_topics}
+        self.pub_values = {i:0 for i in self.pub_topics}
+        self.err_values = {i:0 for i in self.err_topics}
+
         for _slave in slaves:
-            sub_topics.append(_slave.port_topics.sub_topics)
-            pub_topics.append(_slave.port_topics.pub_topics)
-            err_topics.append(_slave.port_topics.err_topics)
-        self.sub_topics=sub_topics
-        self.pub_topics=pub_topics
-        self.err_topics=err_topics
+            for topic in _slave.port_topics.sub_topics:
+                self.sub_topics.append(topic)
+            for topic in _slave.port_topics.pub_topics:
+                self.pub_topics.append(topic)
+            for topic in _slave.port_topics.err_topics:
+                self.err_topics.append(topic)
 
 class port_Topics:
     def __init__(self, sub_topics, pub_topics, err_topics):
@@ -70,11 +66,6 @@ class port_Topics:
         self.sub_topics = sub_topics
         self.pub_topics = pub_topics
         self.err_topics = err_topics
-        self.sub_values = {i:0 for i in self.sub_topics}
-        self.sub_events = {i:threading.Event() for i in self.sub_topics}
-        self.pub_values = {i:0 for i in self.pub_topics}
-        self.err_values = {i:0 for i in self.err_topics}
-
 
 class RTU:
     def __init__(self, idno, func_code, data_site):
@@ -158,7 +149,8 @@ Scale_slave = Slave(idno=Scale_id,
 # TCHeader Rreading, RTU func code 03, PV value site at '008A', data_len is 1 ('0001')
 # TCHeader Writing, RTU func code 06, SV value site at '0000'
 Header_EVA_slave = Slave(idno=Header_EVA_id,
-                        port_topics=port_Topics(sub_topics=[
+                        port_topics=port_Topics(
+                                sub_topics=[
                                     'Header_EVA_SV', # Header EVA(Header_EVA_SV)
                                 ],
                                 pub_topics=[
@@ -174,7 +166,8 @@ Header_EVA_slave = Slave(idno=Header_EVA_id,
                         )
 
 Header_BR_slave = Slave(idno=Header_BR_id, 
-                        port_topics=port_Topics(sub_topics=[
+                        port_topics=port_Topics(
+                                sub_topics=[
                                     'Header_BR_SV', # Header BR(Header_BR_SV)
                                 ],
                                 pub_topics=[
@@ -192,7 +185,8 @@ Header_BR_slave = Slave(idno=Header_BR_id,
 # ADAM_SET_slave, RTU func code 03, channel site at '0000-0003', data_len is 4 ('0004')
 ## ch00:+-10V, ch01:0-5V, ch02:0-5V, ch03:0-5V
 ADAM_SET_slave = Slave(idno=ADAM_SET_id,
-                        port_topics=port_Topics(sub_topics=[
+                        port_topics=port_Topics(
+                                sub_topics=[
                                     'PCB_SET_SV', 'Pump_SET_SV', 'Air_MFC_SET_SV', 'H2_MFC_SET_SV' # PCB(ADAM_SET_SV0), Pump(ADAM_SET_SV1), Air_MFC(ADAM_SET_SV2), H2_MFC(ADAM_SET_SV3)
                                 ],
                                 pub_topics=[
@@ -210,8 +204,8 @@ ADAM_SET_slave = Slave(idno=ADAM_SET_id,
 # ADAM_READ_slave, RTU func code 03, channel site at '0000-0008', data_len is 8 ('0008')
 ## ch00:4-20mA, ch01:0-5V, ch04:0-5V, ch05:0-5V, ch06:0-5V
 ADAM_READ_slave = Slave(idno=ADAM_READ_id,
-                        port_topics=port_Topics(sub_topics=[
-                                ],
+                        port_topics=port_Topics(
+                                sub_topics=[],
                                 pub_topics=[
                                     'SMC_0_PV', 'SMC_1_PV', 'ADAM_READ_PV2', 'ADAM_READ_PV3', 'Pump_PV', 'Air_MFC_PV', 'H2_MFC_PV', 'ADAM_READ_PV7' # ADAM_READ_PV0 (SMC), ADAM_READ_PV1 (SMC), ADAM_READ_PV2, ADAM_READ_PV3, ADAM_READ_PV4(pump), ADAM_READ_PV5(Air_MFC), ADAM_READ_PV6(H2_MFC), ADAM_READ_PV7
                                 ],
@@ -226,7 +220,8 @@ ADAM_READ_slave = Slave(idno=ADAM_READ_id,
 
 # DFMs' slaves
 DFM_slave = Slave(idno=DFM_id,
-                port_topics=port_Topics(sub_topics=[],
+                port_topics=port_Topics(
+                                sub_topics=[],
                                 pub_topics=[
                                     'DFM_RichGas',
                                 ],
@@ -239,7 +234,8 @@ DFM_slave = Slave(idno=DFM_id,
                 )
 
 DFM_AOG_slave = Slave(idno=DFM_AOG_id, 
-                    port_topics=port_Topics(sub_topics=[],
+                    port_topics=port_Topics(
+                                sub_topics=[],
                                 pub_topics=[
                                     'DFM_AOG'
                                 ],
@@ -296,20 +292,10 @@ GPIO_port = device_port(DFM_slave,
 
 print('Ports are all set')
 
-#-----------------Interrupt events------------------------------
-# Keyboard interrupt event to kill all the threads (Ctr + C)
-kb_event = threading.Event()
-def signal_handler(signum, frame):
-    kb_event.set()
-signal.signal(signal.SIGINT, signal_handler) # Keyboard interrupt to stop the program
 
 
-def terminate(event): # ask user input to stop the program
-    print(event.is_set())
-    text = input("Type 'exit' to terminate the program...\n>")
-    if text == 'exit':
-        event.set()
-
-
+print(Setup_port.sub_topics)
+print(Setup_port.pub_topics)
+print(Setup_port.err_topics)
 
 

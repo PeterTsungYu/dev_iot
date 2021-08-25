@@ -10,8 +10,8 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 #custom modules
+import params
 import config
-import MQTT_config
 
 #-------------------------time and tokens--------------------------------------
 time = datetime.now().strftime('%Y_%m_%d_%H')
@@ -61,8 +61,8 @@ insertSchema = f'INSERT INTO platform_{time} (' \
 #print(insertSchema)
 
 def multi_insert(cur):
-    while not config.kb_event.isSet():
-        if not config.ticker.wait(config.sample_time):
+    while not params.kb_event.isSet():
+        if not params.ticker.wait(params.sample_time):
             try:
                 cur.execute(
                     insertSchema, 
