@@ -39,11 +39,13 @@ except mariadb.Error as e:
     sys.exit(1)
 
 #-------------------------create table--------------------------------------
-Table_col = [u + ' FLOAT' for i in MQTT_config.lst_port_Topics if i.name != 'err_Topics' for u in i.pub_topics]
+lst_port_Topics = [config.RS485_port, config.RS232_port, config.Scale_port, config.Setup_port, config.GPIO_port]
+
+Table_col = [u + ' FLOAT' for i in lst_port_Topics for u in i.pub_topics]
 TableSchema = f'create table platform_{time} (Id int NOT NULL AUTO_INCREMENT,' \
                 + ','.join(Table_col) \
                 + ',PRIMARY KEY (Id))'
-#print(TableSchema)
+print(TableSchema)
 
 try:
     cur.execute(f'drop table if exists platform_{time}') 
@@ -54,20 +56,20 @@ except mariadb.Error as e:
     sys.exit(2)
 
 #-------------------------db func--------------------------------------
-insert_col = [u for i in MQTT_config.lst_port_Topics if i.name != 'err_Topics' for u in i.pub_topics]
+insert_col = [u for i in lst_port_Topics for u in i.pub_topics]
 insertSchema = f'INSERT INTO platform_{time} (' \
                 + ','.join(insert_col) \
                 + f') VALUES ({("?,"*len(insert_col))[:-1]})'
-#print(insertSchema)
+print(insertSchema)
 
 def multi_insert(cur):
     while not params.kb_event.isSet():
         if not params.ticker.wait(params.sample_time):
             try:
                 cur.execute(
-                    insertSchema, 
-                    tuple(i for i in MQTT_config.Setup_port_Topics.sub_values.values()) + # sub value
-                    tuple(u for i in MQTT_config.lst_port_Topics if i.name != 'err_Topics' for u in i.pub_values.values()) # pub value
+                    insertSchema,
+                    #tuple(i for i in config.Setup_port.sub_values.values()) + # sub value
+                    tuple(u for i in lst_port_Topics for u in i.pub_values.values()) # pub value
                     )
                 print(f"Successfully added entry to database. Last Inserted ID: {cur.lastrowid}")
             except mariadb.Error as e:
@@ -80,7 +82,6 @@ multi_insert = threading.Thread(
     )
 multi_insert.start()
 
-'''
-while True:
-    pass
-'''
+
+'''while True:
+    pass'''
