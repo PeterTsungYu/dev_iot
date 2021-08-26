@@ -42,8 +42,8 @@ def tohex(value):
 
 class device_port:
     def __init__(self, *slaves, name, port):
-        self.slaves = slaves
-        self.name = name
+        self.slaves = slaves # lst of slaves
+        self.name = name 
         self.port = port
         self.sub_topics=[]
         self.pub_topics=[]
@@ -72,42 +72,49 @@ class port_Topics:
         self.pub_topics = pub_topics
         self.err_topics = err_topics
 
-class RTU:
-    def __init__(self, idno, func_code, data_site):
-        self.idno=idno
-        self.func_code=func_code
-        self.data_site=data_site
-        
-    def read_rtu(self, _value):
-        data_struc = self.idno + self.func_code + self.data_site + _value
-        crc = Crc16Modbus.calchex(bytearray.fromhex(data_struc))
-        self.rtu_r = data_struc + crc[-2:] + crc[:2]
-
-    def write_rtu(self, _value):
-        _value = tohex(_value*10)
-        data_struc = self.idno + self.func_code + self.data_site + _value
-        crc = Crc16Modbus.calchex(bytearray.fromhex(data_struc))
-        self.rtu_w = data_struc + crc[-2:] + crc[:2]
-
-
 class Slave: # Create Slave data store 
-    def __init__(self, name, idno, port_topics, rtu, **funcs):
+    def __init__(self, name, idno, port_topics, **funcs):
         self.name = name
         self.id = idno # id number of slave
-        #self.__dict__.update(rtu) # ex. rtu_r=???, rtu_w=??? 
-        self.rtu=rtu
         self.lst_readings = [] # record readings
         self.time_readings = 0 # record time
         self.readings = [] # for all data
         self.port_topics = port_topics
-        self.funcs=funcs
+        self.funcs=funcs # dict of funcs
+    
+    def read_rtu(self, _fields):
+        # _fields requires a lst
+        # _fields[0]:data_site
+        # _fields[1]:value / data_len
+        if len(_fields) == 2:
+            data_struc = self.id + '03' + _fields[0] + _fields[1]
+            crc = Crc16Modbus.calchex(bytearray.fromhex(data_struc))
+            self.rtu_r = data_struc + crc[-2:] + crc[:2]
+        elif len(_fields) == 1:
+            self.rtu_r = _fields[0]
+        else:
+            raise Exception(f"{self.name} Wrong Reading RTU Fields")
+
+    def write_rtu(self, _fields):
+        # _fields requires a lst
+        # _fields[0]:data_site
+        # _fields[1]:value / data_len
+        if len(_fields) == 2:
+            _value = tohex(_fields[1])
+            data_struc = self.id + '06' + _fields[0] + _value
+            crc = Crc16Modbus.calchex(bytearray.fromhex(data_struc))
+            self.rtu_w = data_struc + crc[-2:] + crc[:2]
+        elif len(_fields) == 1:
+            self.rtu_w = _fields[0]
+        else:
+            raise Exception(f"{self.name} Wrong Writing RTU Fields")
     
 
 #-------------------------RTU & Slave--------------------------------------
 # ADAM_TC
 # RTU func code 03, PV value site starts at '0000', data_len is 8 ('0008')
 ADAM_TC_slave = Slave(
-                    name = 'ADAM_TC_slave',
+                    name = 'ADAM_TC',
                     idno=ADAM_TC_id,
                     port_topics=port_Topics(sub_topics=[],
                                             pub_topics=[
@@ -118,14 +125,13 @@ ADAM_TC_slave = Slave(
                                                 'ADAM_TC_collect_err', 'ADAM_TC_analyze_err',
                                             ]
                                             ),
-                    rtu=RTU(ADAM_TC_id, '03', '0000'), # read_rtu('0008'),
                     comm_func=Modbus.ADAM_TC_collect,
                     analyze_func=Modbus.ADAM_TC_analyze
                     )
 
 # GA slave
 GA_slave = Slave(
-                name = 'GA_slave',
+                name = 'GA',
                 idno=GA_id,
                 port_topics=port_Topics(sub_topics=[],
                                         pub_topics=[
@@ -133,17 +139,16 @@ GA_slave = Slave(
                                             'GA_H2', 'GA_N2', 'GA_HEAT'
                                         ],
                                         err_topics=[
-                                            'GA_data_collect_err', 'GA_data_analyze_err',
+                                            'GA_collect_err', 'GA_analyze_err',
                                         ]
                                         ),
-                rtu='11 01 60 8E',
                 comm_func=Modbus.GA_data_collect,
                 analyze_func=Modbus.GA_data_analyze
                 )
 
 # Scale slave
 Scale_slave = Slave(
-                    name = 'Scale_slave',
+                    name = 'Scale',
                     idno=Scale_id,
                     port_topics=port_Topics(sub_topics=[],
                                             pub_topics=[
@@ -153,7 +158,6 @@ Scale_slave = Slave(
                                                 'Scale_collect_err', 'Scale_analyze_err',
                                             ]
                                             ),
-                    rtu='',
                     comm_func=Modbus.Scale_data_collect,
                     analyze_func=Modbus.Scale_data_analyze
                     )
@@ -161,7 +165,7 @@ Scale_slave = Slave(
 # TCHeader Rreading, RTU func code 03, PV value site at '008A', data_len is 1 ('0001')
 # TCHeader Writing, RTU func code 06, SV value site at '0000'
 Header_EVA_slave = Slave(
-                        name = 'Header_EVA_slave',
+                        name = 'Header_EVA',
                         idno=Header_EVA_id,
                         port_topics=port_Topics(
                                 sub_topics=[
@@ -174,13 +178,12 @@ Header_EVA_slave = Slave(
                                     'Header_EVA_collect_err', 'Header_EVA_set_err', 'Header_EVA_analyze_err',
                                 ]
                                 ),
-                        rtu=RTU(Header_EVA_id, '03', '008A'), # read_rtu('0001')
                         comm_func=Modbus.TCHeader_comm,
                         analyze_func=Modbus.TCHeader_analyze
                         )
 
 Header_BR_slave = Slave(
-                        name='Header_BR_slave',
+                        name='Header_BR',
                         idno=Header_BR_id, 
                         port_topics=port_Topics(
                                 sub_topics=[
@@ -193,7 +196,6 @@ Header_BR_slave = Slave(
                                     'Header_BR_collect_err', 'Header_BR_set_err', 'Header_BR_analyze_err',
                                 ]
                                 ),
-                        rtu=RTU(Header_BR_id, '03', '008A'), # read_rtu('0001')
                         comm_func=Modbus.TCHeader_comm,
                         analyze_func=Modbus.TCHeader_analyze
                         )
@@ -201,7 +203,7 @@ Header_BR_slave = Slave(
 # ADAM_SET_slave, RTU func code 03, channel site at '0000-0003', data_len is 4 ('0004')
 ## ch00:+-10V, ch01:0-5V, ch02:0-5V, ch03:0-5V
 ADAM_SET_slave = Slave(
-                        name='ADAM_SET_slave',
+                        name='ADAM_SET',
                         idno=ADAM_SET_id,
                         port_topics=port_Topics(
                                 sub_topics=[
@@ -214,7 +216,6 @@ ADAM_SET_slave = Slave(
                                     'ADAM_SET_collect_err', 'ADAM_SET_set_err', 'ADAM_SET_analyze_err',
                                 ]
                                 ),
-                        rtu=RTU(ADAM_SET_id, '03', '0000'), # read_rtu('0004')
                         comm_func=Modbus.ADAM_SET_comm,
                         analyze_func=Modbus.ADAM_SET_analyze
                     )
@@ -222,7 +223,7 @@ ADAM_SET_slave = Slave(
 # ADAM_READ_slave, RTU func code 03, channel site at '0000-0008', data_len is 8 ('0008')
 ## ch00:4-20mA, ch01:0-5V, ch04:0-5V, ch05:0-5V, ch06:0-5V
 ADAM_READ_slave = Slave(
-                        name='ADAM_READ_slave',
+                        name='ADAM_READ',
                         idno=ADAM_READ_id,
                         port_topics=port_Topics(
                                 sub_topics=[],
@@ -233,14 +234,13 @@ ADAM_READ_slave = Slave(
                                     'ADAM_READ_collect_err', 'ADAM_READ_analyze_err',
                                 ]
                                 ),
-                        rtu=RTU(ADAM_READ_id, '03', '0000'), # read_rtu('0008')
                         comm_func=Modbus.ADAM_READ_collect,
                         analyze_func=Modbus.ADAM_READ_analyze
                         )
 
 # DFMs' slaves
 DFM_slave = Slave(
-                name='DFM_slave',
+                name='DFM',
                 idno=DFM_id,
                 port_topics=port_Topics(
                                 sub_topics=[],
@@ -248,15 +248,14 @@ DFM_slave = Slave(
                                     'DFM_RichGas',
                                 ],
                                 err_topics=[
-                                    'DFM_data_collect_err', 'DFM_data_analyze_err', 
+                                    'DFM_collect_err', 'DFM_analyze_err', 
                                 ]
                                 ),
-                rtu='',
                 analyze_func=Modbus.DFM_data_analyze
                 )
 
 DFM_AOG_slave = Slave(
-                    name='DFM_AOG_slave',
+                    name='DFM_AOG',
                     idno=DFM_AOG_id, 
                     port_topics=port_Topics(
                                 sub_topics=[],
@@ -264,10 +263,9 @@ DFM_AOG_slave = Slave(
                                     'DFM_AOG'
                                 ],
                                 err_topics=[
-                                    'DFM_AOG_data_collect_err', 'DFM_AOG_data_analyze_err'
+                                    'DFM_AOG_collect_err', 'DFM_AOG_analyze_err'
                                 ]
                                 ),
-                    rtu='',
                     analyze_func=Modbus.DFM_AOG_data_analyze
                     )
 

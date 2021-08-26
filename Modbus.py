@@ -23,12 +23,12 @@ def RS232_data_collect(start, port, slave, *funcs):
 
 
 #------------------------------Collect and Analyze func---------------------------------
-def ADAM_TC_collect(start, port, slave, wait_data, collect_err):
-    #start = time.time()
+def Modbus_Read(_field, start, port, slave, wait_data):
     while not params.kb_event.isSet():
         try:
+            port.write(bytes.fromhex(slave.read_rtu(_field))) #hex to binary(byte) 
+            
             slave.time_readings.append(round(time.time()-start, 2))
-            port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
 
             time.sleep(params.time_out)
 
@@ -39,33 +39,66 @@ def ADAM_TC_collect(start, port, slave, wait_data, collect_err):
                 # check sta, func code, datalen, crc
                 if (readings[0:2] == slave.id) and (readings[2:4] == '03') and ((crc[-2:] + crc[:2]) == readings[-4:]):
                     slave.lst_readings.append(readings)
-                    print(f'ADAM_TC_collect done: read from slave_{slave.id}')
+                    print(f'Read from slave_{slave.name}')
                 else:
                     port.reset_input_buffer() # reset the buffer if no read
-                    MQTT_config.err_Topics.pub_values[collect_err] += 1
-                    print('XX'*10 + f"ADAM_TC_collect error: from slave_{slave.id}, err_{MQTT_config.err_Topics.pub_values[collect_err]} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
+                    port.err_values[f'{slave.name}_collect_err'] += 1
+                    print('XX'*10 + f"{slave.name}_collect_err_{port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
             else: # if data len is less than the wait data
                 port.reset_input_buffer() # reset the buffer if no read
-                MQTT_config.err_Topics.pub_values[collect_err] += 1
-                print('XX'*10 + f"ADAM_TC_collect error: from slave_{slave.id}, err_{MQTT_config.err_Topics.pub_values[collect_err]} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+                port.err_values[f'{slave.name}_collect_err'] += 1
+                print('XX'*10 + f"{slave.name}_collect_err_{port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
         except Exception as e:
-            MQTT_config.err_Topics.pub_values[collect_err] += 1
-            print('XX'*10 + f" {MQTT_config.err_Topics.pub_values[collect_err]} ADAM_TC_collect error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            port.err_values[f'{slave.name}_collect_err'] += 1
+            print('XX'*10 + f"{slave.name}_collect_err_{port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
             pass
-
     port.close()
-    print('kill ADAM_TC_collect')
-    print(f'Final ADAM_TC_collect: {MQTT_config.err_Topics.pub_values[collect_err]} errors occured')
-    #barrier_kill.wait()
+    print(f"kill {slave.name}_collect, {port.err_values[f'{slave.name}_collect_err']} errors occured") 
+
+
+def ADAM_TC_collect(start, port, slave, wait_data):
+    #start = time.time()
+    while not params.kb_event.isSet():
+        try:
+            port.write(bytes.fromhex(slave.read_rtu('0000', '0008'))) #hex to binary(byte) 
+            
+            slave.time_readings.append(round(time.time()-start, 2))
+
+            time.sleep(params.time_out)
+
+            # look up the buffer for 21 bytes, which is for 8 channels data length
+            if port.inWaiting() >= wait_data: 
+                readings = port.read(wait_data).hex() # after reading, the buffer will be clean
+                crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
+                # check sta, func code, datalen, crc
+                if (readings[0:2] == slave.id) and (readings[2:4] == '03') and ((crc[-2:] + crc[:2]) == readings[-4:]):
+                    slave.lst_readings.append(readings)
+                    print(f'Read from slave_{slave.name}')
+                else:
+                    port.reset_input_buffer() # reset the buffer if no read
+                    port.err_values[f'{slave.name}_collect_err'] += 1
+                    print('XX'*10 + f"{slave.name}_collect_err_{port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
+            else: # if data len is less than the wait data
+                port.reset_input_buffer() # reset the buffer if no read
+                port.err_values[f'{slave.name}_collect_err'] += 1
+                print('XX'*10 + f"{slave.name}_collect_err_{port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+        except Exception as e:
+            port.err_values[f'{slave.name}_collect_err'] += 1
+            print('XX'*10 + f"{slave.name}_collect_err_{port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+        finally:
+            pass
+    port.close()
+    print(f"kill {slave.name}_collect, {port.err_values[f'{slave.name}_collect_err']} errors occured")
 
 
 def ADAM_READ_collect(start, port, slave, wait_data, collect_err):
     #start = time.time()
     while not params.kb_event.isSet():
         try:
-            slave.time_readings.append(round(time.time()-start, 2))
             port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
+            
+            slave.time_readings.append(round(time.time()-start, 2))
 
             time.sleep(params.time_out)
 
