@@ -6,6 +6,7 @@ from crccheck.crc import Crc16Modbus
 
 #custom modules
 import Modbus
+import params
 
 #-----------------Serial port and DeviceID------------------------------
 #_port_path = '/dev/ttyUSB'
@@ -64,6 +65,19 @@ class device_port:
             for topic in _slave.port_topics.err_topics:
                 self.err_topics.append(topic)
                 self.err_values[topic] = 0
+    
+    '''def serial_funcs(self, _func): # _func requires either 'comm_func' or 'analyze_func'
+        while not params.kb_event.isSet():
+            for slave in self.slaves:
+                threading.Thread(
+                    target=slave.funcs[_func],
+                    args=()
+        self.port.close()
+        print(f'Close {self.port}, err are {self.err_values}')
+
+    def parallel_funcs(self, _func): # _func requires either 'comm_func' or 'analyze_func'
+        for slave in self.slaves:
+            slave.funcs[_func]'''
 
 class port_Topics:
     def __init__(self, sub_topics, pub_topics, err_topics):
@@ -73,29 +87,28 @@ class port_Topics:
         self.err_topics = err_topics
 
 class Slave: # Create Slave data store 
-    def __init__(self, name, idno, port_topics, **funcs):
+    def __init__(self, name, idno, port_topics, **kwargs):
         self.name = name
         self.id = idno # id number of slave
         self.lst_readings = [] # record readings
         self.time_readings = 0 # record time
         self.readings = [] # for all data
         self.port_topics = port_topics
-        self.funcs=funcs # dict of funcs
-    
-    def read_rtu(self, _fields):
-        # _fields requires a lst
+        self.kwargs = kwargs # dict of funcs
+
+    def read_rtu(self, *_fields, wait_len):
+        self.wait_len = wait_len
         # _fields[0]:data_site
         # _fields[1]:value / data_len
         if len(_fields) == 2:
             data_struc = self.id + '03' + _fields[0] + _fields[1]
             crc = Crc16Modbus.calchex(bytearray.fromhex(data_struc))
-            self.rtu_r = data_struc + crc[-2:] + crc[:2]
+            self.rtu = data_struc + crc[-2:] + crc[:2]
         elif len(_fields) == 1:
-            self.rtu_r = _fields[0]
-        else:
-            raise Exception(f"{self.name} Wrong Reading RTU Fields")
+            self.rtu = _fields[0]
 
-    def write_rtu(self, _fields):
+    def write_rtu(self, _fields, wait_len):
+        self.wait_len = wait_len
         # _fields requires a lst
         # _fields[0]:data_site
         # _fields[1]:value / data_len
@@ -103,11 +116,7 @@ class Slave: # Create Slave data store
             _value = tohex(_fields[1])
             data_struc = self.id + '06' + _fields[0] + _value
             crc = Crc16Modbus.calchex(bytearray.fromhex(data_struc))
-            self.rtu_w = data_struc + crc[-2:] + crc[:2]
-        elif len(_fields) == 1:
-            self.rtu_w = _fields[0]
-        else:
-            raise Exception(f"{self.name} Wrong Writing RTU Fields")
+            self.rtu = data_struc + crc[-2:] + crc[:2]
     
 
 #-------------------------RTU & Slave--------------------------------------
@@ -128,6 +137,7 @@ ADAM_TC_slave = Slave(
                     comm_func=Modbus.ADAM_TC_collect,
                     analyze_func=Modbus.ADAM_TC_analyze
                     )
+ADAM_TC_slave.read_rtu('0000', '0008', wait_len=21)
 
 # GA slave
 GA_slave = Slave(
@@ -145,6 +155,7 @@ GA_slave = Slave(
                 comm_func=Modbus.GA_data_collect,
                 analyze_func=Modbus.GA_data_analyze
                 )
+GA_slave.read_rtu('11 01 60 8E', wait_len=31)
 
 # Scale slave
 Scale_slave = Slave(
@@ -161,9 +172,12 @@ Scale_slave = Slave(
                     comm_func=Modbus.Scale_data_collect,
                     analyze_func=Modbus.Scale_data_analyze
                     )
+Scale_slave.read_rtu(wait_len=0)
 
 # TCHeader Rreading, RTU func code 03, PV value site at '008A', data_len is 1 ('0001')
 # TCHeader Writing, RTU func code 06, SV value site at '0000'
+# r_wait_len=7,
+# w_wait_len=8,
 Header_EVA_slave = Slave(
                         name = 'Header_EVA',
                         idno=Header_EVA_id,
@@ -181,6 +195,7 @@ Header_EVA_slave = Slave(
                         comm_func=Modbus.TCHeader_comm,
                         analyze_func=Modbus.TCHeader_analyze
                         )
+Header_EVA_slave.read_rtu('008A', '0001', wait_len=7)
 
 Header_BR_slave = Slave(
                         name='Header_BR',
@@ -199,9 +214,12 @@ Header_BR_slave = Slave(
                         comm_func=Modbus.TCHeader_comm,
                         analyze_func=Modbus.TCHeader_analyze
                         )
+Header_EVA_slave.read_rtu('008A', '0001', wait_len=7)
 
 # ADAM_SET_slave, RTU func code 03, channel site at '0000-0003', data_len is 4 ('0004')
 ## ch00:+-10V, ch01:0-5V, ch02:0-5V, ch03:0-5V
+# r_wait_len=13, # wait for 7 bytes == 7 Hex numbers
+# w_wait_len=8,
 ADAM_SET_slave = Slave(
                         name='ADAM_SET',
                         idno=ADAM_SET_id,
@@ -219,6 +237,7 @@ ADAM_SET_slave = Slave(
                         comm_func=Modbus.ADAM_SET_comm,
                         analyze_func=Modbus.ADAM_SET_analyze
                     )
+ADAM_SET_slave.read_rtu('0000', '0004', wait_len=13)
 
 # ADAM_READ_slave, RTU func code 03, channel site at '0000-0008', data_len is 8 ('0008')
 ## ch00:4-20mA, ch01:0-5V, ch04:0-5V, ch05:0-5V, ch06:0-5V
@@ -237,6 +256,7 @@ ADAM_READ_slave = Slave(
                         comm_func=Modbus.ADAM_READ_collect,
                         analyze_func=Modbus.ADAM_READ_analyze
                         )
+ADAM_READ_slave.read_rtu('0000', '0008', wait_len=21)
 
 # DFMs' slaves
 DFM_slave = Slave(
