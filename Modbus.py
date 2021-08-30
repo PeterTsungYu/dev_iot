@@ -12,16 +12,6 @@ from crccheck.crc import Crc16Modbus
 #custom modules
 import params
 
-#------------------------------Port func---------------------------------
-def RS232_data_collect(start, port, slave, *funcs):
-    while not params.kb_event.isSet():
-        for func in funcs:
-            func(start, port, slave, 31, collect_err)
-    port.close()
-    print('kill GA_data_collect')
-    print(f'Final GA_data_collect: {collect_err} errors occured')
-
-
 #------------------------------Collect and Analyze func---------------------------------
 def Modbus_Read(start, port, slave):
     #while not params.kb_event.isSet():
@@ -53,8 +43,6 @@ def Modbus_Read(start, port, slave):
         print('XX'*10 + f"{slave.name}_collect_err_{port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
     finally:
         pass
-    #port.close()
-    #print(f"kill {slave.name}_collect, {port.err_values[f'{slave.name}_collect_err']} errors occured") 
 
 
 def Scale_data_collect(start, port, slave):
@@ -76,9 +64,6 @@ def Scale_data_collect(start, port, slave):
         print('XX'*10 + f"{slave.name}_collect_err_{port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
     finally:
         pass
-
-    # port.close()
-    # print(f"kill {slave.name}_collect, {port.err_values[f'{slave.name}_collect_err']} errors occured") 
 
 
 def Modbus_Comm(start, port, slave):    

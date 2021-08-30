@@ -53,6 +53,7 @@ class device_port:
         self.sub_events = {}
         self.pub_values = {}
         self.err_values = {}
+        self.thread_funcs = []
 
         for _slave in slaves:
             for topic in _slave.port_topics.sub_topics:
@@ -66,18 +67,34 @@ class device_port:
                 self.err_topics.append(topic)
                 self.err_values[topic] = 0
     
-    '''def serial_funcs(self, _func): # _func requires either 'comm_func' or 'analyze_func'
-        while not params.kb_event.isSet():
-            for slave in self.slaves:
-                threading.Thread(
-                    target=slave.funcs[_func],
-                    args=()
-        self.port.close()
-        print(f'Close {self.port}, err are {self.err_values}')
+    def serial_funcs(self, start): 
+        def thread_func():
+            while not params.kb_event.isSet():
+                for slave in self.slaves:
+                    slave.kwargs['comm_func'](start, self.port, slave)
+            self.port.close()
+            print(f'Close {self.port}, err are {self.err_values}')
+        
+        self.thread_funcs.append(threading.Thread(
+                                    target=thread_func, 
+                                    #args=(,)
+                                    )
+                                )
 
-    def parallel_funcs(self, _func): # _func requires either 'comm_func' or 'analyze_func'
+    def parallel_funcs(self, start): 
         for slave in self.slaves:
-            slave.funcs[_func]'''
+            def thread_func():
+                while not params.kb_event.isSet():
+                    slave.kwargs['analyze_func'](start, self.port, slave)
+                self.port.close()
+                print(f'Close {self.port}, err are {self.err_values}')
+        
+            self.thread_funcs.append(threading.Thread(
+                                        target=thread_func, 
+                                        #args=(,)
+                                        )
+                                    )
+
 
 class port_Topics:
     def __init__(self, sub_topics, pub_topics, err_topics):
