@@ -97,26 +97,25 @@ class Slave: # Create Slave data store
         self.kwargs = kwargs # dict of funcs
 
     def read_rtu(self, *_fields, wait_len):
-        self.wait_len = wait_len
+        self.r_wait_len = wait_len
         # _fields[0]:data_site
         # _fields[1]:value / data_len
         if len(_fields) == 2:
             data_struc = self.id + '03' + _fields[0] + _fields[1]
             crc = Crc16Modbus.calchex(bytearray.fromhex(data_struc))
-            self.rtu = data_struc + crc[-2:] + crc[:2]
+            self.r_rtu = data_struc + crc[-2:] + crc[:2]
         elif len(_fields) == 1:
-            self.rtu = _fields[0]
+            self.r_rtu = _fields[0]
 
-    def write_rtu(self, _fields, wait_len):
-        self.wait_len = wait_len
-        # _fields requires a lst
+    def write_rtu(self, *_fields):
+        self.w_wait_len = 8
         # _fields[0]:data_site
         # _fields[1]:value / data_len
         if len(_fields) == 2:
             _value = tohex(_fields[1])
             data_struc = self.id + '06' + _fields[0] + _value
             crc = Crc16Modbus.calchex(bytearray.fromhex(data_struc))
-            self.rtu = data_struc + crc[-2:] + crc[:2]
+            self.w_rtu = data_struc + crc[-2:] + crc[:2]
     
 
 #-------------------------RTU & Slave--------------------------------------
@@ -134,7 +133,7 @@ ADAM_TC_slave = Slave(
                                                 'ADAM_TC_collect_err', 'ADAM_TC_analyze_err',
                                             ]
                                             ),
-                    comm_func=Modbus.ADAM_TC_collect,
+                    comm_func=Modbus.Modbus_Read,
                     analyze_func=Modbus.ADAM_TC_analyze
                     )
 ADAM_TC_slave.read_rtu('0000', '0008', wait_len=21)
@@ -152,7 +151,7 @@ GA_slave = Slave(
                                             'GA_collect_err', 'GA_analyze_err',
                                         ]
                                         ),
-                comm_func=Modbus.GA_data_collect,
+                comm_func=Modbus.Modbus_Read,
                 analyze_func=Modbus.GA_data_analyze
                 )
 GA_slave.read_rtu('11 01 60 8E', wait_len=31)
@@ -192,7 +191,7 @@ Header_EVA_slave = Slave(
                                     'Header_EVA_collect_err', 'Header_EVA_set_err', 'Header_EVA_analyze_err',
                                 ]
                                 ),
-                        comm_func=Modbus.TCHeader_comm,
+                        comm_func=Modbus.Modbus_Comm,
                         analyze_func=Modbus.TCHeader_analyze
                         )
 Header_EVA_slave.read_rtu('008A', '0001', wait_len=7)
@@ -211,10 +210,10 @@ Header_BR_slave = Slave(
                                     'Header_BR_collect_err', 'Header_BR_set_err', 'Header_BR_analyze_err',
                                 ]
                                 ),
-                        comm_func=Modbus.TCHeader_comm,
+                        comm_func=Modbus.Modbus_Comm,
                         analyze_func=Modbus.TCHeader_analyze
                         )
-Header_EVA_slave.read_rtu('008A', '0001', wait_len=7)
+Header_BR_slave.read_rtu('008A', '0001', wait_len=7)
 
 # ADAM_SET_slave, RTU func code 03, channel site at '0000-0003', data_len is 4 ('0004')
 ## ch00:+-10V, ch01:0-5V, ch02:0-5V, ch03:0-5V
@@ -234,7 +233,7 @@ ADAM_SET_slave = Slave(
                                     'ADAM_SET_collect_err', 'ADAM_SET_set_err', 'ADAM_SET_analyze_err',
                                 ]
                                 ),
-                        comm_func=Modbus.ADAM_SET_comm,
+                        comm_func=Modbus.Modbus_Comm,
                         analyze_func=Modbus.ADAM_SET_analyze
                     )
 ADAM_SET_slave.read_rtu('0000', '0004', wait_len=13)
@@ -253,7 +252,7 @@ ADAM_READ_slave = Slave(
                                     'ADAM_READ_collect_err', 'ADAM_READ_analyze_err',
                                 ]
                                 ),
-                        comm_func=Modbus.ADAM_READ_collect,
+                        comm_func=Modbus.Modbus_Read,
                         analyze_func=Modbus.ADAM_READ_analyze
                         )
 ADAM_READ_slave.read_rtu('0000', '0008', wait_len=21)
