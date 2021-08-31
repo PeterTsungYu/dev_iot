@@ -13,8 +13,9 @@ from crccheck.crc import Crc16Modbus
 import params
 
 #------------------------------Collect and Analyze func---------------------------------
-def Modbus_Read(start, port, slave):
+def Modbus_Read(start, device_port, slave):
     #while not params.kb_event.isSet():
+    port = device_port.port
     try:
         port.write(bytes.fromhex(slave.r_rtu)) #hex to binary(byte) 
         
@@ -32,21 +33,22 @@ def Modbus_Read(start, port, slave):
                 print(f'Read from slave_{slave.name}')
             else:
                 port.reset_input_buffer() # reset the buffer if no read
-                port.err_values[f'{slave.name}_collect_err'] += 1
-                print('XX'*10 + f"{slave.name}_collect_err_{port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
+                device_port.err_values[f'{slave.name}_collect_err'] += 1
+                print('XX'*10 + f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
         else: # if data len is less than the wait data
             port.reset_input_buffer() # reset the buffer if no read
-            port.err_values[f'{slave.name}_collect_err'] += 1
-            print('XX'*10 + f"{slave.name}_collect_err_{port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+            device_port.err_values[f'{slave.name}_collect_err'] += 1
+            print('XX'*10 + f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
     except Exception as e:
-        port.err_values[f'{slave.name}_collect_err'] += 1
-        print('XX'*10 + f"{slave.name}_collect_err_{port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+        device_port.err_values[f'{slave.name}_collect_err'] += 1
+        print('XX'*10 + f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
     finally:
         pass
 
 
-def Scale_data_collect(start, port, slave):
+def Scale_data_collect(start, device_port, slave):
     #while not params.kb_event.isSet():
+    port = device_port.port
     try:
         slave.time_readings = time.time()-start
         time.sleep(params.time_out) # wait for the data input to the buffer
@@ -57,22 +59,23 @@ def Scale_data_collect(start, port, slave):
             print(f'Read from slave_{slave.name}')
             port.reset_input_buffer() # reset the buffer after each reading process
         else: # if data len is no data
-            port.err_values[f'{slave.name}_collect_err'] += 1
-            print('XX'*10 + f"{slave.name}_collect_err_{port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: data len is no wait data" + 'XX'*10) 
+            device_port.err_values[f'{slave.name}_collect_err'] += 1
+            print('XX'*10 + f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: data len is no wait data" + 'XX'*10) 
     except Exception as e:
-        port.err_values[f'{slave.name}_collect_err'] += 1
-        print('XX'*10 + f"{slave.name}_collect_err_{port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+        device_port.err_values[f'{slave.name}_collect_err'] += 1
+        print('XX'*10 + f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
     finally:
         pass
 
 
-def Modbus_Comm(start, port, slave):    
+def Modbus_Comm(start, device_port, slave):    
     #while not params.kb_event.isSet(): # it is written in the ReadingThreads.py
+    port = device_port.port
     for topic in slave.port_topics.sub_topics:
         w_data_site=0
-        if not port.sub_events[topic].isSet():
+        if not device_port.sub_events[topic].isSet():
             try: # try to collect
-                port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
+                port.write(bytes.fromhex(slave.r_rtu)) #hex to binary(byte) 
                 
                 slave.time_readings = time.time()-start
 
@@ -87,21 +90,22 @@ def Modbus_Comm(start, port, slave):
                         print(f'Read from slave_{slave.name}')
                     else:
                         port.reset_input_buffer() # reset the buffer if no read
-                        port.err_values[f'{slave.name}_collect_err'] += 1
-                        print('XX'*10 + f"{slave.name}_collect_err_{port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
+                        device_port.err_values[f'{slave.name}_collect_err'] += 1
+                        print('XX'*10 + f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
                 else: # if data len is less than the wait data
                     port.reset_input_buffer() # reset the buffer if no read
-                    port.err_values[f'{slave.name}_collect_err'] += 1
-                    print('XX'*10 + f"{slave.name}_collect_err_{port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+                    device_port.err_values[f'{slave.name}_collect_err'] += 1
+                    print('XX'*10 + f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
             except Exception as e:
-                port.err_values[f'{slave.name}_collect_err'] += 1
-                print('XX'*10 + f"{slave.name}_collect_err_{port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+                device_port.err_values[f'{slave.name}_collect_err'] += 1
+                print('XX'*10 + f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
             finally:
                 pass
 
         else:
             try: # try to set value
-                port.write(bytes.fromhex(slave.write_rtu(f"{w_data_site:0>4}", port.sub_values[topic]))) #hex to binary(byte) 
+                slave.write_rtu(f"{w_data_site:0>4}", device_port.sub_values[topic])
+                port.write(bytes.fromhex(slave.w_rtu)) #hex to binary(byte) 
                 
                 time.sleep(params.time_out)
 
@@ -114,23 +118,23 @@ def Modbus_Comm(start, port, slave):
                         print(f'Write to slave_{slave.name}')
                     else:
                         port.reset_input_buffer() # reset the buffer if no read
-                        port.err_values[f'{slave.name}_collect_err'] += 1
-                        print('XX'*10 + f"{slave.name}_collect_err_{port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
+                        device_port.err_values[f'{slave.name}_collect_err'] += 1
+                        print('XX'*10 + f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
                 else: # if data len is less than the wait data
                     port.reset_input_buffer() # reset the buffer if no read
-                    port.err_values[f'{slave.name}_collect_err'] += 1
-                    print('XX'*10 + f"{slave.name}_collect_err_{port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+                    device_port.err_values[f'{slave.name}_collect_err'] += 1
+                    print('XX'*10 + f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
             except Exception as e:
-                port.err_values[f'{slave.name}_collect_err'] += 1
-                print('XX'*10 + f"{slave.name}_collect_err_{port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+                device_port.err_values[f'{slave.name}_collect_err'] += 1
+                print('XX'*10 + f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
             finally:
-                port.sub_events[topic].clear()
+                device_port.sub_events[topic].clear()
         
         w_data_site += 1
 
 
 
-def ADAM_TC_analyze(start, port, slave):
+def ADAM_TC_analyze(start, device_port, slave):
     #while not params.kb_event.isSet():
     if not params.ticker.wait(params.sample_time):
         lst_readings = slave.lst_readings
@@ -149,7 +153,7 @@ def ADAM_TC_analyze(start, port, slave):
                 # casting
                 ind = 1
                 for topic in slave.port_topics.pub_topics:    
-                    port.pub_values[topic] = readings[ind]
+                    device_port.pub_values[topic] = readings[ind]
                     ind += 1
                 ## to slave data list
                 slave.readings.append(readings)
@@ -158,13 +162,13 @@ def ADAM_TC_analyze(start, port, slave):
                 print(f"{slave.name}_analyze record nothing")
 
         except Exception as e:
-            port.err_values[f'{slave.name}_analyze_err'] += 1
-            print('XX'*10 + f"{slave.name}_analyze_err_{port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            device_port.err_values[f'{slave.name}_analyze_err'] += 1
+            print('XX'*10 + f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
             pass
 
 
-def ADAM_READ_analyze(start, port, slave):
+def ADAM_READ_analyze(start, device_port, slave):
     #while not params.kb_event.isSet():
     if not params.ticker.wait(params.sample_time):
         lst_readings = slave.lst_readings
@@ -183,7 +187,7 @@ def ADAM_READ_analyze(start, port, slave):
                 # casting
                 ind = 1
                 for topic in slave.port_topics.pub_topics:    
-                    port.pub_values[topic] = readings[ind]
+                    device_port.pub_values[topic] = readings[ind]
                     ind += 1
                 ## to slave data list
                 slave.readings.append(readings)
@@ -192,13 +196,13 @@ def ADAM_READ_analyze(start, port, slave):
                 print(f"{slave.name}_analyze record nothing")
 
         except Exception as e:
-            port.err_values[f'{slave.name}_analyze_err'] += 1
-            print('XX'*10 + f"{slave.name}_analyze_err_{port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            device_port.err_values[f'{slave.name}_analyze_err'] += 1
+            print('XX'*10 + f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
             pass
 
 
-def DFM_data_analyze(start, port, slave):
+def DFM_data_analyze(start, device_port, slave):
     #while not params.kb_event.isSet():
     if not params.ticker.wait(params.sample_time_DFM): # for each sample_time, collect data
         sampling_time = round(time.time()-start, 2)
@@ -225,7 +229,7 @@ def DFM_data_analyze(start, port, slave):
                 # casting
                 ind = 1
                 for topic in slave.port_topics.pub_topics:    
-                    port.pub_values[topic] = readings[ind]
+                    device_port.pub_values[topic] = readings[ind]
                     ind += 1
                 ## to slave data list
                 slave.readings.append(readings)
@@ -234,13 +238,13 @@ def DFM_data_analyze(start, port, slave):
                 print(f"{slave.name}_analyze record nothing")
 
         except Exception as e:
-            port.err_values[f'{slave.name}_analyze_err'] += 1
-            print('XX'*10 + f"{slave.name}_analyze_err_{port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            device_port.err_values[f'{slave.name}_analyze_err'] += 1
+            print('XX'*10 + f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
             pass
 
 
-def DFM_AOG_data_analyze(start, port, slave):
+def DFM_AOG_data_analyze(start, device_port, slave):
     #while not params.kb_event.isSet():
     if not params.ticker.wait(params.sample_time_DFM): # for each sample_time, collect data
         sampling_time = round(time.time()-start, 2)
@@ -268,7 +272,7 @@ def DFM_AOG_data_analyze(start, port, slave):
                 # casting
                 ind = 1
                 for topic in slave.port_topics.pub_topics:    
-                    port.pub_values[topic] = readings[ind]
+                    device_port.pub_values[topic] = readings[ind]
                     ind += 1
                 ## to slave data list
                 slave.readings.append(readings)
@@ -277,13 +281,13 @@ def DFM_AOG_data_analyze(start, port, slave):
                 print(f"{slave.name}_analyze record nothing")
 
         except Exception as e:
-            port.err_values[f'{slave.name}_analyze_err'] += 1
-            print('XX'*10 + f"{slave.name}_analyze_err_{port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            device_port.err_values[f'{slave.name}_analyze_err'] += 1
+            print('XX'*10 + f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
             pass
 
 
-def Scale_data_analyze(start, port, slave):
+def Scale_data_analyze(start, device_port, slave):
     #while (not params.kb_event.isSet()): 
     if not params.ticker.wait(params.sample_time_Scale):
         lst_readings = slave.lst_readings
@@ -300,7 +304,7 @@ def Scale_data_analyze(start, port, slave):
                 # casting
                 ind = 1
                 for topic in slave.port_topics.pub_topics:    
-                    port.pub_values[topic] = readings[ind]
+                    device_port.pub_values[topic] = readings[ind]
                     ind += 1
                 ## to slave data list
                 slave.readings.append(readings)
@@ -309,13 +313,13 @@ def Scale_data_analyze(start, port, slave):
                 print(f"{slave.name}_analyze record nothing")
 
         except Exception as e:
-            port.err_values[f'{slave.name}_analyze_err'] += 1
-            print('XX'*10 + f"{slave.name}_analyze_err_{port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            device_port.err_values[f'{slave.name}_analyze_err'] += 1
+            print('XX'*10 + f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
             pass
 
 
-def GA_data_analyze(start, port, slave):
+def GA_data_analyze(start, device_port, slave):
     #while not params.kb_event.isSet():
     if not params.ticker.wait(params.sample_time):
         lst_readings = slave.lst_readings
@@ -339,7 +343,7 @@ def GA_data_analyze(start, port, slave):
                 # casting
                 ind = 1
                 for topic in slave.port_topics.pub_topics:    
-                    port.pub_values[topic] = readings[ind]
+                    device_port.pub_values[topic] = readings[ind]
                     ind += 1
                 ## to slave data list
                 slave.readings.append(readings)
@@ -348,13 +352,13 @@ def GA_data_analyze(start, port, slave):
                 print(f"{slave.name}_analyze record nothing")
 
         except Exception as e:
-            port.err_values[f'{slave.name}_analyze_err'] += 1
-            print('XX'*10 + f"{slave.name}_analyze_err_{port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            device_port.err_values[f'{slave.name}_analyze_err'] += 1
+            print('XX'*10 + f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
             pass
 
 
-def TCHeader_analyze(start, port, slave):
+def TCHeader_analyze(start, device_port, slave):
     #while (not params.kb_event.isSet()): 
     if not params.ticker.wait(params.sample_time):
         #print(slave.id, slave.time_readings, slave.lst_readings)
@@ -377,7 +381,7 @@ def TCHeader_analyze(start, port, slave):
                 # casting
                 ind = 1
                 for topic in slave.port_topics.pub_topics:    
-                    port.pub_values[topic] = readings[ind]
+                    device_port.pub_values[topic] = readings[ind]
                     ind += 1
                 ## to slave data list
                 slave.readings.append(readings)
@@ -386,13 +390,13 @@ def TCHeader_analyze(start, port, slave):
                 print(f"{slave.name}_analyze record nothing")
 
         except Exception as e:
-            port.err_values[f'{slave.name}_analyze_err'] += 1
-            print('XX'*10 + f"{slave.name}_analyze_err_{port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            device_port.err_values[f'{slave.name}_analyze_err'] += 1
+            print('XX'*10 + f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
             pass
 
 
-def ADAM_SET_analyze(start, port, slave):
+def ADAM_SET_analyze(start, device_port, slave):
     #while (not params.kb_event.isSet())
     if not params.ticker.wait(params.sample_time):
         #print(slave.id, slave.time_readings, slave.lst_readings)
@@ -417,7 +421,7 @@ def ADAM_SET_analyze(start, port, slave):
                 # casting
                 ind = 1
                 for topic in slave.port_topics.pub_topics:    
-                    port.pub_values[topic] = readings[ind]
+                    device_port.pub_values[topic] = readings[ind]
                     ind += 1
                 ## to slave data list
                 slave.readings.append(readings)
@@ -426,7 +430,7 @@ def ADAM_SET_analyze(start, port, slave):
                 print(f"{slave.name}_analyze record nothing")
 
         except Exception as e:
-            port.err_values[f'{slave.name}_analyze_err'] += 1
-            print('XX'*10 + f"{slave.name}_analyze_err_{port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            device_port.err_values[f'{slave.name}_analyze_err'] += 1
+            print('XX'*10 + f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
         finally:
             pass

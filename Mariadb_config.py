@@ -45,7 +45,7 @@ Table_col = [u + ' FLOAT' for i in lst_port_Topics for u in i.pub_topics]
 TableSchema = f'create table platform_{time} (Id int NOT NULL AUTO_INCREMENT,' \
                 + ','.join(Table_col) \
                 + ',PRIMARY KEY (Id))'
-print(TableSchema)
+#print(TableSchema)
 
 try:
     cur.execute(f'drop table if exists platform_{time}') 
@@ -60,7 +60,7 @@ insert_col = [u for i in lst_port_Topics for u in i.pub_topics]
 insertSchema = f'INSERT INTO platform_{time} (' \
                 + ','.join(insert_col) \
                 + f') VALUES ({("?,"*len(insert_col))[:-1]})'
-print(insertSchema)
+#print(insertSchema)
 
 def multi_insert(cur):
     while not params.kb_event.isSet():

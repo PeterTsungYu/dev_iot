@@ -71,9 +71,8 @@ class device_port:
         def thread_func():
             while not params.kb_event.isSet():
                 for slave in self.slaves:
-                    slave.kwargs['comm_func'](start, self.port, slave)
-            self.port.close()
-            print(f'Close {self.port}, err are {self.err_values}')
+                    if slave.kwargs.get('comm_func'):
+                        slave.kwargs['comm_func'](start, self, slave)
         
         self.thread_funcs.append(threading.Thread(
                                     target=thread_func, 
@@ -85,9 +84,8 @@ class device_port:
         for slave in self.slaves:
             def thread_func():
                 while not params.kb_event.isSet():
-                    slave.kwargs['analyze_func'](start, self.port, slave)
-                self.port.close()
-                print(f'Close {self.port}, err are {self.err_values}')
+                    if slave.kwargs.get('analyze_func'):
+                        slave.kwargs['analyze_func'](start, self, slave)
         
             self.thread_funcs.append(threading.Thread(
                                         target=thread_func, 
@@ -108,7 +106,7 @@ class Slave: # Create Slave data store
         self.name = name
         self.id = idno # id number of slave
         self.lst_readings = [] # record readings
-        self.time_readings = 0 # record time
+        self.time_readings = [] # record time
         self.readings = [] # for all data
         self.port_topics = port_topics
         self.kwargs = kwargs # dict of funcs

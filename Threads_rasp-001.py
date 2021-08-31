@@ -19,7 +19,10 @@ print('=='*30)
 start = time.time()
 
 #-------------------------Open ports--------------------------------------
-lst_ports = [config.RS485_port, config.Scale_port, config.RS232_port, config.Setup_port]
+lst_ports = [#config.RS485_port, 
+            #config.Scale_port, 
+            #config.RS232_port, 
+            config.Setup_port]
 
 try:
     for device_port in lst_ports: 
@@ -80,7 +83,11 @@ except Exception as ex:
     print("=="*30)
 finally:
     print("=="*30)
+    for device_port in lst_ports: 
+        device_port.port.close()
+        print(f'Close {device_port.name}, err are {device_port.err_values}')
     GPIO.cleanup()
+    print(f'Close {config.GPIO_port.name}, err are {config.GPIO_port.err_values}')
     print(f"Program duration: {time.time() - start}")
     Mariadb_config.conn.close()
     print("close connection to MariaDB")
