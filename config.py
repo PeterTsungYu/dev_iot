@@ -73,8 +73,10 @@ class device_port:
                 for slave in self.slaves:
                     if slave.kwargs.get('comm_func'):
                         slave.kwargs['comm_func'](start, self, slave)
+                        print('v'*100,'serial_funcs', slave.name)
         
         self.thread_funcs.append(threading.Thread(
+                                    name = f'{self.name}_comm',
                                     target=thread_func, 
                                     #args=(,)
                                     )
@@ -82,16 +84,14 @@ class device_port:
 
     def parallel_funcs(self, start): 
         for slave in self.slaves:
-            def thread_func():
-                while not params.kb_event.isSet():
-                    if slave.kwargs.get('analyze_func'):
-                        slave.kwargs['analyze_func'](start, self, slave)
-        
-            self.thread_funcs.append(threading.Thread(
-                                        target=thread_func, 
-                                        #args=(,)
-                                        )
-                                    )
+            if slave.kwargs.get('analyze_func'):
+                self.thread_funcs.append(
+                    threading.Thread(
+                        name=f'{slave.name}_analyze',
+                        target=slave.kwargs['analyze_func'],
+                        args=(start, self, slave,)
+                    )
+                )
 
 
 class port_Topics:
@@ -334,10 +334,11 @@ RS232_port = device_port(GA_slave,
                                             parity='N'),
                         )
 
-Setup_port = device_port(Header_EVA_slave,
-                        Header_BR_slave,
-                        ADAM_SET_slave,
-                        ADAM_READ_slave,
+Setup_port = device_port(
+                        Header_EVA_slave,
+                        #Header_BR_slave,
+                        #ADAM_SET_slave,
+                        #ADAM_READ_slave,
                         name='Setup_port',
                         port=serial.Serial(port=Setup_port_path,
                                             baudrate=115200, 

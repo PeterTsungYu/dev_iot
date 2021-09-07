@@ -47,8 +47,10 @@ try:
     for device_port in lst_ports: 
         device_port.serial_funcs(start)
         device_port.parallel_funcs(start) 
+        print(config.Setup_port.thread_funcs)
         for subthread in device_port.thread_funcs:
             subthread.start()
+            print('start', subthread.name)
     print('Threading funcs')
            
 except Exception as ex:

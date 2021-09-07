@@ -12,6 +12,12 @@ from crccheck.crc import Crc16Modbus
 #custom modules
 import params
 
+
+def kb_event(func):
+    def wrapper(*arg):
+        while not params.kb_event.isSet():
+            func(*arg)
+    return wrapper
 #------------------------------Collect and Analyze func---------------------------------
 def Modbus_Read(start, device_port, slave):
     #while not params.kb_event.isSet():
@@ -19,7 +25,7 @@ def Modbus_Read(start, device_port, slave):
     try:
         port.write(bytes.fromhex(slave.r_rtu)) #hex to binary(byte) 
         
-        slave.time_readings.append(round(time.time()-start, 2))
+        slave.time_readings = time.time()-start
 
         time.sleep(params.time_out)
 
@@ -81,6 +87,7 @@ def Modbus_Comm(start, device_port, slave):
 
                 time.sleep(params.time_out)
 
+                print(port.inWaiting())    
                 if port.inWaiting() >= slave.r_wait_len: 
                     readings = port.read(slave.r_wait_len).hex() # after reading, the buffer will be clean
                     crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
@@ -133,7 +140,7 @@ def Modbus_Comm(start, device_port, slave):
         w_data_site += 1
 
 
-
+@kb_event
 def ADAM_TC_analyze(start, device_port, slave):
     #while not params.kb_event.isSet():
     if not params.ticker.wait(params.sample_time):
@@ -141,7 +148,6 @@ def ADAM_TC_analyze(start, device_port, slave):
         time_readings = slave.time_readings
         #print(f'ADAM_TC_analyze: {lst_readings}')
         slave.lst_readings = []
-        slave.time_readings = []
         try:
             if len(lst_readings) > 0:
                 arr_readings = np.array([[int(reading[i-4:i],16) for i in range(10,len(reading)-2,4)] for reading in lst_readings])
@@ -168,6 +174,7 @@ def ADAM_TC_analyze(start, device_port, slave):
             pass
 
 
+@kb_event
 def ADAM_READ_analyze(start, device_port, slave):
     #while not params.kb_event.isSet():
     if not params.ticker.wait(params.sample_time):
@@ -175,7 +182,6 @@ def ADAM_READ_analyze(start, device_port, slave):
         time_readings = slave.time_readings
         #print(f'ADAM_TC_analyze: {lst_readings}')
         slave.lst_readings = []
-        slave.time_readings = []
         try:
             if len(lst_readings) > 0:
                 arr_readings = np.array([[int(reading[i-4:i],16) for i in range(10,len(reading)-2,4)] for reading in lst_readings])
@@ -202,6 +208,7 @@ def ADAM_READ_analyze(start, device_port, slave):
             pass
 
 
+@kb_event
 def DFM_data_analyze(start, device_port, slave):
     #while not params.kb_event.isSet():
     if not params.ticker.wait(params.sample_time_DFM): # for each sample_time, collect data
@@ -244,6 +251,7 @@ def DFM_data_analyze(start, device_port, slave):
             pass
 
 
+@kb_event
 def DFM_AOG_data_analyze(start, device_port, slave):
     #while not params.kb_event.isSet():
     if not params.ticker.wait(params.sample_time_DFM): # for each sample_time, collect data
@@ -287,6 +295,7 @@ def DFM_AOG_data_analyze(start, device_port, slave):
             pass
 
 
+@kb_event
 def Scale_data_analyze(start, device_port, slave):
     #while (not params.kb_event.isSet()): 
     if not params.ticker.wait(params.sample_time_Scale):
@@ -319,6 +328,7 @@ def Scale_data_analyze(start, device_port, slave):
             pass
 
 
+@kb_event
 def GA_data_analyze(start, device_port, slave):
     #while not params.kb_event.isSet():
     if not params.ticker.wait(params.sample_time):
@@ -326,7 +336,6 @@ def GA_data_analyze(start, device_port, slave):
         time_readings = slave.time_readings
         #print(f'GA_data_analyze: {lst_readings}')
         slave.lst_readings = []
-        slave.time_readings = []
         try:
             if len(lst_readings) > 0:           
                 arr_readings = np.array(
@@ -358,6 +367,7 @@ def GA_data_analyze(start, device_port, slave):
             pass
 
 
+@kb_event
 def TCHeader_analyze(start, device_port, slave):
     #while (not params.kb_event.isSet()): 
     if not params.ticker.wait(params.sample_time):
@@ -366,15 +376,17 @@ def TCHeader_analyze(start, device_port, slave):
         time_readings = slave.time_readings
         #print(slave.id, lst_readings)
         slave.lst_readings = []
+        #print(lst_readings)
+        #print(time_readings)
         try:
             if len(lst_readings) > 0:
                 arr_readings = np.array(
-                    [int(readings[-8:-4],16)/10 # convert from hex to dec 
+                    [int(readings[-8:-4],16) # convert from hex to dec 
                     for readings in lst_readings]
                     )
                 #print(slave.id, arr_readings)
                 #print(slave.id, time_readings)
-                lst_readings = tuple([np.round(np.sum(arr_readings) / len(lst_readings), 1)])
+                lst_readings = tuple([np.sum(arr_readings) / len(lst_readings)])
                 readings = tuple([round(time_readings,2)]) + lst_readings
                 #print(slave.id, readings)
 
@@ -396,6 +408,7 @@ def TCHeader_analyze(start, device_port, slave):
             pass
 
 
+@kb_event
 def ADAM_SET_analyze(start, device_port, slave):
     #while (not params.kb_event.isSet())
     if not params.ticker.wait(params.sample_time):
