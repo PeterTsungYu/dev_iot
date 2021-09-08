@@ -38,6 +38,15 @@ def kb_event(func):
             func(*arg)
     return wrapper
 
+
+def sampling_event(sample_time):
+    def decker(func):
+        def wrapper(*arg):
+            if not params.ticker.wait(sample_time):
+                func(*arg)
+        return wrapper
+    return decker
+
 #------------------------------Collect and Analyze func---------------------------------
 def Modbus_Read(start, device_port, slave):
     #while not params.kb_event.isSet():
@@ -173,316 +182,306 @@ def Modbus_Comm(start, device_port, slave):
 
 
 @kb_event
+@sampling_event(params.sample_time)
 def ADAM_TC_analyze(start, device_port, slave):
-    #while not params.kb_event.isSet():
-    if not params.ticker.wait(params.sample_time):
-        lst_readings = slave.lst_readings
-        time_readings = slave.time_readings
-        #print(f'ADAM_TC_analyze: {lst_readings}')
-        slave.lst_readings = []
-        try:
-            if len(lst_readings) > 0:
-                arr_readings = np.array([[int(reading[i-4:i],16) for i in range(10,len(reading)-2,4)] for reading in lst_readings])
-                lst_readings = tuple(np.round(1370/65535*(np.sum(arr_readings, axis=0) / len(lst_readings)), 1))
-                #print(lst_readings)
-                readings = tuple([round(time_readings,2)]) + lst_readings
-                #print(readings)
+    lst_readings = slave.lst_readings
+    time_readings = slave.time_readings
+    #print(f'ADAM_TC_analyze: {lst_readings}')
+    slave.lst_readings = []
+    try:
+        if len(lst_readings) > 0:
+            arr_readings = np.array([[int(reading[i-4:i],16) for i in range(10,len(reading)-2,4)] for reading in lst_readings])
+            lst_readings = tuple(np.round(1370/65535*(np.sum(arr_readings, axis=0) / len(lst_readings)), 1))
+            #print(lst_readings)
+            readings = tuple([round(time_readings,2)]) + lst_readings
+            #print(readings)
 
-                # casting
-                ind = 1
-                for topic in slave.port_topics.pub_topics:    
-                    device_port.pub_values[topic] = readings[ind]
-                    ind += 1
-                ## to slave data list
-                slave.readings.append(readings)
-                logging.info(f"{slave.name}_analyze done: record {readings}")
-            else:
-                logging.warning(f"{slave.name}_analyze record nothing")
+            # casting
+            ind = 1
+            for topic in slave.port_topics.pub_topics:    
+                device_port.pub_values[topic] = readings[ind]
+                ind += 1
+            ## to slave data list
+            slave.readings.append(readings)
+            logging.info(f"{slave.name}_analyze done: record {readings}")
+        else:
+            logging.warning(f"{slave.name}_analyze record nothing")
 
-        except Exception as e:
-            device_port.err_values[f'{slave.name}_analyze_err'] += 1
-            logging.error(f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e))
-        finally:
-            pass
+    except Exception as e:
+        device_port.err_values[f'{slave.name}_analyze_err'] += 1
+        logging.error(f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e))
+    finally:
+        pass
 
 
 @kb_event
+@sampling_event(params.sample_time)
 def ADAM_READ_analyze(start, device_port, slave):
-    #while not params.kb_event.isSet():
-    if not params.ticker.wait(params.sample_time):
-        lst_readings = slave.lst_readings
-        time_readings = slave.time_readings
-        #print(f'ADAM_Read_analyze: {lst_readings}')
-        slave.lst_readings = []
-        try:
-            if len(lst_readings) > 0:
-                arr_readings = np.array([[int(reading[i-4:i],16) for i in range(10,len(reading)-2,4)] for reading in lst_readings])
-                #print(arr_readings)
-                lst_readings = np.sum(arr_readings, axis=0) / len(lst_readings)
-                lst_readings[0] = lst_readings[0] / 65536 * 5
-                lst_readings[1] = lst_readings[1] / 65536
-                lst_readings[4] = (lst_readings[4] - 32767) / 32767 * 120
-                lst_readings[5] = (lst_readings[5] - 32767) / 32767 * 250
-                lst_readings[6] = (lst_readings[6] - 32767) / 32767 * 100
-                #print(lst_readings)
-                readings = tuple([round(time_readings,2)]) + tuple(np.round(lst_readings, 3))
-                #print(readings)
+    lst_readings = slave.lst_readings
+    time_readings = slave.time_readings
+    #print(f'ADAM_Read_analyze: {lst_readings}')
+    slave.lst_readings = []
+    try:
+        if len(lst_readings) > 0:
+            arr_readings = np.array([[int(reading[i-4:i],16) for i in range(10,len(reading)-2,4)] for reading in lst_readings])
+            #print(arr_readings)
+            lst_readings = np.sum(arr_readings, axis=0) / len(lst_readings)
+            lst_readings[0] = lst_readings[0] / 65536 * 5
+            lst_readings[1] = lst_readings[1] / 65536
+            lst_readings[4] = (lst_readings[4] - 32767) / 32767 * 120
+            lst_readings[5] = (lst_readings[5] - 32767) / 32767 * 250
+            lst_readings[6] = (lst_readings[6] - 32767) / 32767 * 100
+            #print(lst_readings)
+            readings = tuple([round(time_readings,2)]) + tuple(np.round(lst_readings, 3))
+            #print(readings)
 
-                # casting
-                ind = 1
-                for topic in slave.port_topics.pub_topics:    
-                    device_port.pub_values[topic] = readings[ind]
-                    ind += 1
-                ## to slave data list
-                slave.readings.append(readings)
-                logging.info(f"{slave.name}_analyze done: record {readings}")
-            else:
-                logging.warning(f"{slave.name}_analyze record nothing")
+            # casting
+            ind = 1
+            for topic in slave.port_topics.pub_topics:    
+                device_port.pub_values[topic] = readings[ind]
+                ind += 1
+            ## to slave data list
+            slave.readings.append(readings)
+            logging.info(f"{slave.name}_analyze done: record {readings}")
+        else:
+            logging.warning(f"{slave.name}_analyze record nothing")
 
-        except Exception as e:
-            device_port.err_values[f'{slave.name}_analyze_err'] += 1
-            logging.error(f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e))
-        finally:
-            pass
+    except Exception as e:
+        device_port.err_values[f'{slave.name}_analyze_err'] += 1
+        logging.error(f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e))
+    finally:
+        pass
 
 
 @kb_event
+@sampling_event(params.sample_time_DFM)
 def DFM_data_analyze(start, device_port, slave):
-    #while not params.kb_event.isSet():
-    if not params.ticker.wait(params.sample_time_DFM): # for each sample_time, collect data
-        sampling_time = round(time.time()-start, 2)
-        try: 
-            time_readings = slave.time_readings
+    sampling_time = round(time.time()-start, 2)
+    try: 
+        time_readings = slave.time_readings
 
-            if len(time_readings) > 0:
-                slave.time_readings = []
-                average_interval_lst = []
-                # calc average min flow rate by each interval 
-                for interval in range(30, 55, 5):
-                    flow_rate_interval_lst = []
-                    # for each interval, calculate the average flow rate
-                    for i in range(interval, len(time_readings), interval):
-                        # flow rate in [liter/s]
-                        # 0.1 liter / pulse
-                        flow_rate = 60 * 0.1 * (interval-1) / (time_readings[i-1] - time_readings[i-interval])
-                        flow_rate_interval_lst.append(round(flow_rate, 2)) 
-                    average_flow_rate_interval = round(sum(flow_rate_interval_lst) / len(flow_rate_interval_lst), 2)          
-                    average_interval_lst.append(average_flow_rate_interval)
-                    _average = round(sum(average_interval_lst) / len(average_interval_lst), 1)
-                readings = tuple([sampling_time, _average])
-                
-                # casting
-                ind = 1
-                for topic in slave.port_topics.pub_topics:    
-                    device_port.pub_values[topic] = readings[ind]
-                    ind += 1
-                ## to slave data list
-                slave.readings.append(readings)
-                logging.info(f"{slave.name}_analyze done: record {readings}")
-            else:
-                logging.warning(f"{slave.name}_analyze record nothing")
+        if len(time_readings) > 0:
+            slave.time_readings = []
+            average_interval_lst = []
+            # calc average min flow rate by each interval 
+            for interval in range(30, 55, 5):
+                flow_rate_interval_lst = []
+                # for each interval, calculate the average flow rate
+                for i in range(interval, len(time_readings), interval):
+                    # flow rate in [liter/s]
+                    # 0.1 liter / pulse
+                    flow_rate = 60 * 0.1 * (interval-1) / (time_readings[i-1] - time_readings[i-interval])
+                    flow_rate_interval_lst.append(round(flow_rate, 2)) 
+                average_flow_rate_interval = round(sum(flow_rate_interval_lst) / len(flow_rate_interval_lst), 2)          
+                average_interval_lst.append(average_flow_rate_interval)
+                _average = round(sum(average_interval_lst) / len(average_interval_lst), 1)
+            readings = tuple([sampling_time, _average])
+            
+            # casting
+            ind = 1
+            for topic in slave.port_topics.pub_topics:    
+                device_port.pub_values[topic] = readings[ind]
+                ind += 1
+            ## to slave data list
+            slave.readings.append(readings)
+            logging.info(f"{slave.name}_analyze done: record {readings}")
+        else:
+            logging.warning(f"{slave.name}_analyze record nothing")
 
-        except Exception as e:
-            device_port.err_values[f'{slave.name}_analyze_err'] += 1
-            logging.error(f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e))
-        finally:
-            pass
+    except Exception as e:
+        device_port.err_values[f'{slave.name}_analyze_err'] += 1
+        logging.error(f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e))
+    finally:
+        pass
 
 
 @kb_event
+@sampling_event(params.sample_time_DFM)
 def DFM_AOG_data_analyze(start, device_port, slave):
-    #while not params.kb_event.isSet():
-    if not params.ticker.wait(params.sample_time_DFM): # for each sample_time, collect data
-        sampling_time = round(time.time()-start, 2)
-        try: 
-            time_readings = slave.time_readings
+    sampling_time = round(time.time()-start, 2)
+    try: 
+        time_readings = slave.time_readings
 
-            if len(time_readings) > 0:
-                slave.time_readings = []
-                average_interval_lst = []
-                # calc average min flow rate by each interval 
-                for interval in range(5, 30, 5):
-                #for interval in range(30, 55, 5):
-                    flow_rate_interval_lst = []
-                    # for each interval, calculate the average flow rate
-                    for i in range(interval, len(time_readings), interval):
-                        # flow rate in [liter/s]
-                        # 0.01 liter / pulse
-                        flow_rate = 60 * 0.01 * (interval-1) / (time_readings[i-1] - time_readings[i-interval])
-                        flow_rate_interval_lst.append(round(flow_rate, 2)) 
-                    average_flow_rate_interval = round(sum(flow_rate_interval_lst) / len(flow_rate_interval_lst), 2)          
-                    average_interval_lst.append(average_flow_rate_interval)
-                    _average = round(sum(average_interval_lst) / len(average_interval_lst), 1)
-                readings = tuple([sampling_time, _average])
-                
-                # casting
-                ind = 1
-                for topic in slave.port_topics.pub_topics:    
-                    device_port.pub_values[topic] = readings[ind]
-                    ind += 1
-                ## to slave data list
-                slave.readings.append(readings)
-                logging.info(f"{slave.name}_analyze done: record {readings}")
-            else:
-                logging.warning(f"{slave.name}_analyze record nothing")
+        if len(time_readings) > 0:
+            slave.time_readings = []
+            average_interval_lst = []
+            # calc average min flow rate by each interval 
+            for interval in range(5, 30, 5):
+            #for interval in range(30, 55, 5):
+                flow_rate_interval_lst = []
+                # for each interval, calculate the average flow rate
+                for i in range(interval, len(time_readings), interval):
+                    # flow rate in [liter/s]
+                    # 0.01 liter / pulse
+                    flow_rate = 60 * 0.01 * (interval-1) / (time_readings[i-1] - time_readings[i-interval])
+                    flow_rate_interval_lst.append(round(flow_rate, 2)) 
+                average_flow_rate_interval = round(sum(flow_rate_interval_lst) / len(flow_rate_interval_lst), 2)          
+                average_interval_lst.append(average_flow_rate_interval)
+                _average = round(sum(average_interval_lst) / len(average_interval_lst), 1)
+            readings = tuple([sampling_time, _average])
+            
+            # casting
+            ind = 1
+            for topic in slave.port_topics.pub_topics:    
+                device_port.pub_values[topic] = readings[ind]
+                ind += 1
+            ## to slave data list
+            slave.readings.append(readings)
+            logging.info(f"{slave.name}_analyze done: record {readings}")
+        else:
+            logging.warning(f"{slave.name}_analyze record nothing")
 
-        except Exception as e:
-            device_port.err_values[f'{slave.name}_analyze_err'] += 1
-            logging.error(f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e))
-        finally:
-            pass
+    except Exception as e:
+        device_port.err_values[f'{slave.name}_analyze_err'] += 1
+        logging.error(f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e))
+    finally:
+        pass
 
 
 @kb_event
+@sampling_event(params.sample_time_Scale)
 def Scale_data_analyze(start, device_port, slave):
-    #while (not params.kb_event.isSet()): 
-    if not params.ticker.wait(params.sample_time_Scale):
-        lst_readings = slave.lst_readings
-        time_readings = slave.time_readings
-        #print(f'Scale_data_analyze: {lst_readings}')
-        slave.lst_readings = []
-        try:
-            if len(lst_readings) > 0:
-                #print(len(lst_readings))
-                lst_readings = [sum(i)/len(i) for i in lst_readings] # average for 1s' data
-                lst_readings = round((lst_readings[-1] - lst_readings[0]) / params.sample_time_Scale, 3) # average for 1min's data
-                readings = tuple([round(time_readings, 2), lst_readings])
-                
-                # casting
-                ind = 1
-                for topic in slave.port_topics.pub_topics:    
-                    device_port.pub_values[topic] = readings[ind]
-                    ind += 1
-                ## to slave data list
-                slave.readings.append(readings)
-                logging.info(f"{slave.name}_analyze done: record {readings}")
-            else:
-                logging.warning(f"{slave.name}_analyze record nothing")
+    lst_readings = slave.lst_readings
+    time_readings = slave.time_readings
+    #print(f'Scale_data_analyze: {lst_readings}')
+    slave.lst_readings = []
+    try:
+        if len(lst_readings) > 0:
+            #print(len(lst_readings))
+            lst_readings = [sum(i)/len(i) for i in lst_readings] # average for 1s' data
+            lst_readings = round((lst_readings[-1] - lst_readings[0]) / params.sample_time_Scale, 3) # average for 1min's data
+            readings = tuple([round(time_readings, 2), lst_readings])
+            
+            # casting
+            ind = 1
+            for topic in slave.port_topics.pub_topics:    
+                device_port.pub_values[topic] = readings[ind]
+                ind += 1
+            ## to slave data list
+            slave.readings.append(readings)
+            logging.info(f"{slave.name}_analyze done: record {readings}")
+        else:
+            logging.warning(f"{slave.name}_analyze record nothing")
 
-        except Exception as e:
-            device_port.err_values[f'{slave.name}_analyze_err'] += 1
-            logging.error(f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e))
-        finally:
-            pass
+    except Exception as e:
+        device_port.err_values[f'{slave.name}_analyze_err'] += 1
+        logging.error(f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e))
+    finally:
+        pass
 
 
 @kb_event
+@sampling_event(params.sample_time)
 def GA_data_analyze(start, device_port, slave):
-    #while not params.kb_event.isSet():
-    if not params.ticker.wait(params.sample_time):
-        lst_readings = slave.lst_readings
-        time_readings = slave.time_readings
-        #print(f'GA_data_analyze: {lst_readings}')
-        slave.lst_readings = []
-        try:
-            if len(lst_readings) > 0:           
-                arr_readings = np.array(
-                    [[int(readings[i:i+4],16)/100 for i in range(8,20,4)] 
-                    + [int(readings[24:28],16)/100] 
-                    + [int(readings[-12:-8],16)/100] 
-                    + [(lambda i: ((i[0]*256+i[1]+i[2])*256+i[3])/100)([int(readings[i:i+2],16) for i in range(-20,-12,2)])] 
-                    for readings in lst_readings]
-                    )
-                #print(arr_readings)
-                lst_readings = tuple(np.round(np.sum(arr_readings, axis=0) / len(lst_readings), 1))
-                readings = tuple([round(time_readings[-1],2)]) + lst_readings
-                
-                # casting
-                ind = 1
-                for topic in slave.port_topics.pub_topics:    
-                    device_port.pub_values[topic] = readings[ind]
-                    ind += 1
-                ## to slave data list
-                slave.readings.append(readings)
-                logging.info(f"{slave.name}_analyze done: record {readings}")
-            else:
-                logging.warning(f"{slave.name}_analyze record nothing")
+    lst_readings = slave.lst_readings
+    time_readings = slave.time_readings
+    #print(f'GA_data_analyze: {lst_readings}')
+    slave.lst_readings = []
+    try:
+        if len(lst_readings) > 0:           
+            arr_readings = np.array(
+                [[int(readings[i:i+4],16)/100 for i in range(8,20,4)] 
+                + [int(readings[24:28],16)/100] 
+                + [int(readings[-12:-8],16)/100] 
+                + [(lambda i: ((i[0]*256+i[1]+i[2])*256+i[3])/100)([int(readings[i:i+2],16) for i in range(-20,-12,2)])] 
+                for readings in lst_readings]
+                )
+            #print(arr_readings)
+            lst_readings = tuple(np.round(np.sum(arr_readings, axis=0) / len(lst_readings), 1))
+            readings = tuple([round(time_readings[-1],2)]) + lst_readings
+            
+            # casting
+            ind = 1
+            for topic in slave.port_topics.pub_topics:    
+                device_port.pub_values[topic] = readings[ind]
+                ind += 1
+            ## to slave data list
+            slave.readings.append(readings)
+            logging.info(f"{slave.name}_analyze done: record {readings}")
+        else:
+            logging.warning(f"{slave.name}_analyze record nothing")
 
-        except Exception as e:
-            device_port.err_values[f'{slave.name}_analyze_err'] += 1
-            logging.error(f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e))
-        finally:
-            pass
+    except Exception as e:
+        device_port.err_values[f'{slave.name}_analyze_err'] += 1
+        logging.error(f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e))
+    finally:
+        pass
 
 
 @kb_event
+@sampling_event(params.sample_time)
 def TCHeader_analyze(start, device_port, slave):
-    #while (not params.kb_event.isSet()): 
-    if not params.ticker.wait(params.sample_time):
-        #print(slave.id, slave.time_readings, slave.lst_readings)
-        lst_readings = slave.lst_readings
-        time_readings = slave.time_readings
-        #print(slave.id, lst_readings)
-        slave.lst_readings = []
-        #print(lst_readings)
-        #print(time_readings)
-        try:
-            if len(lst_readings) > 0:
-                arr_readings = np.array(
-                    [int(readings[-8:-4],16) # convert from hex to dec 
-                    for readings in lst_readings]
-                    )
-                #print(slave.id, arr_readings)
-                #print(slave.id, time_readings)
-                lst_readings = tuple([np.sum(arr_readings) / len(lst_readings)])
-                readings = tuple([round(time_readings,2)]) + lst_readings
-                #print(slave.id, readings)
+    lst_readings = slave.lst_readings
+    time_readings = slave.time_readings
+    #print(slave.id, lst_readings)
+    slave.lst_readings = []
+    #print(lst_readings)
+    #print(time_readings)
+    try:
+        if len(lst_readings) > 0:
+            arr_readings = np.array(
+                [int(readings[-8:-4],16) # convert from hex to dec 
+                for readings in lst_readings]
+                )
+            #print(slave.id, arr_readings)
+            #print(slave.id, time_readings)
+            lst_readings = tuple([np.sum(arr_readings) / len(lst_readings)])
+            readings = tuple([round(time_readings,2)]) + lst_readings
+            #print(slave.id, readings)
 
-                # casting
-                ind = 1
-                for topic in slave.port_topics.pub_topics:    
-                    device_port.pub_values[topic] = readings[ind]
-                    ind += 1
-                ## to slave data list
-                slave.readings.append(readings)
-                logging.info(f"{slave.name}_analyze done: record {readings}")
-            else:
-                logging.warning(f"{slave.name}_analyze record nothing")
+            # casting
+            ind = 1
+            for topic in slave.port_topics.pub_topics:    
+                device_port.pub_values[topic] = readings[ind]
+                ind += 1
+            ## to slave data list
+            slave.readings.append(readings)
+            logging.info(f"{slave.name}_analyze done: record {readings}")
+        else:
+            logging.warning(f"{slave.name}_analyze record nothing")
 
-        except Exception as e:
-            device_port.err_values[f'{slave.name}_analyze_err'] += 1
-            logging.error(f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e))
-        finally:
-            pass
+    except Exception as e:
+        device_port.err_values[f'{slave.name}_analyze_err'] += 1
+        logging.error(f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e))
+    finally:
+        pass
 
 
 @kb_event
+@sampling_event(params.sample_time)
 def ADAM_SET_analyze(start, device_port, slave):
-    #while (not params.kb_event.isSet())
-    if not params.ticker.wait(params.sample_time):
-        #print(slave.id, slave.time_readings, slave.lst_readings)
-        lst_readings = slave.lst_readings
-        time_readings = slave.time_readings
-        #print(slave.id, lst_readings)
-        slave.lst_readings = []
-        try:
-            if len(lst_readings) > 0:
-                #print(lst_readings)
-                arr_readings = np.array(
-                    [[int(readings[6:-4][i:i+4],16)/(2**12)*20-10 for i in range(0,16,4)] # convert from hex to dec 
-                    for readings in lst_readings]
-                    )
-                #print(slave.id, arr_readings)
-                #print(slave.id, time_readings)
-                lst_readings = tuple(np.sum(arr_readings, 0) / len(lst_readings))
-                #print(lst_readings)
-                readings = tuple([round(time_readings,2)]) + lst_readings
-                #print(lst_readings)
-                #print(slave.id, readings)
+    lst_readings = slave.lst_readings
+    time_readings = slave.time_readings
+    #print(slave.id, lst_readings)
+    slave.lst_readings = []
+    try:
+        if len(lst_readings) > 0:
+            #print(lst_readings)
+            arr_readings = np.array(
+                [[int(readings[6:-4][i:i+4],16)/(2**12)*20-10 for i in range(0,16,4)] # convert from hex to dec 
+                for readings in lst_readings]
+                )
+            #print(slave.id, arr_readings)
+            #print(slave.id, time_readings)
+            lst_readings = tuple(np.sum(arr_readings, 0) / len(lst_readings))
+            #print(lst_readings)
+            readings = tuple([round(time_readings,2)]) + lst_readings
+            #print(lst_readings)
+            #print(slave.id, readings)
 
-                # casting
-                ind = 1
-                for topic in slave.port_topics.pub_topics:    
-                    device_port.pub_values[topic] = readings[ind]
-                    ind += 1
-                ## to slave data list
-                slave.readings.append(readings)
-                logging.info(f"{slave.name}_analyze done: record {readings}")
-            else:
-                logging.warning(f"{slave.name}_analyze record nothing")
+            # casting
+            ind = 1
+            for topic in slave.port_topics.pub_topics:    
+                device_port.pub_values[topic] = readings[ind]
+                ind += 1
+            ## to slave data list
+            slave.readings.append(readings)
+            logging.info(f"{slave.name}_analyze done: record {readings}")
+        else:
+            logging.warning(f"{slave.name}_analyze record nothing")
 
-        except Exception as e:
-            device_port.err_values[f'{slave.name}_analyze_err'] += 1
-            logging.error(f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e))
-        finally:
-            pass
+    except Exception as e:
+        device_port.err_values[f'{slave.name}_analyze_err'] += 1
+        logging.error(f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e))
+    finally:
+        pass
