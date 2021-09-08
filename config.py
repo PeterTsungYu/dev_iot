@@ -359,7 +359,7 @@ lst_ports = [
             Setup_port,
             #GPIO_port
             ]
-print(type(Setup_port.port) is serial.serialposix.Serial)
+
 print('Ports are all set')
 
 

@@ -8,16 +8,36 @@ import numpy as np
 import time
 import re
 from crccheck.crc import Crc16Modbus
+import logging
 
 #custom modules
 import params
 
+#------------------------------Logger---------------------------------
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+formatter = logging.Formatter(
+	'[%(levelname)s %(asctime)s %(module)s:%(lineno)d] %(message)s',
+	datefmt='%Y%m%d %H:%M:%S')
 
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+ch.setFormatter(formatter)
+
+fh = logging.FileHandler(filename='platform.log', mode='w')
+fh.setLevel(logging.DEBUG)
+fh.setFormatter(formatter)
+
+logger.addHandler(ch)
+logger.addHandler(fh)
+
+#------------------------------Decker---------------------------------
 def kb_event(func):
     def wrapper(*arg):
         while not params.kb_event.isSet():
             func(*arg)
     return wrapper
+
 #------------------------------Collect and Analyze func---------------------------------
 def Modbus_Read(start, device_port, slave):
     #while not params.kb_event.isSet():
@@ -36,19 +56,22 @@ def Modbus_Read(start, device_port, slave):
             # check sta, func code, datalen, crc
             if (readings[0:2] == slave.id) and (readings[2:4] == '03') and ((crc[-2:] + crc[:2]) == readings[-4:]):
                 slave.lst_readings.append(readings)
-                print(readings)
-                print(f'Read from slave_{slave.name}')
+                #print(readings)
+                logging.info(f'Read from slave_{slave.name}')
             else:
                 port.reset_input_buffer() # reset the buffer if no read
                 device_port.err_values[f'{slave.name}_collect_err'] += 1
-                print('XX'*10 + f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
+                err_msg = f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: crc validation failed"
+                logging.error(err_msg)
         else: # if data len is less than the wait data
             port.reset_input_buffer() # reset the buffer if no read
             device_port.err_values[f'{slave.name}_collect_err'] += 1
-            print('XX'*10 + f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+            err_msg = f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: data len is less than the wait data"
+            logging.error(err_msg)
     except Exception as e:
         device_port.err_values[f'{slave.name}_collect_err'] += 1
-        print('XX'*10 + f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+        err_msg = f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: " + str(e)
+        logging.error(err_msg)
     finally:
         pass
 
@@ -63,14 +86,16 @@ def Scale_data_collect(start, device_port, slave):
             readings = port.read(port.inWaiting()).decode('utf-8')
             readings = [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ \-][ .\d]{7}', readings)]
             slave.lst_readings.append(readings)
-            print(f'Read from slave_{slave.name}')
+            logging.info(f'Read from slave_{slave.name}')
             port.reset_input_buffer() # reset the buffer after each reading process
         else: # if data len is no data
             device_port.err_values[f'{slave.name}_collect_err'] += 1
-            print('XX'*10 + f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: data len is no wait data" + 'XX'*10) 
+            err_msg = f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: data len is no wait data"
+            logging.error(err_msg)
     except Exception as e:
         device_port.err_values[f'{slave.name}_collect_err'] += 1
-        print('XX'*10 + f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+        err_msg = f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: " + str(e)
+        logging.error(err_msg)
     finally:
         pass
 
@@ -88,25 +113,28 @@ def Modbus_Comm(start, device_port, slave):
 
                 time.sleep(params.time_out)
 
-                print(port.inWaiting())    
+                #print(port.inWaiting())    
                 if port.inWaiting() >= slave.r_wait_len: 
                     readings = port.read(slave.r_wait_len).hex() # after reading, the buffer will be clean
                     crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
                     # check sta, func code, datalen, crc
                     if (readings[0:2] == slave.id) and (readings[2:4] == '03') and ((crc[-2:] + crc[:2]) == readings[-4:]):
                         slave.lst_readings.append(readings)
-                        print(f'Read from slave_{slave.name}')
+                        logging.info(f'Read from slave_{slave.name}')
                     else:
                         port.reset_input_buffer() # reset the buffer if crc failed
                         device_port.err_values[f'{slave.name}_collect_err'] += 1
-                        print('XX'*10 + f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
+                        err_msg = f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: crc validation failed"
+                        logging.error(err_msg)
                 else: # if data len is less than the wait data
                     port.reset_input_buffer() # reset the buffer if len is incorrect
                     device_port.err_values[f'{slave.name}_collect_err'] += 1
-                    print('XX'*10 + f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+                    err_msg = f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: data len is less than the wait data"
+                    logging.error(err_msg)
             except Exception as e:
                 device_port.err_values[f'{slave.name}_collect_err'] += 1
-                print('XX'*10 + f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+                err_msg = f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: " + str(e)
+                logging.error(err_msg)
             finally:
                 pass
 
@@ -123,18 +151,21 @@ def Modbus_Comm(start, device_port, slave):
                     crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
                     # check sta, func code, datalen, crc
                     if (readings[0:2] == slave.id) and (readings[2:4] == '06') and ((crc[-2:] + crc[:2]) == readings[-4:]):
-                        print(f'Write to slave_{slave.name}')
+                        logging.info(f'Write to slave_{slave.name}')
                     else:
                         port.reset_input_buffer() # reset the buffer if no read
                         device_port.err_values[f'{slave.name}_collect_err'] += 1
-                        print('XX'*10 + f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
+                        err_msg = f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: crc validation failed"
+                        logging.error(err_msg)
                 else: # if data len is less than the wait data
                     port.reset_input_buffer() # reset the buffer if no read
                     device_port.err_values[f'{slave.name}_collect_err'] += 1
-                    print('XX'*10 + f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+                    err_msg = f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: data len is less than the wait data"
+                    logging.error(err_msg)
             except Exception as e:
                 device_port.err_values[f'{slave.name}_collect_err'] += 1
-                print('XX'*10 + f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+                err_msg = f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: " + str(e)
+                logging.error(err_msg)
             finally:
                 device_port.sub_events[topic].clear()
         
@@ -164,13 +195,13 @@ def ADAM_TC_analyze(start, device_port, slave):
                     ind += 1
                 ## to slave data list
                 slave.readings.append(readings)
-                print(f"{slave.name}_analyze done: record {readings}")
+                logging.info(f"{slave.name}_analyze done: record {readings}")
             else:
-                print(f"{slave.name}_analyze record nothing")
+                logging.warning(f"{slave.name}_analyze record nothing")
 
         except Exception as e:
             device_port.err_values[f'{slave.name}_analyze_err'] += 1
-            print('XX'*10 + f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            logging.error(f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e))
         finally:
             pass
 
@@ -204,13 +235,13 @@ def ADAM_READ_analyze(start, device_port, slave):
                     ind += 1
                 ## to slave data list
                 slave.readings.append(readings)
-                print(f"{slave.name}_analyze done: record {readings}")
+                logging.info(f"{slave.name}_analyze done: record {readings}")
             else:
-                print(f"{slave.name}_analyze record nothing")
+                logging.warning(f"{slave.name}_analyze record nothing")
 
         except Exception as e:
             device_port.err_values[f'{slave.name}_analyze_err'] += 1
-            print('XX'*10 + f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            logging.error(f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e))
         finally:
             pass
 
@@ -247,13 +278,13 @@ def DFM_data_analyze(start, device_port, slave):
                     ind += 1
                 ## to slave data list
                 slave.readings.append(readings)
-                print(f"{slave.name}_analyze done: record {readings}")
+                logging.info(f"{slave.name}_analyze done: record {readings}")
             else:
-                print(f"{slave.name}_analyze record nothing")
+                logging.warning(f"{slave.name}_analyze record nothing")
 
         except Exception as e:
             device_port.err_values[f'{slave.name}_analyze_err'] += 1
-            print('XX'*10 + f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            logging.error(f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e))
         finally:
             pass
 
@@ -291,13 +322,13 @@ def DFM_AOG_data_analyze(start, device_port, slave):
                     ind += 1
                 ## to slave data list
                 slave.readings.append(readings)
-                print(f"{slave.name}_analyze done: record {readings}")
+                logging.info(f"{slave.name}_analyze done: record {readings}")
             else:
-                print(f"{slave.name}_analyze record nothing")
+                logging.warning(f"{slave.name}_analyze record nothing")
 
         except Exception as e:
             device_port.err_values[f'{slave.name}_analyze_err'] += 1
-            print('XX'*10 + f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            logging.error(f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e))
         finally:
             pass
 
@@ -324,13 +355,13 @@ def Scale_data_analyze(start, device_port, slave):
                     ind += 1
                 ## to slave data list
                 slave.readings.append(readings)
-                print(f"{slave.name}_analyze done: record {readings}")
+                logging.info(f"{slave.name}_analyze done: record {readings}")
             else:
-                print(f"{slave.name}_analyze record nothing")
+                logging.warning(f"{slave.name}_analyze record nothing")
 
         except Exception as e:
             device_port.err_values[f'{slave.name}_analyze_err'] += 1
-            print('XX'*10 + f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            logging.error(f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e))
         finally:
             pass
 
@@ -363,13 +394,13 @@ def GA_data_analyze(start, device_port, slave):
                     ind += 1
                 ## to slave data list
                 slave.readings.append(readings)
-                print(f"{slave.name}_analyze done: record {readings}")
+                logging.info(f"{slave.name}_analyze done: record {readings}")
             else:
-                print(f"{slave.name}_analyze record nothing")
+                logging.warning(f"{slave.name}_analyze record nothing")
 
         except Exception as e:
             device_port.err_values[f'{slave.name}_analyze_err'] += 1
-            print('XX'*10 + f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            logging.error(f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e))
         finally:
             pass
 
@@ -404,13 +435,13 @@ def TCHeader_analyze(start, device_port, slave):
                     ind += 1
                 ## to slave data list
                 slave.readings.append(readings)
-                print(f"{slave.name}_analyze done: record {readings}")
+                logging.info(f"{slave.name}_analyze done: record {readings}")
             else:
-                print(f"{slave.name}_analyze record nothing")
+                logging.warning(f"{slave.name}_analyze record nothing")
 
         except Exception as e:
             device_port.err_values[f'{slave.name}_analyze_err'] += 1
-            print('XX'*10 + f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            logging.error(f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e))
         finally:
             pass
 
@@ -446,12 +477,12 @@ def ADAM_SET_analyze(start, device_port, slave):
                     ind += 1
                 ## to slave data list
                 slave.readings.append(readings)
-                print(f"{slave.name}_analyze done: record {readings}")
+                logging.info(f"{slave.name}_analyze done: record {readings}")
             else:
-                print(f"{slave.name}_analyze record nothing")
+                logging.warning(f"{slave.name}_analyze record nothing")
 
         except Exception as e:
             device_port.err_values[f'{slave.name}_analyze_err'] += 1
-            print('XX'*10 + f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+            logging.error(f"{slave.name}_analyze_err_{device_port.err_values[f'{slave.name}_analyze_err']} at {round((time.time()-start),2)}s: " + str(e))
         finally:
             pass

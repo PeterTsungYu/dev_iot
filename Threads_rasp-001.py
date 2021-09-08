@@ -10,6 +10,7 @@ import params
 import config
 import MQTT_config
 import Mariadb_config
+import Modbus
 
 print('Import: succeed')
 
@@ -80,10 +81,11 @@ finally:
     for device_port in config.lst_ports: 
         if type(device_port.port) is serial.serialposix.Serial:
             device_port.port.close()
-            print(f'Close {device_port.name}, err are {device_port.err_values}')
-    GPIO.cleanup()
-    print(f'Close {config.GPIO_port.name}, err are {config.GPIO_port.err_values}')
-    print(f"Program duration: {time.time() - start}")
+            Modbus.logger.info(f'Close {device_port.name}, err are {device_port.err_values}')
+        elif device_port.port == 'GPIO':
+            GPIO.cleanup()
+            Modbus.logger.info(f'Close {config.GPIO_port.name}, err are {config.GPIO_port.err_values}')
+    Modbus.logger.info(f"Program duration: {time.time() - start}")
     Mariadb_config.conn.close()
     print("close connection to MariaDB")
     MQTT_config.client_0.loop_stop()
