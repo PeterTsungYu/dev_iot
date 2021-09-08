@@ -334,8 +334,8 @@ RS232_port = device_port(GA_slave,
                         )
 
 Setup_port = device_port(
-                        #Header_EVA_slave,
-                        #Header_BR_slave,
+                        Header_EVA_slave,
+                        Header_BR_slave,
                         ADAM_SET_slave,
                         ADAM_READ_slave,
                         name='Setup_port',
@@ -352,6 +352,14 @@ GPIO_port = device_port(DFM_slave,
                         port='GPIO',
                         )
 
+lst_ports = [
+            #RS485_port, 
+            #Scale_port, 
+            #RS232_port, 
+            Setup_port,
+            #GPIO_port
+            ]
+print(type(Setup_port.port) is serial.serialposix.Serial)
 print('Ports are all set')
 
 
