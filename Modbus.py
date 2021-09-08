@@ -36,6 +36,7 @@ def Modbus_Read(start, device_port, slave):
             # check sta, func code, datalen, crc
             if (readings[0:2] == slave.id) and (readings[2:4] == '03') and ((crc[-2:] + crc[:2]) == readings[-4:]):
                 slave.lst_readings.append(readings)
+                print(readings)
                 print(f'Read from slave_{slave.name}')
             else:
                 port.reset_input_buffer() # reset the buffer if no read
@@ -96,11 +97,11 @@ def Modbus_Comm(start, device_port, slave):
                         slave.lst_readings.append(readings)
                         print(f'Read from slave_{slave.name}')
                     else:
-                        port.reset_input_buffer() # reset the buffer if no read
+                        port.reset_input_buffer() # reset the buffer if crc failed
                         device_port.err_values[f'{slave.name}_collect_err'] += 1
                         print('XX'*10 + f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
                 else: # if data len is less than the wait data
-                    port.reset_input_buffer() # reset the buffer if no read
+                    port.reset_input_buffer() # reset the buffer if len is incorrect
                     device_port.err_values[f'{slave.name}_collect_err'] += 1
                     print('XX'*10 + f"{slave.name}_collect_err_{device_port.err_values[f'{slave.name}_collect_err']} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
             except Exception as e:
@@ -153,7 +154,7 @@ def ADAM_TC_analyze(start, device_port, slave):
                 arr_readings = np.array([[int(reading[i-4:i],16) for i in range(10,len(reading)-2,4)] for reading in lst_readings])
                 lst_readings = tuple(np.round(1370/65535*(np.sum(arr_readings, axis=0) / len(lst_readings)), 1))
                 #print(lst_readings)
-                readings = tuple([round(time_readings[-1],2)]) + lst_readings
+                readings = tuple([round(time_readings,2)]) + lst_readings
                 #print(readings)
 
                 # casting
@@ -180,14 +181,20 @@ def ADAM_READ_analyze(start, device_port, slave):
     if not params.ticker.wait(params.sample_time):
         lst_readings = slave.lst_readings
         time_readings = slave.time_readings
-        #print(f'ADAM_TC_analyze: {lst_readings}')
+        #print(f'ADAM_Read_analyze: {lst_readings}')
         slave.lst_readings = []
         try:
             if len(lst_readings) > 0:
                 arr_readings = np.array([[int(reading[i-4:i],16) for i in range(10,len(reading)-2,4)] for reading in lst_readings])
-                lst_readings = tuple(np.round(1370/65535*(np.sum(arr_readings, axis=0) / len(lst_readings)), 1))
+                #print(arr_readings)
+                lst_readings = np.sum(arr_readings, axis=0) / len(lst_readings)
+                lst_readings[0] = lst_readings[0] / 65536 * 5
+                lst_readings[1] = lst_readings[1] / 65536
+                lst_readings[4] = (lst_readings[4] - 32767) / 32767 * 120
+                lst_readings[5] = (lst_readings[5] - 32767) / 32767 * 250
+                lst_readings[6] = (lst_readings[6] - 32767) / 32767 * 100
                 #print(lst_readings)
-                readings = tuple([round(time_readings[-1],2)]) + lst_readings
+                readings = tuple([round(time_readings,2)]) + tuple(np.round(lst_readings, 3))
                 #print(readings)
 
                 # casting
@@ -419,17 +426,18 @@ def ADAM_SET_analyze(start, device_port, slave):
         slave.lst_readings = []
         try:
             if len(lst_readings) > 0:
-                print(lst_readings)
+                #print(lst_readings)
                 arr_readings = np.array(
-                    [int(readings[-8:-4],16)/(2**12)*20-10 # convert from hex to dec 
+                    [[int(readings[6:-4][i:i+4],16)/(2**12)*20-10 for i in range(0,16,4)] # convert from hex to dec 
                     for readings in lst_readings]
                     )
                 #print(slave.id, arr_readings)
                 #print(slave.id, time_readings)
-                lst_readings = tuple([np.round(np.sum(arr_readings) / len(lst_readings), 1)])
+                lst_readings = tuple(np.sum(arr_readings, 0) / len(lst_readings))
+                #print(lst_readings)
                 readings = tuple([round(time_readings,2)]) + lst_readings
-                print(lst_readings)
-                print(slave.id, readings)
+                #print(lst_readings)
+                #print(slave.id, readings)
 
                 # casting
                 ind = 1

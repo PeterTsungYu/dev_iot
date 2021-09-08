@@ -73,7 +73,6 @@ class device_port:
                 for slave in self.slaves:
                     if slave.kwargs.get('comm_func'):
                         slave.kwargs['comm_func'](start, self, slave)
-                        print('v'*100,'serial_funcs', slave.name)
         
         self.thread_funcs.append(threading.Thread(
                                     name = f'{self.name}_comm',
@@ -335,10 +334,10 @@ RS232_port = device_port(GA_slave,
                         )
 
 Setup_port = device_port(
-                        Header_EVA_slave,
+                        #Header_EVA_slave,
                         #Header_BR_slave,
-                        #ADAM_SET_slave,
-                        #ADAM_READ_slave,
+                        ADAM_SET_slave,
+                        ADAM_READ_slave,
                         name='Setup_port',
                         port=serial.Serial(port=Setup_port_path,
                                             baudrate=115200, 

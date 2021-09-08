@@ -19,10 +19,12 @@ print('=='*30)
 start = time.time()
 
 #-------------------------Open ports--------------------------------------
-lst_ports = [#config.RS485_port, 
-            #config.Scale_port, 
-            #config.RS232_port, 
-            config.Setup_port]
+lst_ports = [
+            config.RS485_port, 
+            config.Scale_port, 
+            config.RS232_port, 
+            config.Setup_port
+            ]
 
 try:
     for device_port in lst_ports: 
@@ -98,3 +100,4 @@ finally:
     print("close connection to MQTT broker")
     print('kill main thread')
     exit()
+# %%
