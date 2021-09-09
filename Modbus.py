@@ -98,12 +98,10 @@ def Modbus_Comm(start, device_port, slave):
                 slave.lst_readings.append(readings)
                 logging.info(f'Read from slave_{slave.name}')
             else:
-                port.reset_input_buffer() # reset the buffer if crc failed
                 collect_err[0] += 1
                 err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: crc validation failed"
                 logging.error(err_msg)
         else: # if data len is less than the wait data
-            port.reset_input_buffer() # reset the buffer if len is incorrect
             collect_err[0] += 1
             err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: data len is less than the wait data"
             logging.error(err_msg)
@@ -112,6 +110,7 @@ def Modbus_Comm(start, device_port, slave):
         err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: " + str(e)
         logging.error(err_msg)
     finally:
+        port.reset_input_buffer()
         logging.info(f"{slave.name}_collect_err: {round((collect_err[1] - collect_err[0])/collect_err[1]*100, 2)}%")
 
     for topic in slave.port_topics.sub_topics:
@@ -136,12 +135,10 @@ def Modbus_Comm(start, device_port, slave):
                         slave.lst_readings.append(readings)
                         logging.info(f'Read from slave_{slave.name}')
                     else:
-                        port.reset_input_buffer() # reset the buffer if no read
                         set_err[0] += 1
                         err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: crc validation failed"
                         logging.error(err_msg)
                 else: # if data len is less than the wait data
-                    port.reset_input_buffer() # reset the buffer if no read
                     set_err[0] += 1
                     err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: data len is less than the wait data"
                     logging.error(err_msg)
@@ -152,6 +149,7 @@ def Modbus_Comm(start, device_port, slave):
             finally:
                 device_port.sub_events[topic].clear()
                 logging.info(f"{slave.name}_set_err: {round((set_err[1] - set_err[0])/set_err[1]*100, 2)}%")
+                port.reset_input_buffer()
         else:
             pass
         w_data_site += 1
