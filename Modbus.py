@@ -75,7 +75,6 @@ def Scale_data_collect(start, device_port, slave):
 
 
 def Modbus_Comm(start, device_port, slave):    
-    #while not params.kb_event.isSet(): # it is written in the ReadingThreads.py
     port = device_port.port
     collect_err = device_port.err_values.get(f'{slave.name}_collect_err')
     set_err = device_port.err_values.get(f'{slave.name}_set_err')
@@ -87,10 +86,15 @@ def Modbus_Comm(start, device_port, slave):
         logging.debug(port.inWaiting())    
         if port.inWaiting() >= slave.r_wait_len: 
             readings = port.read(port.inWaiting()).hex() # after reading, the buffer will be clean
-            logging.debug(readings)    
+            logging.debug(readings)
+            re = hex(int(slave.id))[2:].zfill(2) + '03' + hex(slave.r_wait_len-5)[2:].zfill(2)
+            logging.debug(re)
+            if readings.index(re):
+                readings = readings[readings.index(re):(readings.index(re)+slave.r_wait_len*2)]
+            logging.debug(readings)
             crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
             # check sta, func code, datalen, crc
-            if (readings[0:2] == slave.id) and (readings[2:4] == '03') and ((crc[-2:] + crc[:2]) == readings[-4:]):
+            if (crc[-2:] + crc[:2]) == readings[-4:]:
                 slave.lst_readings.append(readings)
                 logging.info(f'Read from slave_{slave.name}')
             else:
@@ -119,12 +123,18 @@ def Modbus_Comm(start, device_port, slave):
                 port.write(bytes.fromhex(slave.w_rtu)) #hex to binary(byte) 
                 time.sleep(params.time_out)
                 if port.inWaiting() >= slave.w_wait_len:
-                    readings = port.read(slave.w_wait_len).hex() # after reading, the buffer will be clean
-                    #print(readings)
+                    readings = port.read(port.inWaiting()).hex() # after reading, the buffer will be clean
+                    logging.debug(readings)
+                    re = hex(int(slave.id))[2:].zfill(2) + '06' + hex(slave.w_wait_len-5)[2:].zfill(2)
+                    logging.debug(re)
+                    if readings.index(re):
+                        readings = readings[readings.index(re):(readings.index(re)+slave.w_wait_len*2)]
+                    logging.debug(readings)
                     crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
                     # check sta, func code, datalen, crc
-                    if (readings[0:2] == slave.id) and (readings[2:4] == '06') and ((crc[-2:] + crc[:2]) == readings[-4:]):
-                        logging.info(f'Write to slave_{slave.name}')
+                    if (crc[-2:] + crc[:2]) == readings[-4:]:
+                        slave.lst_readings.append(readings)
+                        logging.info(f'Read from slave_{slave.name}')
                     else:
                         port.reset_input_buffer() # reset the buffer if no read
                         set_err[0] += 1
