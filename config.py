@@ -65,7 +65,7 @@ class device_port:
                 self.pub_values[topic] = 0
             for topic in _slave.port_topics.err_topics:
                 self.err_topics.append(topic)
-                self.err_values[topic] = 0
+                self.err_values[topic] = [0,0] #[err, click_throu]
     
     def serial_funcs(self, start): 
         def thread_func():
@@ -147,7 +147,7 @@ ADAM_TC_slave = Slave(
                                                 'ADAM_TC_collect_err', 'ADAM_TC_analyze_err',
                                             ]
                                             ),
-                    comm_func=Modbus.Modbus_Read,
+                    comm_func=Modbus.Modbus_Comm,
                     analyze_func=Modbus.ADAM_TC_analyze
                     )
 ADAM_TC_slave.read_rtu('0000', '0008', wait_len=21)
@@ -165,7 +165,7 @@ GA_slave = Slave(
                                             'GA_collect_err', 'GA_analyze_err',
                                         ]
                                         ),
-                comm_func=Modbus.Modbus_Read,
+                comm_func=Modbus.Modbus_Comm,
                 analyze_func=Modbus.GA_data_analyze
                 )
 GA_slave.read_rtu('11 01 60 8E', wait_len=31)
@@ -266,7 +266,7 @@ ADAM_READ_slave = Slave(
                                     'ADAM_READ_collect_err', 'ADAM_READ_analyze_err',
                                 ]
                                 ),
-                        comm_func=Modbus.Modbus_Read,
+                        comm_func=Modbus.Modbus_Comm,
                         analyze_func=Modbus.ADAM_READ_analyze
                         )
 ADAM_READ_slave.read_rtu('0000', '0008', wait_len=21)
@@ -334,8 +334,8 @@ RS232_port = device_port(GA_slave,
                         )
 
 Setup_port = device_port(
-                        Header_EVA_slave,
-                        Header_BR_slave,
+                        #Header_EVA_slave,
+                        #Header_BR_slave,
                         ADAM_SET_slave,
                         ADAM_READ_slave,
                         name='Setup_port',
