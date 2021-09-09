@@ -77,7 +77,8 @@ def Scale_data_collect(start, device_port, slave):
 def Modbus_Comm(start, device_port, slave):    
     #while not params.kb_event.isSet(): # it is written in the ReadingThreads.py
     port = device_port.port
-    collect_err = device_port.err_values[f'{slave.name}_collect_err']
+    collect_err = device_port.err_values.get(f'{slave.name}_collect_err')
+    set_err = device_port.err_values.get(f'{slave.name}_set_err')
     try: # try to collect
         collect_err[1] += 1
         port.write(bytes.fromhex(slave.r_rtu)) #hex to binary(byte) 
@@ -113,7 +114,7 @@ def Modbus_Comm(start, device_port, slave):
         w_data_site=0
         if device_port.sub_events[topic].isSet():
             try: # try to set value
-                device_port.err_values[f'{slave.name}_set_err'][1] += 1
+                set_err[1] += 1
                 slave.write_rtu(f"{w_data_site:0>4}", device_port.sub_values[topic])
                 port.write(bytes.fromhex(slave.w_rtu)) #hex to binary(byte) 
                 time.sleep(params.time_out)
@@ -126,20 +127,21 @@ def Modbus_Comm(start, device_port, slave):
                         logging.info(f'Write to slave_{slave.name}')
                     else:
                         port.reset_input_buffer() # reset the buffer if no read
-                        device_port.err_values[f'{slave.name}_set_err'][0] += 1
-                        err_msg = f"{slave.name}_set_err_{device_port.err_values[f'{slave.name}_set_err']} at {round((time.time()-start),2)}s: crc validation failed"
+                        set_err[0] += 1
+                        err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: crc validation failed"
                         logging.error(err_msg)
                 else: # if data len is less than the wait data
                     port.reset_input_buffer() # reset the buffer if no read
-                    device_port.err_values[f'{slave.name}_set_err'][0] += 1
-                    err_msg = f"{slave.name}_set_err_{device_port.err_values[f'{slave.name}_set_err']} at {round((time.time()-start),2)}s: data len is less than the wait data"
+                    set_err[0] += 1
+                    err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: data len is less than the wait data"
                     logging.error(err_msg)
             except Exception as e:
-                device_port.err_values[f'{slave.name}_set_err'][0] += 1
-                err_msg = f"{slave.name}_set_err_{device_port.err_values[f'{slave.name}_set_err']} at {round((time.time()-start),2)}s: " + str(e)
+                set_err[0] += 1
+                err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: " + str(e)
                 logging.error(err_msg)
             finally:
                 device_port.sub_events[topic].clear()
+                logging.info(f"{slave.name}_set_err: {round((set_err[1] - set_err[0])/set_err[1]*100, 2)}%")
         else:
             pass
         w_data_site += 1
