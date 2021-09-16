@@ -210,11 +210,12 @@ def ADAM_READ_analyze(start, device_port, slave, **kwargs):
     _time_readings = kwargs.get('_time_readings')
     _arr_readings = np.array([[int(reading[i-4:i],16) for i in range(10,len(reading)-2,4)] for reading in _lst_readings])
     _lst_readings = np.sum(_arr_readings, axis=0) / len(_lst_readings)
+    logging.debug(_lst_readings)
     _lst_readings[0] = _lst_readings[0] / 65536 * 5
     _lst_readings[1] = _lst_readings[1] / 65536
-    _lst_readings[4] = (_lst_readings[4] - 32767) / 32767 * 120
-    _lst_readings[5] = (_lst_readings[5] - 32767) / 32767 * 250
-    _lst_readings[6] = (_lst_readings[6] - 32767) / 32767 * 100
+    _lst_readings[5] = (_lst_readings[5] - 32767) / 32767 * 5
+    _lst_readings[6] = (_lst_readings[6] - 32767) / 32767 * 250
+    _lst_readings[7] = (_lst_readings[7] - 32767) / 32767 * 100
     _readings = tuple([round(_time_readings,2)]) + tuple(np.round(_lst_readings, 3))
     return _readings
     
