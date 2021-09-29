@@ -1,0 +1,1056 @@
+[
+    {
+        "id": "6a163fc1071c16f5",
+        "type": "tab",
+        "label": "Flow 1",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "76e63fa4b2b9d426",
+        "type": "mqtt in",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "topic": "RS485_port",
+        "qos": "0",
+        "datatype": "json",
+        "broker": "f8aea8534f5e2a70",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "x": 130,
+        "y": 100,
+        "wires": [
+            [
+                "26598d507b65c360",
+                "0a43f1f397c8d9ba"
+            ]
+        ]
+    },
+    {
+        "id": "26598d507b65c360",
+        "type": "debug",
+        "z": "6a163fc1071c16f5",
+        "name": "RS485_port",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "payload",
+        "statusType": "auto",
+        "x": 350,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "1207a6742d9a9ee0",
+        "type": "mqtt in",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "topic": "Scale_port",
+        "qos": "0",
+        "datatype": "json",
+        "broker": "f8aea8534f5e2a70",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "x": 120,
+        "y": 880,
+        "wires": [
+            [
+                "5f2c53389abeb403",
+                "f1fdd1aafee45046"
+            ]
+        ]
+    },
+    {
+        "id": "5f2c53389abeb403",
+        "type": "debug",
+        "z": "6a163fc1071c16f5",
+        "name": "Scale_port",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "payload",
+        "statusType": "auto",
+        "x": 350,
+        "y": 840,
+        "wires": []
+    },
+    {
+        "id": "28c5d13298b4c2da",
+        "type": "mqtt in",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "topic": "RS232_port",
+        "qos": "0",
+        "datatype": "json",
+        "broker": "f8aea8534f5e2a70",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "x": 130,
+        "y": 1120,
+        "wires": [
+            [
+                "43be0c8349e75c46",
+                "79075ac6fe1986ba"
+            ]
+        ]
+    },
+    {
+        "id": "43be0c8349e75c46",
+        "type": "debug",
+        "z": "6a163fc1071c16f5",
+        "name": "RS232_port",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "payload",
+        "statusType": "auto",
+        "x": 350,
+        "y": 1060,
+        "wires": []
+    },
+    {
+        "id": "95de06d4c940c1f5",
+        "type": "mqtt in",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "topic": "Setup_port",
+        "qos": "0",
+        "datatype": "json",
+        "broker": "f8aea8534f5e2a70",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "x": 120,
+        "y": 440,
+        "wires": [
+            [
+                "5a44929e0bc16d26",
+                "995a0561893097a7"
+            ]
+        ]
+    },
+    {
+        "id": "5a44929e0bc16d26",
+        "type": "debug",
+        "z": "6a163fc1071c16f5",
+        "name": "Setup_port",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "payload",
+        "statusType": "auto",
+        "x": 350,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "44570ad091103cf5",
+        "type": "mqtt in",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "topic": "GPIO_port",
+        "qos": "0",
+        "datatype": "json",
+        "broker": "f8aea8534f5e2a70",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "x": 120,
+        "y": 1400,
+        "wires": [
+            [
+                "8c91be5f3b4385b8",
+                "5a47d3f9ce3f05c5"
+            ]
+        ]
+    },
+    {
+        "id": "8c91be5f3b4385b8",
+        "type": "debug",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "payload",
+        "statusType": "auto",
+        "x": 330,
+        "y": 1340,
+        "wires": []
+    },
+    {
+        "id": "f1fdd1aafee45046",
+        "type": "function",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "func": "var msg_lst = []\n\nfor (var key of Object.keys(msg.payload)) {\n    var temp = {}\n    temp.topic = key\n    temp.payload = msg.payload[key]\n    msg_lst.push(temp)\n}\n\nreturn msg_lst;\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 920,
+        "wires": [
+            [
+                "9daf6c2a6bc219eb",
+                "a71e4673f1e889a4"
+            ]
+        ]
+    },
+    {
+        "id": "0a43f1f397c8d9ba",
+        "type": "function",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "func": "var msg_lst = []\n\nfor (var key of Object.keys(msg.payload)) {\n    var temp = {}\n    temp.topic = key\n    temp.payload = msg.payload[key]\n    msg_lst.push(temp)\n}\n\nreturn msg_lst;\n",
+        "outputs": 8,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 180,
+        "wires": [
+            [
+                "3190e9946ec35f0a"
+            ],
+            [
+                "3190e9946ec35f0a"
+            ],
+            [
+                "3190e9946ec35f0a"
+            ],
+            [
+                "be82686c60dc7a25",
+                "e0d59c8ad25b6e98"
+            ],
+            [
+                "15a7d709a5b4456c"
+            ],
+            [
+                "15a7d709a5b4456c"
+            ],
+            [
+                "34977b5f0c3a9637"
+            ],
+            [
+                "34977b5f0c3a9637"
+            ]
+        ]
+    },
+    {
+        "id": "3190e9946ec35f0a",
+        "type": "ui_chart",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "group": "297f87ae35596935",
+        "order": 5,
+        "width": "10",
+        "height": "5",
+        "label": "Burner",
+        "chartType": "line",
+        "legend": "true",
+        "xformat": "HH:mm",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "10",
+        "removeOlderUnit": "60",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "x": 770,
+        "y": 220,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "9daf6c2a6bc219eb",
+        "type": "ui_gauge",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "group": "5bc8200f.c1064",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "Scale",
+        "label": "g/min",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "15",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "x": 550,
+        "y": 920,
+        "wires": []
+    },
+    {
+        "id": "a71e4673f1e889a4",
+        "type": "debug",
+        "z": "6a163fc1071c16f5",
+        "name": "Scale",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "payload",
+        "statusType": "auto",
+        "x": 550,
+        "y": 840,
+        "wires": []
+    },
+    {
+        "id": "be82686c60dc7a25",
+        "type": "debug",
+        "z": "6a163fc1071c16f5",
+        "name": "TC10",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "payload",
+        "statusType": "auto",
+        "x": 570,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "e0d59c8ad25b6e98",
+        "type": "ui_gauge",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "group": "297f87ae35596935",
+        "order": 1,
+        "width": 3,
+        "height": 3,
+        "gtype": "gage",
+        "title": "TC10 Gauge",
+        "label": "oC",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "500",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "x": 750,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "79075ac6fe1986ba",
+        "type": "function",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "func": "var msg_lst = []\n\nfor (var key of Object.keys(msg.payload)) {\n    var temp = {}\n    temp.topic = key\n    temp.payload = msg.payload[key]\n    msg_lst.push(temp)\n}\n\nreturn msg_lst;\n",
+        "outputs": 6,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 1180,
+        "wires": [
+            [
+                "6c057fe95fe9a256",
+                "929dd54f826020b2",
+                "72da778604f3d743"
+            ],
+            [
+                "6c057fe95fe9a256"
+            ],
+            [
+                "6c057fe95fe9a256"
+            ],
+            [
+                "6c057fe95fe9a256"
+            ],
+            [
+                "6c057fe95fe9a256"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "6c057fe95fe9a256",
+        "type": "ui_chart",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "group": "62c1eaa282dd444b",
+        "order": 0,
+        "width": 0,
+        "height": 0,
+        "label": "chart",
+        "chartType": "horizontalBar",
+        "legend": "true",
+        "xformat": "HH:mm",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "10",
+        "removeOlderUnit": "60",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "x": 550,
+        "y": 1140,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "929dd54f826020b2",
+        "type": "ui_gauge",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "group": "62c1eaa282dd444b",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "CO gauge",
+        "label": "%",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "5",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "x": 770,
+        "y": 1060,
+        "wires": []
+    },
+    {
+        "id": "72da778604f3d743",
+        "type": "debug",
+        "z": "6a163fc1071c16f5",
+        "name": "CO",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "payload",
+        "statusType": "auto",
+        "x": 550,
+        "y": 1060,
+        "wires": []
+    },
+    {
+        "id": "995a0561893097a7",
+        "type": "function",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "func": "var msg_lst = []\n\nfor (var key of Object.keys(msg.payload)) {\n    var temp = {}\n    temp.topic = key\n    temp.payload = msg.payload[key]\n    msg_lst.push(temp)\n}\n\nreturn msg_lst;\n",
+        "outputs": 14,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 560,
+        "wires": [
+            [
+                "15a7d709a5b4456c"
+            ],
+            [
+                "3190e9946ec35f0a"
+            ],
+            [
+                "945ef93e621a77e9"
+            ],
+            [
+                "ce44322899ff5549"
+            ],
+            [
+                "4874235908d48ba3"
+            ],
+            [
+                "2f3b2088b1c56df9"
+            ],
+            [
+                "11c3d4e5e8d7f5bf"
+            ],
+            [
+                "11c3d4e5e8d7f5bf"
+            ],
+            [],
+            [],
+            [
+                "2dff80be691310b7"
+            ],
+            [
+                "4d0d647a8491c6fc"
+            ],
+            [
+                "d1831abb676edee0"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "15a7d709a5b4456c",
+        "type": "ui_chart",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "group": "297f87ae35596935",
+        "order": 6,
+        "width": 0,
+        "height": 0,
+        "label": "Steam Reformer",
+        "chartType": "line",
+        "legend": "true",
+        "xformat": "HH:mm",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "10",
+        "removeOlderUnit": "60",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "x": 800,
+        "y": 260,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "945ef93e621a77e9",
+        "type": "ui_gauge",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "group": "f7b9b84f65a2452b",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "PCB_SET gauge",
+        "label": "%",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "100",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "x": 590,
+        "y": 500,
+        "wires": []
+    },
+    {
+        "id": "ce44322899ff5549",
+        "type": "ui_gauge",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "group": "f7b9b84f65a2452b",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "Pump_SET gauge",
+        "label": "cc/min",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "120",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "x": 590,
+        "y": 540,
+        "wires": []
+    },
+    {
+        "id": "4874235908d48ba3",
+        "type": "ui_gauge",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "group": "f7b9b84f65a2452b",
+        "order": 4,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "Air MFC SET gauge",
+        "label": "LPM",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "250",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "x": 600,
+        "y": 580,
+        "wires": []
+    },
+    {
+        "id": "2f3b2088b1c56df9",
+        "type": "ui_gauge",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "group": "f7b9b84f65a2452b",
+        "order": 5,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "H2 MFC SET gauge",
+        "label": "LPM",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "100",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "x": 600,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "11c3d4e5e8d7f5bf",
+        "type": "ui_chart",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "group": "c6375cf50c3cb618",
+        "order": 6,
+        "width": 0,
+        "height": 0,
+        "label": "Pressure Chart",
+        "chartType": "line",
+        "legend": "true",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "x": 580,
+        "y": 660,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "2dff80be691310b7",
+        "type": "ui_gauge",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "group": "5bc8200f.c1064",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "Pump PV gauge",
+        "label": "cc/min",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "120",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "x": 800,
+        "y": 540,
+        "wires": []
+    },
+    {
+        "id": "4d0d647a8491c6fc",
+        "type": "ui_gauge",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "group": "f7b9b84f65a2452b",
+        "order": 6,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "Air MFC PV gauge",
+        "label": "LPM",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "250",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "x": 810,
+        "y": 580,
+        "wires": []
+    },
+    {
+        "id": "d1831abb676edee0",
+        "type": "ui_gauge",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "group": "f7b9b84f65a2452b",
+        "order": 7,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "H2 MFC gauge",
+        "label": "LPM",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "100",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "x": 800,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "34977b5f0c3a9637",
+        "type": "ui_chart",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "group": "297f87ae35596935",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "label": "RAD",
+        "chartType": "line",
+        "legend": "true",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "x": 770,
+        "y": 300,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "5a47d3f9ce3f05c5",
+        "type": "function",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "func": "var msg_lst = []\n\nfor (var key of Object.keys(msg.payload)) {\n    var temp = {}\n    temp.topic = key\n    temp.payload = msg.payload[key]\n    msg_lst.push(temp)\n}\n\nreturn msg_lst;\n",
+        "outputs": 2,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 1460,
+        "wires": [
+            [
+                "0b37b48584d25eda"
+            ],
+            [
+                "0b37b48584d25eda"
+            ]
+        ]
+    },
+    {
+        "id": "0b37b48584d25eda",
+        "type": "ui_chart",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "group": "3649b894af0c6ada",
+        "order": 0,
+        "width": 0,
+        "height": 0,
+        "label": "DFM",
+        "chartType": "line",
+        "legend": "true",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "x": 550,
+        "y": 1460,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "f8aea8534f5e2a70",
+        "type": "mqtt-broker",
+        "name": "",
+        "broker": "localhost",
+        "port": "1883",
+        "clientid": "RPi",
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "willMsg": {},
+        "sessionExpiry": ""
+    },
+    {
+        "id": "297f87ae35596935",
+        "type": "ui_group",
+        "name": "Dashboard",
+        "tab": "e427e8a2.33a718",
+        "order": 4,
+        "disp": true,
+        "width": 16,
+        "collapse": false
+    },
+    {
+        "id": "5bc8200f.c1064",
+        "type": "ui_group",
+        "name": "Scale",
+        "tab": "662b1e41ad4ec8e6",
+        "order": 2,
+        "disp": true,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "62c1eaa282dd444b",
+        "type": "ui_group",
+        "name": "Gas Compo",
+        "tab": "662b1e41ad4ec8e6",
+        "order": 3,
+        "disp": true,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "f7b9b84f65a2452b",
+        "type": "ui_group",
+        "name": "Dashboard",
+        "tab": "3a0b2c699094b623",
+        "order": 1,
+        "disp": true,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "c6375cf50c3cb618",
+        "type": "ui_group",
+        "name": "Dashboard",
+        "tab": "81827930559ca1a3",
+        "order": 3,
+        "disp": true,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "3649b894af0c6ada",
+        "type": "ui_group",
+        "name": "Dry Flow Meter",
+        "tab": "662b1e41ad4ec8e6",
+        "order": 3,
+        "disp": true,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "e427e8a2.33a718",
+        "type": "ui_tab",
+        "name": "TC",
+        "icon": "dashboard",
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "662b1e41ad4ec8e6",
+        "type": "ui_tab",
+        "name": "Gas Production",
+        "icon": "dashboard",
+        "order": 3,
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "3a0b2c699094b623",
+        "type": "ui_tab",
+        "name": "Setting",
+        "icon": "dashboard",
+        "order": 2,
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "81827930559ca1a3",
+        "type": "ui_tab",
+        "name": "Pressure Board",
+        "icon": "dashboard",
+        "disabled": false,
+        "hidden": false
+    }
+]
