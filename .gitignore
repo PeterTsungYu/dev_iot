@@ -2,3 +2,4 @@
 /NodeRed_sandbox/data/*
 /.env
 /*.log
+/test*

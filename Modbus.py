@@ -91,7 +91,7 @@ def Scale_data_collect(start, device_port, slave):
             readings = port.read(port.inWaiting()).decode('utf-8')
             readings = [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ \-][ .\d]{7}', readings)]
             slave.lst_readings.append(readings)
-            logging.info(f'Read from slave_{slave.name}')
+            logging.info(f'Read {readings} from slave_{slave.name}')
             port.reset_input_buffer() # reset the buffer after each reading process
         else: # if data len is no data
             collect_err[0] += 1

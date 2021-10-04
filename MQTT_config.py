@@ -19,26 +19,29 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
         
         # Subscribing in on_connect() means that if we lose the connection and
         # reconnect then subscriptions will be renewed.
-        #client.subscribe("nodered", qos=0)
-        client.subscribe([(u,0) for i in config.lst_ports for u in i.sub_topics])
+        client.subscribe("nodered_port", qos=0)
+        #client.subscribe([(u,0) for i in config.lst_ports for u in i.sub_topics])
         #client.subscribe([("Header_EVA_SV", 0), ("Header_BR_SV", 0)])
 
     # The callback for when a SUB message is received
     def on_message(client, userdata, msg):
-        print(msg.topic+ ": " + str(msg.payload) + f">>> {client_id}")
-        if (msg.topic != 'nodered') and (msg.payload != b''):
-            config.Setup_port.sub_values[msg.topic] = float(msg.payload)
-            config.Setup_port.sub_events[msg.topic].set()
+        #print(msg.topic+ ": " + str(msg.payload) + f">>> {client_id}")
+        resp = json.loads(msg.payload.decode('utf-8'))
+        for key, value in resp.items():    
+            if (key != 'nodered') and (value != None):
+                print(key, value)
+                config.Setup_port.sub_values[key] = float(value)
+                config.Setup_port.sub_events[key].set()
         
     def on_publish(client, userdata, mid):
         print(mid)
 
     client = mqtt.Client(client_id=client_id, clean_session=True)
     # client.username_pw_set(username, password)
-    #client.on_connect = on_connect
-    client.subscribe([(u,0) for i in config.lst_ports for u in i.sub_topics])
-    client.on_message = on_message
+    client.on_connect = on_connect
+    #client.subscribe([(u,0) for i in config.lst_ports for u in i.sub_topics])
     #client.on_publish = on_publish
+    client.on_message = on_message
     client.connect_async(hostname, port, keepalive)
     return client
 

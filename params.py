@@ -4,7 +4,7 @@ import signal
 #-------------------------Global var--------------------------------------
 time_out          = 1 # for collecting data
 sample_time       = 2 # for analyzing data
-sample_time_Scale = 5
+sample_time_Scale = 60
 sample_time_DFM   = 60
 
 # count down events
