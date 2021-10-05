@@ -150,9 +150,11 @@ def Modbus_Comm(start, device_port, slave):
         port.reset_input_buffer()
         logging.info(f"{slave.name}_collect_err: {round((collect_err[1] - collect_err[0])/(collect_err[1]+0.00000000000000001)*100, 2)}%")
 
+    w_data_site=0
     for topic in slave.port_topics.sub_topics:
-        w_data_site=0
+        #logging.critical((slave.name, topic))
         if device_port.sub_events[topic].isSet():
+            #logging.critical(device_port.sub_values[topic])
             try: # try to set value
                 set_err[1] += 1
                 slave.write_rtu(f"{w_data_site:0>4}", device_port.sub_values[topic])
@@ -160,17 +162,18 @@ def Modbus_Comm(start, device_port, slave):
                 time.sleep(params.time_out)
                 if port.inWaiting() >= slave.w_wait_len:
                     readings = port.read(port.inWaiting()).hex() # after reading, the buffer will be clean
-                    logging.debug(readings)
-                    re = hex(int(slave.id))[2:].zfill(2) + '06' + hex(slave.w_wait_len-5)[2:].zfill(2)
-                    logging.debug(re)
+                    #logging.critical(readings)
+                    re = hex(int(slave.id))[2:].zfill(2) + '06' + f"{w_data_site:0>4}"
+                    #logging.critical(re)
                     if readings.index(re):
                         readings = readings[readings.index(re):(readings.index(re)+slave.w_wait_len*2)]
-                    logging.debug(readings)
+                    #logging.critical(readings)
                     crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
                     # check sta, func code, datalen, crc
                     if (crc[-2:] + crc[:2]) == readings[-4:]:
                         slave.lst_readings.append(readings)
                         logging.info(f'Read from slave_{slave.name}')
+                        device_port.sub_events[topic].clear()
                     else:
                         set_err[0] += 1
                         err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: crc validation failed"
@@ -184,12 +187,12 @@ def Modbus_Comm(start, device_port, slave):
                 err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: " + str(e)
                 logging.error(err_msg)
             finally:
-                device_port.sub_events[topic].clear()
                 logging.info(f"{slave.name}_set_err: {round((set_err[1] - set_err[0])/(set_err[1]+0.00000000000000001)*100, 2)}%")
                 port.reset_input_buffer()
+                w_data_site += 1
         else:
-            pass
-        w_data_site += 1
+            w_data_site += 1
+        
 
 
 @kb_event
@@ -211,11 +214,6 @@ def ADAM_READ_analyze(start, device_port, slave, **kwargs):
     _arr_readings = np.array([[int(reading[i-4:i],16) for i in range(10,len(reading)-2,4)] for reading in _lst_readings])
     _lst_readings = np.sum(_arr_readings, axis=0) / len(_lst_readings)
     logging.debug(_lst_readings)
-    _lst_readings[0] = _lst_readings[0] / 65536 * 5
-    _lst_readings[1] = _lst_readings[1] / 65536
-    _lst_readings[5] = (_lst_readings[5] - 32767) / 32767 * 5
-    _lst_readings[6] = (_lst_readings[6] - 32767) / 32767 * 250
-    _lst_readings[7] = (_lst_readings[7] - 32767) / 32767 * 100
     _readings = tuple([round(_time_readings,2)]) + tuple(np.round(_lst_readings, 3))
     return _readings
     

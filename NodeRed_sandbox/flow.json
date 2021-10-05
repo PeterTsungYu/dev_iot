@@ -304,8 +304,8 @@
         ],
         "outputs": 1,
         "useDifferentColor": false,
-        "x": 770,
-        "y": 280,
+        "x": 1570,
+        "y": 400,
         "wires": [
             []
         ]
@@ -315,10 +315,10 @@
         "type": "ui_gauge",
         "z": "6a163fc1071c16f5",
         "name": "",
-        "group": "5bc8200f.c1064",
-        "order": 1,
-        "width": 0,
-        "height": 0,
+        "group": "62c1eaa282dd444b",
+        "order": 2,
+        "width": 4,
+        "height": 4,
         "gtype": "gage",
         "title": "Scale",
         "label": "g/min",
@@ -392,8 +392,8 @@
         ],
         "seg1": "",
         "seg2": "",
-        "x": 750,
-        "y": 40,
+        "x": 1590,
+        "y": 320,
         "wires": []
     },
     {
@@ -436,10 +436,10 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "62c1eaa282dd444b",
-        "order": 2,
-        "width": 0,
-        "height": 0,
-        "label": "",
+        "order": 4,
+        "width": 12,
+        "height": 10,
+        "label": "Gas Comp",
         "chartType": "horizontalBar",
         "legend": "false",
         "xformat": "HH:mm",
@@ -467,7 +467,7 @@
         ],
         "outputs": 1,
         "useDifferentColor": false,
-        "x": 570,
+        "x": 590,
         "y": 2060,
         "wires": [
             []
@@ -478,10 +478,10 @@
         "type": "ui_gauge",
         "z": "6a163fc1071c16f5",
         "name": "",
-        "group": "5bc8200f.c1064",
-        "order": 4,
-        "width": 8,
-        "height": 5,
+        "group": "62c1eaa282dd444b",
+        "order": 1,
+        "width": 4,
+        "height": 4,
         "gtype": "gage",
         "title": "CO gauge",
         "label": "%",
@@ -541,32 +541,34 @@
                 "c2c2ed170de59b86",
                 "c78c008f96fe6c10"
             ],
+            [
+                "576a1e385a0de230"
+            ],
+            [
+                "fcb363cc5ca4e7fe"
+            ],
+            [
+                "60309770f42b06e6"
+            ],
+            [
+                "399fa0946ba866d2"
+            ],
+            [
+                "fdb28dab225e3cb3"
+            ],
+            [
+                "c82840fd68181f98"
+            ],
+            [],
             [],
             [
-                "f4a46745c1d41e44"
+                "cb9df7afd13d2a46"
             ],
             [
-                "292a88c840387444"
+                "38ef481002b48407"
             ],
             [
-                "61dd863a9550e3d8"
-            ],
-            [
-                "11c3d4e5e8d7f5bf"
-            ],
-            [
-                "11c3d4e5e8d7f5bf"
-            ],
-            [],
-            [],
-            [
-                "f4a46745c1d41e44"
-            ],
-            [
-                "292a88c840387444"
-            ],
-            [
-                "61dd863a9550e3d8"
+                "835bce9386f19fc7"
             ],
             []
         ]
@@ -608,8 +610,8 @@
         ],
         "outputs": 1,
         "useDifferentColor": false,
-        "x": 800,
-        "y": 320,
+        "x": 1600,
+        "y": 440,
         "wires": [
             []
         ]
@@ -620,7 +622,7 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "c6375cf50c3cb618",
-        "order": 6,
+        "order": 1,
         "width": 0,
         "height": 0,
         "label": "Pressure Chart",
@@ -651,8 +653,8 @@
         ],
         "outputs": 1,
         "useDifferentColor": false,
-        "x": 1220,
-        "y": 700,
+        "x": 1600,
+        "y": 680,
         "wires": [
             []
         ]
@@ -694,8 +696,8 @@
         ],
         "outputs": 1,
         "useDifferentColor": false,
-        "x": 770,
-        "y": 360,
+        "x": 1570,
+        "y": 480,
         "wires": [
             []
         ]
@@ -728,9 +730,9 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "62c1eaa282dd444b",
-        "order": 1,
-        "width": 0,
-        "height": 0,
+        "order": 8,
+        "width": 12,
+        "height": 6,
         "label": "DFM",
         "chartType": "line",
         "legend": "true",
@@ -889,8 +891,8 @@
         ],
         "seg1": "",
         "seg2": "",
-        "x": 930,
-        "y": 40,
+        "x": 1590,
+        "y": 360,
         "wires": []
     },
     {
@@ -915,8 +917,8 @@
         ],
         "seg1": "",
         "seg2": "",
-        "x": 610,
-        "y": 460,
+        "x": 1630,
+        "y": 520,
         "wires": []
     },
     {
@@ -931,7 +933,7 @@
         "nl": false,
         "rap": false,
         "x": 370,
-        "y": 1480,
+        "y": 1540,
         "wires": [
             [
                 "d3217d28c56d21e2"
@@ -952,7 +954,7 @@
         "statusVal": "payload",
         "statusType": "auto",
         "x": 610,
-        "y": 1480,
+        "y": 1540,
         "wires": []
     },
     {
@@ -970,7 +972,7 @@
         "expiry": "",
         "broker": "f8aea8534f5e2a70",
         "x": 1840,
-        "y": 980,
+        "y": 1100,
         "wires": []
     },
     {
@@ -1042,7 +1044,7 @@
         "topicType": "msg",
         "splitLayout": false,
         "x": 130,
-        "y": 1100,
+        "y": 1220,
         "wires": [
             [
                 "3ff900278a33d6b7",
@@ -1055,7 +1057,7 @@
         "type": "debug",
         "z": "6a163fc1071c16f5",
         "name": "form",
-        "active": false,
+        "active": true,
         "tosidebar": true,
         "console": false,
         "tostatus": true,
@@ -1064,7 +1066,7 @@
         "statusVal": "payload",
         "statusType": "auto",
         "x": 310,
-        "y": 1040,
+        "y": 1160,
         "wires": []
     },
     {
@@ -1079,7 +1081,7 @@
         "stream": false,
         "addname": "topic",
         "x": 310,
-        "y": 1100,
+        "y": 1220,
         "wires": [
             [
                 "a177f3bacc60e804",
@@ -1130,7 +1132,7 @@
         "repair": false,
         "outputs": 6,
         "x": 490,
-        "y": 1100,
+        "y": 1220,
         "wires": [
             [
                 "460512c62477d1e1"
@@ -1178,10 +1180,10 @@
         "repair": false,
         "outputs": 3,
         "x": 770,
-        "y": 960,
+        "y": 1080,
         "wires": [
             [
-                "4416800f3beae6da"
+                "f478001253b9e364"
             ],
             [
                 "b045d8a4fb42f88c",
@@ -1209,7 +1211,7 @@
         "count": "",
         "reduceRight": false,
         "x": 1570,
-        "y": 920,
+        "y": 1040,
         "wires": [
             [
                 "3d0f0b5b96510e68",
@@ -1222,13 +1224,13 @@
         "id": "4416800f3beae6da",
         "type": "change",
         "z": "6a163fc1071c16f5",
-        "name": "Set Null to 2048",
+        "name": "Set Null to 2047",
         "rules": [
             {
                 "t": "set",
                 "p": "payload",
                 "pt": "msg",
-                "to": "2048",
+                "to": "2047",
                 "tot": "num"
             }
         ],
@@ -1238,7 +1240,7 @@
         "to": "",
         "reg": false,
         "x": 1240,
-        "y": 1160,
+        "y": 1320,
         "wires": [
             [
                 "b045d8a4fb42f88c"
@@ -1278,7 +1280,7 @@
         "repair": false,
         "outputs": 4,
         "x": 730,
-        "y": 1020,
+        "y": 1140,
         "wires": [
             [
                 "4416800f3beae6da"
@@ -1327,7 +1329,7 @@
         "repair": false,
         "outputs": 4,
         "x": 770,
-        "y": 1100,
+        "y": 1220,
         "wires": [
             [
                 "4416800f3beae6da"
@@ -1376,7 +1378,7 @@
         "repair": false,
         "outputs": 4,
         "x": 760,
-        "y": 1180,
+        "y": 1300,
         "wires": [
             [
                 "4416800f3beae6da"
@@ -1425,7 +1427,7 @@
         "repair": false,
         "outputs": 4,
         "x": 760,
-        "y": 1260,
+        "y": 1380,
         "wires": [
             [
                 "4416800f3beae6da"
@@ -1455,7 +1457,7 @@
         "statusVal": "payload",
         "statusType": "auto",
         "x": 1830,
-        "y": 1040,
+        "y": 1160,
         "wires": []
     },
     {
@@ -1472,7 +1474,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 450,
-        "y": 1220,
+        "y": 1340,
         "wires": []
     },
     {
@@ -1490,7 +1492,7 @@
         "topic": "",
         "name": "Wrong Set",
         "x": 1230,
-        "y": 1200,
+        "y": 1360,
         "wires": [
             []
         ]
@@ -1509,8 +1511,8 @@
         "raw": false,
         "topic": "MQTT pub",
         "name": "MQTT pub",
-        "x": 2050,
-        "y": 920,
+        "x": 2070,
+        "y": 1040,
         "wires": []
     },
     {
@@ -1533,7 +1535,7 @@
         "to": "",
         "reg": false,
         "x": 1840,
-        "y": 920,
+        "y": 1040,
         "wires": [
             [
                 "0dda530d9d6c902d"
@@ -1566,10 +1568,10 @@
         "repair": false,
         "outputs": 3,
         "x": 770,
-        "y": 900,
+        "y": 1020,
         "wires": [
             [
-                "4416800f3beae6da"
+                "f478001253b9e364"
             ],
             [
                 "b045d8a4fb42f88c",
@@ -1586,7 +1588,7 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "f7b9b84f65a2452b",
-        "order": 7,
+        "order": 4,
         "width": 6,
         "height": 6,
         "label": "Header_BR",
@@ -1617,8 +1619,8 @@
         ],
         "outputs": 1,
         "useDifferentColor": false,
-        "x": 1210,
-        "y": 660,
+        "x": 1590,
+        "y": 600,
         "wires": [
             []
         ]
@@ -1629,7 +1631,7 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "f7b9b84f65a2452b",
-        "order": 5,
+        "order": 2,
         "width": 6,
         "height": 6,
         "label": "Header_EVA",
@@ -1660,8 +1662,8 @@
         ],
         "outputs": 1,
         "useDifferentColor": false,
-        "x": 1210,
-        "y": 620,
+        "x": 1590,
+        "y": 560,
         "wires": [
             []
         ]
@@ -1672,7 +1674,7 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "f7b9b84f65a2452b",
-        "order": 3,
+        "order": 30,
         "width": 6,
         "height": 6,
         "label": "Pump",
@@ -1703,8 +1705,8 @@
         ],
         "outputs": 1,
         "useDifferentColor": false,
-        "x": 1190,
-        "y": 740,
+        "x": 1570,
+        "y": 720,
         "wires": [
             []
         ]
@@ -1715,7 +1717,7 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "f7b9b84f65a2452b",
-        "order": 25,
+        "order": 16,
         "width": 6,
         "height": 6,
         "label": "250 MFC",
@@ -1746,8 +1748,8 @@
         ],
         "outputs": 1,
         "useDifferentColor": false,
-        "x": 1200,
-        "y": 780,
+        "x": 1580,
+        "y": 760,
         "wires": [
             []
         ]
@@ -1758,7 +1760,7 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "f7b9b84f65a2452b",
-        "order": 27,
+        "order": 18,
         "width": 6,
         "height": 6,
         "label": "100 MFC",
@@ -1789,8 +1791,8 @@
         ],
         "outputs": 1,
         "useDifferentColor": false,
-        "x": 1200,
-        "y": 820,
+        "x": 1580,
+        "y": 800,
         "wires": [
             []
         ]
@@ -1801,14 +1803,14 @@
         "z": "6a163fc1071c16f5",
         "minin": "0",
         "maxin": "100",
-        "minout": "2048",
-        "maxout": "4096",
+        "minout": "2047",
+        "maxout": "4095",
         "action": "clamp",
         "round": false,
         "property": "payload",
         "name": "0-100% to 0-10V (12bits)",
         "x": 1270,
-        "y": 1000,
+        "y": 1120,
         "wires": [
             [
                 "b045d8a4fb42f88c"
@@ -1821,14 +1823,14 @@
         "z": "6a163fc1071c16f5",
         "minin": "0",
         "maxin": "120",
-        "minout": "2048",
-        "maxout": "3072",
+        "minout": "2047",
+        "maxout": "3071",
         "action": "clamp",
         "round": false,
         "property": "payload",
         "name": "0-120 to 0-5V (12bits)",
         "x": 1260,
-        "y": 1040,
+        "y": 1160,
         "wires": [
             [
                 "b045d8a4fb42f88c",
@@ -1842,14 +1844,14 @@
         "z": "6a163fc1071c16f5",
         "minin": "0",
         "maxin": "250",
-        "minout": "2048",
-        "maxout": "3072",
+        "minout": "2047",
+        "maxout": "3071",
         "action": "clamp",
         "round": false,
         "property": "payload",
         "name": "0-250 to 0-5V (12bits)",
         "x": 1260,
-        "y": 1080,
+        "y": 1200,
         "wires": [
             [
                 "b045d8a4fb42f88c"
@@ -1862,14 +1864,14 @@
         "z": "6a163fc1071c16f5",
         "minin": "0",
         "maxin": "100",
-        "minout": "2048",
-        "maxout": "3072",
+        "minout": "2047",
+        "maxout": "3071",
         "action": "clamp",
         "round": false,
         "property": "payload",
         "name": "0-100 to 0-5V (12bits)",
         "x": 1260,
-        "y": 1120,
+        "y": 1240,
         "wires": [
             [
                 "b045d8a4fb42f88c"
@@ -1890,8 +1892,239 @@
         "statusVal": "payload",
         "statusType": "auto",
         "x": 1550,
-        "y": 1040,
+        "y": 1160,
         "wires": []
+    },
+    {
+        "id": "f365221255015580",
+        "type": "ui_gauge",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "group": "f7b9b84f65a2452b",
+        "order": 32,
+        "width": 6,
+        "height": 6,
+        "gtype": "gage",
+        "title": "PCB gauge",
+        "label": "%",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "100",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "x": 1590,
+        "y": 640,
+        "wires": []
+    },
+    {
+        "id": "576a1e385a0de230",
+        "type": "range",
+        "z": "6a163fc1071c16f5",
+        "minin": "0",
+        "maxin": "10",
+        "minout": "0",
+        "maxout": "100",
+        "action": "clamp",
+        "round": true,
+        "property": "payload",
+        "name": "0-10V to 0-100%",
+        "x": 1250,
+        "y": 600,
+        "wires": [
+            [
+                "f365221255015580"
+            ]
+        ]
+    },
+    {
+        "id": "cb9df7afd13d2a46",
+        "type": "range",
+        "z": "6a163fc1071c16f5",
+        "minin": "32767",
+        "maxin": "65535",
+        "minout": "0",
+        "maxout": "120",
+        "action": "clamp",
+        "round": false,
+        "property": "payload",
+        "name": "0-5V to 0-120 (16bits)",
+        "x": 1260,
+        "y": 840,
+        "wires": [
+            [
+                "f4a46745c1d41e44"
+            ]
+        ]
+    },
+    {
+        "id": "38ef481002b48407",
+        "type": "range",
+        "z": "6a163fc1071c16f5",
+        "minin": "32767",
+        "maxin": "65535",
+        "minout": "0",
+        "maxout": "250",
+        "action": "clamp",
+        "round": false,
+        "property": "payload",
+        "name": "0-5V to 0-250 (16bits)",
+        "x": 1260,
+        "y": 880,
+        "wires": [
+            [
+                "292a88c840387444"
+            ]
+        ]
+    },
+    {
+        "id": "835bce9386f19fc7",
+        "type": "range",
+        "z": "6a163fc1071c16f5",
+        "minin": "32767",
+        "maxin": "65535",
+        "minout": "0",
+        "maxout": "100",
+        "action": "clamp",
+        "round": false,
+        "property": "payload",
+        "name": "0-5V to 0-100 (16bits)",
+        "x": 1260,
+        "y": 920,
+        "wires": [
+            [
+                "61dd863a9550e3d8"
+            ]
+        ]
+    },
+    {
+        "id": "c82840fd68181f98",
+        "type": "range",
+        "z": "6a163fc1071c16f5",
+        "minin": "32767",
+        "maxin": "65535",
+        "minout": "-1",
+        "maxout": "10",
+        "action": "clamp",
+        "round": false,
+        "property": "payload",
+        "name": "0-5V to -1-10 (16bits)",
+        "x": 1260,
+        "y": 800,
+        "wires": [
+            [
+                "11c3d4e5e8d7f5bf"
+            ]
+        ]
+    },
+    {
+        "id": "fdb28dab225e3cb3",
+        "type": "range",
+        "z": "6a163fc1071c16f5",
+        "minin": "0",
+        "maxin": "65535",
+        "minout": "0",
+        "maxout": "5",
+        "action": "scale",
+        "round": false,
+        "property": "payload",
+        "name": "4-20mA to 0-5 (16bits)",
+        "x": 1260,
+        "y": 760,
+        "wires": [
+            [
+                "11c3d4e5e8d7f5bf"
+            ]
+        ]
+    },
+    {
+        "id": "f478001253b9e364",
+        "type": "change",
+        "z": "6a163fc1071c16f5",
+        "name": "Set null to 0",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "0",
+                "tot": "num"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1230,
+        "y": 1280,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "fcb363cc5ca4e7fe",
+        "type": "range",
+        "z": "6a163fc1071c16f5",
+        "minin": "0",
+        "maxin": "5",
+        "minout": "0",
+        "maxout": "120",
+        "action": "clamp",
+        "round": false,
+        "property": "payload",
+        "name": "0-5V to 0-120",
+        "x": 1240,
+        "y": 640,
+        "wires": [
+            [
+                "f4a46745c1d41e44"
+            ]
+        ]
+    },
+    {
+        "id": "60309770f42b06e6",
+        "type": "range",
+        "z": "6a163fc1071c16f5",
+        "minin": "0",
+        "maxin": "5",
+        "minout": "0",
+        "maxout": "250",
+        "action": "clamp",
+        "round": false,
+        "property": "payload",
+        "name": "0-5V to 0-250",
+        "x": 1240,
+        "y": 680,
+        "wires": [
+            [
+                "292a88c840387444"
+            ]
+        ]
+    },
+    {
+        "id": "399fa0946ba866d2",
+        "type": "range",
+        "z": "6a163fc1071c16f5",
+        "minin": "0",
+        "maxin": "5",
+        "minout": "0",
+        "maxout": "100",
+        "action": "clamp",
+        "round": false,
+        "property": "payload",
+        "name": "0-5V to 0-100",
+        "x": 1240,
+        "y": 720,
+        "wires": [
+            [
+                "61dd863a9550e3d8"
+            ]
+        ]
     },
     {
         "id": "f8aea8534f5e2a70",
@@ -1929,23 +2162,13 @@
         "collapse": false
     },
     {
-        "id": "5bc8200f.c1064",
-        "type": "ui_group",
-        "name": "Gauge",
-        "tab": "662b1e41ad4ec8e6",
-        "order": 2,
-        "disp": true,
-        "width": 8,
-        "collapse": false
-    },
-    {
         "id": "62c1eaa282dd444b",
         "type": "ui_group",
         "name": "Chart",
         "tab": "662b1e41ad4ec8e6",
         "order": 3,
         "disp": true,
-        "width": "16",
+        "width": 24,
         "collapse": false
     },
     {
@@ -1955,7 +2178,7 @@
         "tab": "81827930559ca1a3",
         "order": 3,
         "disp": true,
-        "width": "6",
+        "width": 28,
         "collapse": false
     },
     {
@@ -1965,7 +2188,7 @@
         "tab": "3a0b2c699094b623",
         "order": 1,
         "disp": true,
-        "width": 30,
+        "width": 28,
         "collapse": false
     },
     {
