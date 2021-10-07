@@ -260,7 +260,7 @@ ADAM_READ_slave = Slave(
                         port_topics=port_Topics(
                                 sub_topics=[],
                                 pub_topics=[
-                                    'SMC_0_PV', 'SMC_1_PV', 'ADAM_READ_PV2', 'ADAM_READ_PV3', 'Pump_PV', 'Air_MFC_PV', 'H2_MFC_PV', 'ADAM_READ_PV7' # ADAM_READ_PV0 (SMC), ADAM_READ_PV1 (SMC), ADAM_READ_PV2, ADAM_READ_PV3, ADAM_READ_PV4(pump), ADAM_READ_PV5(Air_MFC), ADAM_READ_PV6(H2_MFC), ADAM_READ_PV7
+                                    'SMC_0_PV', 'SMC_1_PV', 'ADAM_READ_PV2', 'ADAM_READ_PV3', 'ADAM_READ_PV4', 'ADAM_READ_PV5', 'Air_MFC_PV', 'H2_MFC_PV' # ADAM_READ_PV0 (SMC), ADAM_READ_PV1 (SMC), ADAM_READ_PV2, ADAM_READ_PV3, ADAM_READ_PV4(pump), ADAM_READ_PV5(Air_MFC), ADAM_READ_PV6(H2_MFC), ADAM_READ_PV7
                                 ],
                                 err_topics=[
                                     'ADAM_READ_collect_err', 'ADAM_READ_analyze_err',
@@ -334,10 +334,10 @@ RS232_port = device_port(GA_slave,
                         )
 
 Setup_port = device_port(
-                        #Header_EVA_slave,
+                        Header_EVA_slave,
                         Header_BR_slave,
-                        #ADAM_SET_slave,
-                        #ADAM_READ_slave,
+                        ADAM_SET_slave,
+                        ADAM_READ_slave,
                         name='Setup_port',
                         port=serial.Serial(port=Setup_port_path,
                                             baudrate=115200, 
@@ -361,15 +361,3 @@ lst_ports = [
             ]
 
 print('Ports are all set')
-
-
-'''for port in [RS485_port, RS232_port, Scale_port, Setup_port, GPIO_port]:
-    print(f'{port.name} sub_topics {port.sub_topics}')
-    print(f'{port.name} pub_topics {port.pub_topics}')
-    print(f'{port.name} err_topics {port.err_topics}')
-    print(f'{port.name} sub_values {port.sub_values}')
-    print(f'{port.name} sub_events {port.sub_events}')
-    print(f'{port.name} pub_values {port.pub_values}')
-    print(f'{port.name} err_values {port.err_values}')
-'''
-

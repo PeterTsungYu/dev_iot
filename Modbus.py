@@ -114,22 +114,22 @@ def Modbus_Comm(start, device_port, slave):
         port.write(bytes.fromhex(slave.r_rtu)) #hex to binary(byte) 
         slave.time_readings = time.time()-start
         time.sleep(params.time_out)
-        logging.debug(port.inWaiting())
+        #logging.debug(port.inWaiting())
                 
         if port.inWaiting() >= slave.r_wait_len: 
             readings = port.read(port.inWaiting()).hex() # after reading, the buffer will be clean
-            logging.debug(readings)
+            #logging.debug(readings)
             if slave.name == 'GA':
                 slave.lst_readings.append(readings)
                 logging.info(f'Read from slave_{slave.name}')
             else:    
                 re = hex(int(slave.id))[2:].zfill(2) + '03' + hex(slave.r_wait_len-5)[2:].zfill(2)
-                logging.debug(re)
+                #logging.debug(re)
                 if readings.index(re):
                     readings = readings[readings.index(re):(readings.index(re)+slave.r_wait_len*2)]
                 logging.debug(readings)
                 crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
-                logging.debug(crc)
+                #logging.debug(crc)
                 # check sta, func code, datalen, crc
                 if (crc[-2:] + crc[:2]) == readings[-4:]:
                     slave.lst_readings.append(readings)
@@ -210,8 +210,10 @@ def ADAM_TC_analyze(start, device_port, slave, _lst_readings, _time_readings):
 @analyze_decker
 def ADAM_READ_analyze(start, device_port, slave, **kwargs):
     _lst_readings = kwargs.get('_lst_readings')
+    logging.debug(_lst_readings)
     _time_readings = kwargs.get('_time_readings')
     _arr_readings = np.array([[int(reading[i-4:i],16) for i in range(10,len(reading)-2,4)] for reading in _lst_readings])
+    logging.debug(_arr_readings)
     _lst_readings = np.sum(_arr_readings, axis=0) / len(_lst_readings)
     logging.debug(_lst_readings)
     _readings = tuple([round(_time_readings,2)]) + tuple(np.round(_lst_readings, 3))
