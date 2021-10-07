@@ -304,8 +304,8 @@
         ],
         "outputs": 1,
         "useDifferentColor": false,
-        "x": 1570,
-        "y": 400,
+        "x": 1750,
+        "y": 300,
         "wires": [
             []
         ]
@@ -392,8 +392,8 @@
         ],
         "seg1": "",
         "seg2": "",
-        "x": 1590,
-        "y": 320,
+        "x": 1770,
+        "y": 220,
         "wires": []
     },
     {
@@ -557,20 +557,19 @@
                 "fdb28dab225e3cb3"
             ],
             [
-                "c82840fd68181f98"
+                "bc3953e02482fe0f",
+                "c69a7735b3bcc140"
             ],
             [],
             [],
-            [
-                "cb9df7afd13d2a46"
-            ],
+            [],
+            [],
             [
                 "38ef481002b48407"
             ],
             [
                 "835bce9386f19fc7"
-            ],
-            []
+            ]
         ]
     },
     {
@@ -610,8 +609,8 @@
         ],
         "outputs": 1,
         "useDifferentColor": false,
-        "x": 1600,
-        "y": 440,
+        "x": 1780,
+        "y": 340,
         "wires": [
             []
         ]
@@ -653,8 +652,8 @@
         ],
         "outputs": 1,
         "useDifferentColor": false,
-        "x": 1600,
-        "y": 680,
+        "x": 1780,
+        "y": 580,
         "wires": [
             []
         ]
@@ -696,8 +695,8 @@
         ],
         "outputs": 1,
         "useDifferentColor": false,
-        "x": 1570,
-        "y": 480,
+        "x": 1750,
+        "y": 380,
         "wires": [
             []
         ]
@@ -891,8 +890,8 @@
         ],
         "seg1": "",
         "seg2": "",
-        "x": 1590,
-        "y": 360,
+        "x": 1770,
+        "y": 260,
         "wires": []
     },
     {
@@ -917,8 +916,8 @@
         ],
         "seg1": "",
         "seg2": "",
-        "x": 1630,
-        "y": 520,
+        "x": 1810,
+        "y": 420,
         "wires": []
     },
     {
@@ -1186,8 +1185,7 @@
                 "f478001253b9e364"
             ],
             [
-                "b045d8a4fb42f88c",
-                "c78c008f96fe6c10"
+                "b045d8a4fb42f88c"
             ],
             [
                 "92223f692f35cb26"
@@ -1574,8 +1572,7 @@
                 "f478001253b9e364"
             ],
             [
-                "b045d8a4fb42f88c",
-                "a6b44c3b2be4e995"
+                "b045d8a4fb42f88c"
             ],
             [
                 "92223f692f35cb26"
@@ -1619,8 +1616,8 @@
         ],
         "outputs": 1,
         "useDifferentColor": false,
-        "x": 1590,
-        "y": 600,
+        "x": 1770,
+        "y": 500,
         "wires": [
             []
         ]
@@ -1662,8 +1659,8 @@
         ],
         "outputs": 1,
         "useDifferentColor": false,
-        "x": 1590,
-        "y": 560,
+        "x": 1770,
+        "y": 460,
         "wires": [
             []
         ]
@@ -1705,8 +1702,8 @@
         ],
         "outputs": 1,
         "useDifferentColor": false,
-        "x": 1570,
-        "y": 720,
+        "x": 1750,
+        "y": 620,
         "wires": [
             []
         ]
@@ -1748,8 +1745,8 @@
         ],
         "outputs": 1,
         "useDifferentColor": false,
-        "x": 1580,
-        "y": 760,
+        "x": 1760,
+        "y": 660,
         "wires": [
             []
         ]
@@ -1791,8 +1788,8 @@
         ],
         "outputs": 1,
         "useDifferentColor": false,
-        "x": 1580,
-        "y": 800,
+        "x": 1760,
+        "y": 700,
         "wires": [
             []
         ]
@@ -1917,8 +1914,8 @@
         ],
         "seg1": "",
         "seg2": "",
-        "x": 1590,
-        "y": 640,
+        "x": 1770,
+        "y": 540,
         "wires": []
     },
     {
@@ -1933,8 +1930,8 @@
         "round": true,
         "property": "payload",
         "name": "0-10V to 0-100%",
-        "x": 1250,
-        "y": 600,
+        "x": 1430,
+        "y": 500,
         "wires": [
             [
                 "f365221255015580"
@@ -1945,19 +1942,20 @@
         "id": "cb9df7afd13d2a46",
         "type": "range",
         "z": "6a163fc1071c16f5",
-        "minin": "32767",
+        "minin": "39320.7",
         "maxin": "65535",
         "minout": "0",
-        "maxout": "120",
+        "maxout": "10",
         "action": "clamp",
         "round": false,
         "property": "payload",
-        "name": "0-5V to 0-120 (16bits)",
-        "x": 1260,
-        "y": 840,
+        "name": "1-5V to 0-10 (16bits)",
+        "x": 1440,
+        "y": 740,
         "wires": [
             [
-                "f4a46745c1d41e44"
+                "11c3d4e5e8d7f5bf",
+                "dcc9f8f8aac9c86e"
             ]
         ]
     },
@@ -1973,8 +1971,8 @@
         "round": false,
         "property": "payload",
         "name": "0-5V to 0-250 (16bits)",
-        "x": 1260,
-        "y": 880,
+        "x": 1440,
+        "y": 780,
         "wires": [
             [
                 "292a88c840387444"
@@ -1993,8 +1991,8 @@
         "round": false,
         "property": "payload",
         "name": "0-5V to 0-100 (16bits)",
-        "x": 1260,
-        "y": 920,
+        "x": 1440,
+        "y": 820,
         "wires": [
             [
                 "61dd863a9550e3d8"
@@ -2006,18 +2004,19 @@
         "type": "range",
         "z": "6a163fc1071c16f5",
         "minin": "32767",
-        "maxin": "65535",
+        "maxin": "39320.6",
         "minout": "-1",
-        "maxout": "10",
+        "maxout": "0",
         "action": "clamp",
         "round": false,
         "property": "payload",
-        "name": "0-5V to -1-10 (16bits)",
-        "x": 1260,
-        "y": 800,
+        "name": "0-1V to -1-0 (16bits)",
+        "x": 1440,
+        "y": 700,
         "wires": [
             [
-                "11c3d4e5e8d7f5bf"
+                "11c3d4e5e8d7f5bf",
+                "749963fc2563a527"
             ]
         ]
     },
@@ -2033,8 +2032,8 @@
         "round": false,
         "property": "payload",
         "name": "4-20mA to 0-5 (16bits)",
-        "x": 1260,
-        "y": 760,
+        "x": 1440,
+        "y": 660,
         "wires": [
             [
                 "11c3d4e5e8d7f5bf"
@@ -2078,8 +2077,8 @@
         "round": false,
         "property": "payload",
         "name": "0-5V to 0-120",
-        "x": 1240,
-        "y": 640,
+        "x": 1420,
+        "y": 540,
         "wires": [
             [
                 "f4a46745c1d41e44"
@@ -2098,8 +2097,8 @@
         "round": false,
         "property": "payload",
         "name": "0-5V to 0-250",
-        "x": 1240,
-        "y": 680,
+        "x": 1420,
+        "y": 580,
         "wires": [
             [
                 "292a88c840387444"
@@ -2118,13 +2117,137 @@
         "round": false,
         "property": "payload",
         "name": "0-5V to 0-100",
-        "x": 1240,
-        "y": 720,
+        "x": 1420,
+        "y": 620,
         "wires": [
             [
                 "61dd863a9550e3d8"
             ]
         ]
+    },
+    {
+        "id": "bc3953e02482fe0f",
+        "type": "switch",
+        "z": "6a163fc1071c16f5",
+        "name": "0-1-5V",
+        "property": "payload",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "btwn",
+                "v": "32767",
+                "vt": "num",
+                "v2": "39320.6",
+                "v2t": "num"
+            },
+            {
+                "t": "btwn",
+                "v": "39320.7",
+                "vt": "num",
+                "v2": "65535",
+                "v2t": "num"
+            }
+        ],
+        "checkall": "false",
+        "repair": false,
+        "outputs": 2,
+        "x": 1130,
+        "y": 700,
+        "wires": [
+            [
+                "c82840fd68181f98",
+                "24525e7930527e12"
+            ],
+            [
+                "cb9df7afd13d2a46",
+                "ee61612aff8b4154"
+            ]
+        ]
+    },
+    {
+        "id": "c69a7735b3bcc140",
+        "type": "debug",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload",
+        "statusType": "auto",
+        "x": 620,
+        "y": 800,
+        "wires": []
+    },
+    {
+        "id": "24525e7930527e12",
+        "type": "debug",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload",
+        "statusType": "auto",
+        "x": 1160,
+        "y": 860,
+        "wires": []
+    },
+    {
+        "id": "ee61612aff8b4154",
+        "type": "debug",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload",
+        "statusType": "auto",
+        "x": 1320,
+        "y": 940,
+        "wires": []
+    },
+    {
+        "id": "749963fc2563a527",
+        "type": "debug",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload",
+        "statusType": "auto",
+        "x": 1540,
+        "y": 880,
+        "wires": []
+    },
+    {
+        "id": "dcc9f8f8aac9c86e",
+        "type": "debug",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload",
+        "statusType": "auto",
+        "x": 1610,
+        "y": 940,
+        "wires": []
     },
     {
         "id": "f8aea8534f5e2a70",

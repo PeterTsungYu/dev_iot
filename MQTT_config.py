@@ -30,8 +30,9 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
         for key, value in resp.items():    
             if (key != 'nodered') and (value != None):
                 print(key, value)
-                config.Setup_port.sub_values[key] = float(value)
-                config.Setup_port.sub_events[key].set()
+                if config.Setup_port.sub_values.get(key) != None:
+                    config.Setup_port.sub_values[key] = float(value)
+                    config.Setup_port.sub_events[key].set()
         
     def on_publish(client, userdata, mid):
         print(mid)
