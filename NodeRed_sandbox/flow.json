@@ -23,7 +23,8 @@
         "wires": [
             [
                 "26598d507b65c360",
-                "0a43f1f397c8d9ba"
+                "0a43f1f397c8d9ba",
+                "f29275b3082bb213"
             ]
         ]
     },
@@ -32,7 +33,7 @@
         "type": "debug",
         "z": "6a163fc1071c16f5",
         "name": "RS485_port",
-        "active": false,
+        "active": true,
         "tosidebar": true,
         "console": false,
         "tostatus": true,
@@ -61,7 +62,8 @@
         "wires": [
             [
                 "5f2c53389abeb403",
-                "f1fdd1aafee45046"
+                "f1fdd1aafee45046",
+                "ae7b6be64ad8900c"
             ]
         ]
     },
@@ -99,7 +101,8 @@
         "wires": [
             [
                 "43be0c8349e75c46",
-                "79075ac6fe1986ba"
+                "79075ac6fe1986ba",
+                "d8e21f159bc5088f"
             ]
         ]
     },
@@ -137,7 +140,8 @@
         "wires": [
             [
                 "5a44929e0bc16d26",
-                "995a0561893097a7"
+                "995a0561893097a7",
+                "3fbee3da15cbb852"
             ]
         ]
     },
@@ -175,7 +179,8 @@
         "wires": [
             [
                 "8c91be5f3b4385b8",
-                "5a47d3f9ce3f05c5"
+                "5a47d3f9ce3f05c5",
+                "a6e7d1c0b888d6d8"
             ]
         ]
     },
@@ -305,7 +310,7 @@
         "outputs": 1,
         "useDifferentColor": false,
         "x": 1750,
-        "y": 300,
+        "y": 200,
         "wires": [
             []
         ]
@@ -393,7 +398,7 @@
         "seg1": "",
         "seg2": "",
         "x": 1770,
-        "y": 220,
+        "y": 120,
         "wires": []
     },
     {
@@ -610,7 +615,7 @@
         "outputs": 1,
         "useDifferentColor": false,
         "x": 1780,
-        "y": 340,
+        "y": 240,
         "wires": [
             []
         ]
@@ -696,7 +701,7 @@
         "outputs": 1,
         "useDifferentColor": false,
         "x": 1750,
-        "y": 380,
+        "y": 280,
         "wires": [
             []
         ]
@@ -891,7 +896,7 @@
         "seg1": "",
         "seg2": "",
         "x": 1770,
-        "y": 260,
+        "y": 160,
         "wires": []
     },
     {
@@ -979,7 +984,7 @@
         "type": "ui_form",
         "z": "6a163fc1071c16f5",
         "name": "",
-        "label": "Manual Input",
+        "label": "Manual_Input",
         "group": "f7b9b84f65a2452b",
         "order": 1,
         "width": 15,
@@ -1042,12 +1047,13 @@
         "topic": "topic",
         "topicType": "msg",
         "splitLayout": false,
-        "x": 130,
+        "x": 140,
         "y": 1220,
         "wires": [
             [
                 "3ff900278a33d6b7",
-                "475359a0de6904e8"
+                "475359a0de6904e8",
+                "cc12a6ad4edd086b"
             ]
         ]
     },
@@ -2250,6 +2256,315 @@
         "wires": []
     },
     {
+        "id": "f29275b3082bb213",
+        "type": "change",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "RS485_port",
+                "pt": "flow",
+                "to": "payload",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 380,
+        "y": 280,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "3fbee3da15cbb852",
+        "type": "change",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "Setup_port",
+                "pt": "flow",
+                "to": "payload",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 370,
+        "y": 720,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "cc12a6ad4edd086b",
+        "type": "change",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "Manual_Input",
+                "pt": "flow",
+                "to": "payload",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 360,
+        "y": 1400,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "ae7b6be64ad8900c",
+        "type": "change",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "Scale_port",
+                "pt": "flow",
+                "to": "payload",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 390,
+        "y": 1900,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "d8e21f159bc5088f",
+        "type": "change",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "RS232_port",
+                "pt": "flow",
+                "to": "payload",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 400,
+        "y": 2200,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "a6e7d1c0b888d6d8",
+        "type": "change",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "GPIO_port",
+                "pt": "flow",
+                "to": "payload",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 390,
+        "y": 2460,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "7910a6c11fbfb0ff",
+        "type": "inject",
+        "z": "6a163fc1071c16f5",
+        "name": "Inject to nodered_DB",
+        "props": [
+            {
+                "p": "RS485_port",
+                "v": "RS485_port",
+                "vt": "flow"
+            },
+            {
+                "p": "Setup_port",
+                "v": "Setup_port",
+                "vt": "flow"
+            },
+            {
+                "p": "RS232_port",
+                "v": "RS232_port",
+                "vt": "flow"
+            },
+            {
+                "p": "Scale_port",
+                "v": "Scale_port",
+                "vt": "flow"
+            },
+            {
+                "p": "GPIO_port",
+                "v": "GPIO_port",
+                "vt": "flow"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            },
+            {
+                "p": "payload"
+            },
+            {
+                "p": "Manual_Input",
+                "v": "Manual_Input",
+                "vt": "flow"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "DB",
+        "payload": "0",
+        "payloadType": "str",
+        "x": 180,
+        "y": 2700,
+        "wires": [
+            [
+                "d1ccf059f81d502a"
+            ]
+        ]
+    },
+    {
+        "id": "d1ccf059f81d502a",
+        "type": "function",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "func": "var lst = [msg.Manual_Input, msg.Setup_port, msg.RS485_port, msg.Scale_port, msg.RS232_port, msg.GPIO_port]\nvar len = lst.length;\nmsg.lst = []\n\nfor (var i = 0; i < len; i++) {\n    for (var key in lst[i]) {\n        if (lst[i].hasOwnProperty(key)) {\n            msg.lst.push(lst[i][key])\n        }\n    }\n}\n\nreturn msg",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 2700,
+        "wires": [
+            [
+                "d7c406e4c5287214"
+            ]
+        ]
+    },
+    {
+        "id": "d7c406e4c5287214",
+        "type": "change",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "lst",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 680,
+        "y": 2700,
+        "wires": [
+            [
+                "d4ee87cade5a42b1",
+                "5ce266eb2ad92c53"
+            ]
+        ]
+    },
+    {
+        "id": "5ce266eb2ad92c53",
+        "type": "debug",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload",
+        "statusType": "auto",
+        "x": 910,
+        "y": 2760,
+        "wires": []
+    },
+    {
+        "id": "d4ee87cade5a42b1",
+        "type": "GSheet",
+        "z": "6a163fc1071c16f5",
+        "creds": "700453c3.f1167c",
+        "method": "append",
+        "action": "",
+        "sheet": "1lOTmshcxpiFN5gS1Imb9cQJEx7GGZsbWBz4XVL5EG4w",
+        "cells": "Sheet1",
+        "flatten": false,
+        "name": "",
+        "x": 930,
+        "y": 2700,
+        "wires": [
+            [
+                "5f79f98d048648fe"
+            ]
+        ]
+    },
+    {
+        "id": "5f79f98d048648fe",
+        "type": "debug",
+        "z": "6a163fc1071c16f5",
+        "name": "gsheet",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload",
+        "statusType": "auto",
+        "x": 1070,
+        "y": 2620,
+        "wires": []
+    },
+    {
         "id": "f8aea8534f5e2a70",
         "type": "mqtt-broker",
         "name": "",
@@ -2313,6 +2628,10 @@
         "disp": true,
         "width": 28,
         "collapse": false
+    },
+    {
+        "id": "700453c3.f1167c",
+        "type": "gauth"
     },
     {
         "id": "e427e8a2.33a718",

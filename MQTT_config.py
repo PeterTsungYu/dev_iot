@@ -55,7 +55,7 @@ def multi_pub(client):
                 for key, value in device_port.pub_values.items():
                     payload[key] = value
                 payload = json.dumps(payload)
-                client.publish(topic=f"{device_port.name}", payload=payload, qos=0, retain=True)
+                client.publish(topic=f"{device_port.name}", payload=payload, qos=0, retain=False)
                 #print(f"pub f'{device_port.name}_pub':{payload} succeed from {client._client_id} >>> localhost")
 
 #-------------------------MQTT instance--------------------------------------

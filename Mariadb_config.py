@@ -39,9 +39,7 @@ except mariadb.Error as e:
     sys.exit(1)
 
 #-------------------------create table--------------------------------------
-lst_port_Topics = [config.RS485_port, config.RS232_port, config.Scale_port, config.Setup_port, config.GPIO_port]
-
-Table_col = [u + ' FLOAT' for i in lst_port_Topics for u in i.pub_topics]
+Table_col = [u + ' FLOAT' for i in config.lst_ports for u in i.pub_topics + i.sub_topics]
 TableSchema = f'create table platform_{time} (Id int NOT NULL AUTO_INCREMENT,' \
                 + ','.join(Table_col) \
                 + ',PRIMARY KEY (Id))'
@@ -56,7 +54,7 @@ except mariadb.Error as e:
     sys.exit(2)
 
 #-------------------------db func--------------------------------------
-insert_col = [u for i in lst_port_Topics for u in i.pub_topics]
+insert_col = [u for i in config.lst_ports for u in i.pub_topics + i.sub_topics]
 insertSchema = f'INSERT INTO platform_{time} (' \
                 + ','.join(insert_col) \
                 + f') VALUES ({("?,"*len(insert_col))[:-1]})'
@@ -69,7 +67,7 @@ def multi_insert(cur):
                 cur.execute(
                     insertSchema,
                     #tuple(i for i in config.Setup_port.sub_values.values()) + # sub value
-                    tuple(u for i in lst_port_Topics for u in i.pub_values.values()) # pub value
+                    tuple(u for i in config.lst_ports for u in list(i.pub_values.values()) + list(i.sub_values.values())) # pub value
                     )
                 print(f"Successfully added entry to database. Last Inserted ID: {cur.lastrowid}")
             except mariadb.Error as e:
