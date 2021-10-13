@@ -196,7 +196,6 @@ Header_EVA_slave = Slave(
                         idno=Header_EVA_id,
                         port_topics=port_Topics(
                                 sub_topics=[
-                                    'Header_EVA_SV', # Header EVA(Header_EVA_SV)
                                 ],
                                 pub_topics=[
                                     'Header_EVA_PV', # Header EVA(Header_EVA_PV)
@@ -210,12 +209,30 @@ Header_EVA_slave = Slave(
                         )
 Header_EVA_slave.read_rtu('008A', '0001', wait_len=7)
 
+Header_EVA_SET_slave = Slave(
+                        name = 'Header_EVA_SET',
+                        idno=Header_EVA_id,
+                        port_topics=port_Topics(
+                                sub_topics=[
+                                    'Header_EVA_SV', 
+                                ],
+                                pub_topics=[
+                                    'Header_EVA_SET_PV'
+                                ],
+                                err_topics=[
+                                    'Header_EVA_SET_collect_err', 'Header_EVA_SET_set_err', 'Header_EVA_SET_analyze_err',
+                                ]
+                                ),
+                        comm_func=Modbus.Modbus_Comm,
+                        analyze_func=Modbus.TCHeader_analyze
+                        )
+Header_EVA_SET_slave.read_rtu('0000', '0001', wait_len=7)
+
 Header_BR_slave = Slave(
                         name='Header_BR',
                         idno=Header_BR_id, 
                         port_topics=port_Topics(
                                 sub_topics=[
-                                    'Header_BR_SV', # Header BR(Header_BR_SV)
                                 ],
                                 pub_topics=[
                                     'Header_BR_PV', # Header BR(Header_BR_PV)
@@ -228,6 +245,25 @@ Header_BR_slave = Slave(
                         analyze_func=Modbus.TCHeader_analyze
                         )
 Header_BR_slave.read_rtu('008A', '0001', wait_len=7)
+
+Header_BR_SET_slave = Slave(
+                        name='Header_BR_SET',
+                        idno=Header_BR_id, 
+                        port_topics=port_Topics(
+                                sub_topics=[
+                                    'Header_BR_SV', # Header BR(Header_BR_SV)
+                                ],
+                                pub_topics=[
+                                    'Header_BR_SET_PV' # Header BR(Header_BR_PV)
+                                ],
+                                err_topics=[
+                                    'Header_BR_SET_collect_err', 'Header_BR_SET_set_err', 'Header_BR_SET_analyze_err',
+                                ]
+                                ),
+                        comm_func=Modbus.Modbus_Comm,
+                        analyze_func=Modbus.TCHeader_analyze
+                        )
+Header_BR_SET_slave.read_rtu('0000', '0001', wait_len=7)
 
 # ADAM_SET_slave, RTU func code 03, channel site at '0000-0003', data_len is 4 ('0004')
 ## ch00:+-10V, ch01:0-5V, ch02:0-5V, ch03:0-5V
@@ -338,6 +374,8 @@ Setup_port = device_port(
                         Header_BR_slave,
                         ADAM_SET_slave,
                         ADAM_READ_slave,
+                        Header_EVA_SET_slave,
+                        Header_BR_SET_slave,
                         name='Setup_port',
                         port=serial.Serial(port=Setup_port_path,
                                             baudrate=115200, 

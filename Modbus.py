@@ -15,7 +15,7 @@ import params
 
 #------------------------------Logger---------------------------------
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.CRITICAL)
 formatter = logging.Formatter(
 	'[%(levelname)s %(asctime)s %(module)s:%(lineno)d] %(message)s',
 	datefmt='%Y%m%d %H:%M:%S')
@@ -171,8 +171,8 @@ def Modbus_Comm(start, device_port, slave):
                     crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
                     # check sta, func code, datalen, crc
                     if (crc[-2:] + crc[:2]) == readings[-4:]:
-                        slave.lst_readings.append(readings)
-                        logging.info(f'Read from slave_{slave.name}')
+                        logging.critical(readings)
+                        logging.critical(f'Read from slave_{slave.name}')
                         device_port.sub_events[topic].clear()
                     else:
                         set_err[0] += 1
