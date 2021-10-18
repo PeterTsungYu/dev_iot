@@ -15,9 +15,6 @@
         "qos": "0",
         "datatype": "json",
         "broker": "f8aea8534f5e2a70",
-        "nl": false,
-        "rap": true,
-        "rh": 0,
         "x": 130,
         "y": 100,
         "wires": [
@@ -54,9 +51,6 @@
         "qos": "0",
         "datatype": "json",
         "broker": "f8aea8534f5e2a70",
-        "nl": false,
-        "rap": true,
-        "rh": 0,
         "x": 140,
         "y": 1800,
         "wires": [
@@ -93,9 +87,6 @@
         "qos": "0",
         "datatype": "json",
         "broker": "f8aea8534f5e2a70",
-        "nl": false,
-        "rap": true,
-        "rh": 0,
         "x": 150,
         "y": 2040,
         "wires": [
@@ -132,9 +123,6 @@
         "qos": "0",
         "datatype": "json",
         "broker": "f8aea8534f5e2a70",
-        "nl": false,
-        "rap": true,
-        "rh": 0,
         "x": 120,
         "y": 440,
         "wires": [
@@ -171,9 +159,6 @@
         "qos": "0",
         "datatype": "json",
         "broker": "f8aea8534f5e2a70",
-        "nl": false,
-        "rap": true,
-        "rh": 0,
         "x": 140,
         "y": 2320,
         "wires": [
@@ -211,7 +196,6 @@
         "noerr": 0,
         "initialize": "",
         "finalize": "",
-        "libs": [],
         "x": 360,
         "y": 1840,
         "wires": [
@@ -231,7 +215,6 @@
         "noerr": 0,
         "initialize": "",
         "finalize": "",
-        "libs": [],
         "x": 340,
         "y": 180,
         "wires": [
@@ -278,7 +261,7 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "297f87ae35596935",
-        "order": 20,
+        "order": 17,
         "width": 18,
         "height": 5,
         "label": "Burner",
@@ -321,7 +304,7 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "62c1eaa282dd444b",
-        "order": 2,
+        "order": 4,
         "width": 4,
         "height": 4,
         "gtype": "gage",
@@ -381,7 +364,7 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "297f87ae35596935",
-        "order": 2,
+        "order": 1,
         "width": 5,
         "height": 4,
         "gtype": "gage",
@@ -411,7 +394,6 @@
         "noerr": 0,
         "initialize": "",
         "finalize": "",
-        "libs": [],
         "x": 360,
         "y": 2100,
         "wires": [
@@ -441,7 +423,7 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "62c1eaa282dd444b",
-        "order": 4,
+        "order": 6,
         "width": 12,
         "height": 10,
         "label": "Gas Comp",
@@ -484,7 +466,7 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "62c1eaa282dd444b",
-        "order": 1,
+        "order": 2,
         "width": 4,
         "height": 4,
         "gtype": "gage",
@@ -531,7 +513,6 @@
         "noerr": 0,
         "initialize": "",
         "finalize": "",
-        "libs": [],
         "x": 340,
         "y": 560,
         "wires": [
@@ -591,7 +572,7 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "297f87ae35596935",
-        "order": 22,
+        "order": 18,
         "width": 18,
         "height": 5,
         "label": "Steam Reformer",
@@ -677,7 +658,7 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "297f87ae35596935",
-        "order": 23,
+        "order": 19,
         "width": 18,
         "height": 5,
         "label": "RAD",
@@ -724,7 +705,6 @@
         "noerr": 0,
         "initialize": "",
         "finalize": "",
-        "libs": [],
         "x": 360,
         "y": 2380,
         "wires": [
@@ -742,7 +722,7 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "62c1eaa282dd444b",
-        "order": 8,
+        "order": 16,
         "width": 12,
         "height": 6,
         "label": "DFM",
@@ -825,43 +805,6 @@
         ]
     },
     {
-        "id": "649fad890e7da93e",
-        "type": "ui_table",
-        "z": "6a163fc1071c16f5",
-        "group": "297f87ae35596935",
-        "name": "Sum Table",
-        "order": 21,
-        "width": 10,
-        "height": "16",
-        "columns": [
-            {
-                "field": "topic",
-                "title": "Topic",
-                "width": "40px",
-                "align": "center",
-                "formatter": "plaintext",
-                "formatterParams": {
-                    "target": "_blank"
-                }
-            },
-            {
-                "field": "value",
-                "title": "Value",
-                "width": "60px",
-                "align": "center",
-                "formatter": "plaintext",
-                "formatterParams": {
-                    "target": "_blank"
-                }
-            }
-        ],
-        "outputs": 0,
-        "cts": false,
-        "x": 1430,
-        "y": 120,
-        "wires": []
-    },
-    {
         "id": "593d22a449df6429",
         "type": "function",
         "z": "6a163fc1071c16f5",
@@ -871,7 +814,6 @@
         "noerr": 0,
         "initialize": "",
         "finalize": "",
-        "libs": [],
         "x": 1260,
         "y": 120,
         "wires": [
@@ -887,7 +829,7 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "297f87ae35596935",
-        "order": 4,
+        "order": 3,
         "width": 5,
         "height": 4,
         "gtype": "gage",
@@ -913,7 +855,7 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "297f87ae35596935",
-        "order": 6,
+        "order": 5,
         "width": 5,
         "height": 4,
         "gtype": "gage",
@@ -942,9 +884,7 @@
         "qos": "0",
         "datatype": "auto",
         "broker": "f8aea8534f5e2a70",
-        "nl": false,
-        "rap": false,
-        "x": 370,
+        "x": 350,
         "y": 1540,
         "wires": [
             [
@@ -977,11 +917,6 @@
         "topic": "nodered_port",
         "qos": "0",
         "retain": "true",
-        "respTopic": "",
-        "contentType": "",
-        "userProps": "",
-        "correl": "",
-        "expiry": "",
         "broker": "f8aea8534f5e2a70",
         "x": 1840,
         "y": 1100,
@@ -1599,7 +1534,7 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "f7b9b84f65a2452b",
-        "order": 4,
+        "order": 3,
         "width": 6,
         "height": 6,
         "label": "Header_BR",
@@ -1642,7 +1577,7 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "f7b9b84f65a2452b",
-        "order": 2,
+        "order": 4,
         "width": 6,
         "height": 6,
         "label": "Header_EVA",
@@ -1685,7 +1620,7 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "f7b9b84f65a2452b",
-        "order": 30,
+        "order": 19,
         "width": 6,
         "height": 6,
         "label": "Pump",
@@ -1728,7 +1663,7 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "f7b9b84f65a2452b",
-        "order": 16,
+        "order": 11,
         "width": 6,
         "height": 6,
         "label": "250 MFC",
@@ -1771,7 +1706,7 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "f7b9b84f65a2452b",
-        "order": 18,
+        "order": 12,
         "width": 6,
         "height": 6,
         "label": "100 MFC",
@@ -1912,7 +1847,7 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "f7b9b84f65a2452b",
-        "order": 32,
+        "order": 20,
         "width": 6,
         "height": 6,
         "gtype": "gage",
@@ -2467,7 +2402,6 @@
         "noerr": 0,
         "initialize": "",
         "finalize": "",
-        "libs": [],
         "x": 440,
         "y": 2700,
         "wires": [
@@ -2592,107 +2526,13 @@
         "wires": []
     },
     {
-        "id": "f96fc2e90652bd87",
-        "type": "ui_countdown_timer_switch",
-        "z": "6a163fc1071c16f5",
-        "name": "",
-        "label": "",
-        "group": "f7b9b84f65a2452b",
-        "order": 42,
-        "width": "10",
-        "height": "5",
-        "countdowns": [
-            "0.2",
-            "10",
-            "15",
-            "30"
-        ],
-        "onvalue": "true",
-        "onvalueType": "bool",
-        "offvalue": "false",
-        "offvalueType": "bin",
-        "topic": "",
-        "outputState": "",
-        "showDropdown": true,
-        "x": 270,
-        "y": 2900,
-        "wires": [
-            [
-                "0b10af9944c5a26d",
-                "7edc5c30cd689585"
-            ]
-        ]
-    },
-    {
-        "id": "4673808a2cd3d0f0",
-        "type": "debug",
-        "z": "6a163fc1071c16f5",
-        "name": "",
-        "active": true,
-        "tosidebar": true,
-        "console": false,
-        "tostatus": true,
-        "complete": "payload",
-        "targetType": "msg",
-        "statusVal": "payload",
-        "statusType": "auto",
-        "x": 670,
-        "y": 2920,
-        "wires": []
-    },
-    {
-        "id": "0b10af9944c5a26d",
-        "type": "ui_toast",
-        "z": "6a163fc1071c16f5",
-        "position": "dialog",
-        "displayTime": "3",
-        "highlight": "",
-        "sendall": true,
-        "outputs": 1,
-        "ok": "OK",
-        "cancel": "",
-        "raw": false,
-        "topic": "",
-        "name": "",
-        "x": 610,
-        "y": 2820,
-        "wires": [
-            []
-        ]
-    },
-    {
-        "id": "7edc5c30cd689585",
-        "type": "switch",
-        "z": "6a163fc1071c16f5",
-        "name": "",
-        "property": "payload",
-        "propertyType": "msg",
-        "rules": [
-            {
-                "t": "eq",
-                "v": "",
-                "vt": "str"
-            }
-        ],
-        "checkall": "true",
-        "repair": false,
-        "outputs": 1,
-        "x": 440,
-        "y": 2900,
-        "wires": [
-            [
-                "4673808a2cd3d0f0"
-            ]
-        ]
-    },
-    {
         "id": "61c42647b765e6bc",
         "type": "ui_text",
         "z": "6a163fc1071c16f5",
         "group": "f7b9b84f65a2452b",
-        "order": 43,
-        "width": "4",
-        "height": "2",
+        "order": 27,
+        "width": 4,
+        "height": 2,
         "name": "",
         "label": "text",
         "format": "{{msg.payload}}",
@@ -2722,6 +2562,43 @@
         ]
     },
     {
+        "id": "649fad890e7da93e",
+        "type": "ui_table",
+        "z": "6a163fc1071c16f5",
+        "group": "297f87ae35596935",
+        "name": "Sum Table",
+        "order": 7,
+        "width": 10,
+        "height": 16,
+        "columns": [
+            {
+                "field": "topic",
+                "title": "Topic",
+                "width": "40px",
+                "align": "center",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            },
+            {
+                "field": "value",
+                "title": "Value",
+                "width": "60px",
+                "align": "center",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            }
+        ],
+        "outputs": 0,
+        "cts": false,
+        "x": 1430,
+        "y": 120,
+        "wires": []
+    },
+    {
         "id": "f8aea8534f5e2a70",
         "type": "mqtt-broker",
         "name": "",
@@ -2729,22 +2606,17 @@
         "port": "1883",
         "clientid": "RPi",
         "usetls": false,
-        "protocolVersion": "4",
         "keepalive": "60",
         "cleansession": true,
         "birthTopic": "",
         "birthQos": "0",
         "birthPayload": "",
-        "birthMsg": {},
         "closeTopic": "",
         "closeQos": "0",
         "closePayload": "",
-        "closeMsg": {},
         "willTopic": "",
         "willQos": "0",
-        "willPayload": "",
-        "willMsg": {},
-        "sessionExpiry": ""
+        "willPayload": ""
     },
     {
         "id": "297f87ae35596935",
