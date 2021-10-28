@@ -15,7 +15,7 @@ import params
 
 #------------------------------Logger---------------------------------
 logger = logging.getLogger()
-logger.setLevel(logging.CRITICAL)
+logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter(
 	'[%(levelname)s %(asctime)s %(module)s:%(lineno)d] %(message)s',
 	datefmt='%Y%m%d %H:%M:%S')
@@ -109,8 +109,12 @@ def Modbus_Comm(start, device_port, slave):
     port = device_port.port
     collect_err = device_port.err_values.get(f'{slave.name}_collect_err')
     set_err = device_port.err_values.get(f'{slave.name}_set_err')
+    re_collect = device_port.recur_count.get(f'{slave.name}_collect_err')
+    re_set = device_port.recur_count.get(f'{slave.name}_set_err')
     try: # try to collect
         collect_err[1] += 1
+        #logging.debug(slave.r_rtu)
+        #logging.debug(bytes.fromhex(slave.r_rtu))
         port.write(bytes.fromhex(slave.r_rtu)) #hex to binary(byte) 
         slave.time_readings = time.time()-start
         time.sleep(params.time_out)
@@ -124,8 +128,8 @@ def Modbus_Comm(start, device_port, slave):
                 logging.info(f'Read from slave_{slave.name}')
             else:    
                 re = hex(int(slave.id))[2:].zfill(2) + '03' + hex(slave.r_wait_len-5)[2:].zfill(2)
-                #logging.debug(re)
-                if readings.index(re):
+                #logging.debug(readings.index(re))
+                if readings.index(re) >= 0:
                     readings = readings[readings.index(re):(readings.index(re)+slave.r_wait_len*2)]
                 logging.debug(readings)
                 crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
@@ -138,6 +142,14 @@ def Modbus_Comm(start, device_port, slave):
                     collect_err[0] += 1
                     err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: crc validation failed"
                     logging.error(err_msg)
+        elif port.inWaiting() == 0:
+            # recursive part if the rtu was transferred but crushed in between the lines
+            collect_err[2] += 1
+            err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: wrong rtu code led to null receiving"
+            logging.error(err_msg)
+            if re_collect[0] < 3:
+                re_collect[0] += 1
+                Modbus_Comm(start, device_port, slave)
         else: # if data len is less than the wait data
             collect_err[0] += 1
             err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: data len is less than the wait data"

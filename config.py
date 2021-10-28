@@ -53,6 +53,7 @@ class device_port:
         self.sub_events = {}
         self.pub_values = {}
         self.err_values = {}
+        self.recur_count = {}
         self.thread_funcs = []
 
         for _slave in slaves:
@@ -65,7 +66,8 @@ class device_port:
                 self.pub_values[topic] = 0
             for topic in _slave.port_topics.err_topics:
                 self.err_topics.append(topic)
-                self.err_values[topic] = [0,0] #[err, click_throu]
+                self.err_values[topic] = [0,0,0] #[err, click_throu, recur]
+                self.recur_count[topic] = [0]
     
     def serial_funcs(self, start): 
         def thread_func():
