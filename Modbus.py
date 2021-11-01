@@ -282,14 +282,14 @@ def DFM_AOG_data_analyze(start, device_port, slave, **kwargs):
             
 
 @kb_event
-@sampling_event(params.sample_time_Scale)
+@sampling_event(params.sample_time)
 @analyze_decker
 def Scale_data_analyze(start, device_port, slave, **kwargs):
     _lst_readings = kwargs.get('_lst_readings')
     _time_readings = kwargs.get('_time_readings')
-    _lst_readings = [sum(i)/len(i) for i in _lst_readings] # average for 1s' data
-    _lst_readings = round((_lst_readings[-1] - _lst_readings[0]) / params.sample_time_Scale, 3) # average for 1min's data
-    _readings = tuple([round(_time_readings, 2), _lst_readings])
+    _arr_readings = np.array([sum(i)/len(i) for i in _lst_readings])
+    _lst_readings = tuple([np.sum(_arr_readings) / len(_lst_readings)])
+    _readings = tuple([round(_time_readings,2)]) + _lst_readings
     return _readings
 
 @kb_event

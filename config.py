@@ -394,7 +394,7 @@ GPIO_port = device_port(DFM_slave,
 
 lst_ports = [
             RS485_port,
-            #Scale_port, 
+            Scale_port, 
             #RS232_port, 
             Setup_port,
             #GPIO_port

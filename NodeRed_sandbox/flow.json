@@ -216,8 +216,8 @@
         "y": 2180,
         "wires": [
             [
-                "9daf6c2a6bc219eb",
-                "a71e4673f1e889a4"
+                "a71e4673f1e889a4",
+                "84870f91da3b195e"
             ]
         ]
     },
@@ -240,14 +240,16 @@
                 "c2c2ed170de59b86",
                 "203d37f9ddb4802e",
                 "50c986e369021ea9",
-                "889848a66b05c462"
+                "889848a66b05c462",
+                "602c8120e9c2570c"
             ],
             [
                 "3190e9946ec35f0a",
                 "c2c2ed170de59b86",
                 "203d37f9ddb4802e",
                 "50c986e369021ea9",
-                "ccceb26666efdecc"
+                "ccceb26666efdecc",
+                "aef9e7d008a35a04"
             ],
             [
                 "3190e9946ec35f0a",
@@ -261,8 +263,7 @@
                 "15a7d709a5b4456c",
                 "203d37f9ddb4802e",
                 "50c986e369021ea9",
-                "4ed8eb208c82bf28",
-                "602c8120e9c2570c"
+                "4ed8eb208c82bf28"
             ],
             [
                 "15a7d709a5b4456c",
@@ -328,32 +329,6 @@
         "wires": [
             []
         ]
-    },
-    {
-        "id": "9daf6c2a6bc219eb",
-        "type": "ui_gauge",
-        "z": "6a163fc1071c16f5",
-        "name": "",
-        "group": "62c1eaa282dd444b",
-        "order": 2,
-        "width": 4,
-        "height": 4,
-        "gtype": "gage",
-        "title": "Scale",
-        "label": "g/min",
-        "format": "{{value}}",
-        "min": 0,
-        "max": "15",
-        "colors": [
-            "#00b500",
-            "#e6e600",
-            "#ca3838"
-        ],
-        "seg1": "",
-        "seg2": "",
-        "x": 550,
-        "y": 2180,
-        "wires": []
     },
     {
         "id": "a71e4673f1e889a4",
@@ -1386,11 +1361,16 @@
                 "t": "gt",
                 "v": "250",
                 "vt": "num"
+            },
+            {
+                "t": "gt",
+                "v": "200",
+                "vt": "num"
             }
         ],
-        "checkall": "false",
+        "checkall": "true",
         "repair": false,
-        "outputs": 4,
+        "outputs": 5,
         "x": 740,
         "y": 1640,
         "wires": [
@@ -1405,6 +1385,9 @@
             ],
             [
                 "92223f692f35cb26"
+            ],
+            [
+                "252793267f40f674"
             ]
         ]
     },
@@ -2670,7 +2653,7 @@
         "z": "6a163fc1071c16f5",
         "group": "4cb03dd4e1bf63fb",
         "name": "Sum Table",
-        "order": 42,
+        "order": 20,
         "width": 10,
         "height": 6,
         "columns": [
@@ -2726,7 +2709,7 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "4cb03dd4e1bf63fb",
-        "order": 39,
+        "order": 17,
         "width": 20,
         "height": 12,
         "label": "TC_BW chart",
@@ -2738,7 +2721,7 @@
         "dot": false,
         "ymin": "",
         "ymax": "",
-        "removeOlder": "60",
+        "removeOlder": "120",
         "removeOlderPoints": "",
         "removeOlderUnit": "60",
         "cutout": 0,
@@ -2769,8 +2752,8 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "4cb03dd4e1bf63fb",
-        "order": 12,
-        "width": 5,
+        "order": 8,
+        "width": 7,
         "height": 6,
         "gtype": "gage",
         "title": "Lambda Sensor",
@@ -2870,7 +2853,7 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "4cb03dd4e1bf63fb",
-        "order": 40,
+        "order": 18,
         "width": 5,
         "height": 6,
         "label": "Pump",
@@ -2913,7 +2896,7 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "4cb03dd4e1bf63fb",
-        "order": 41,
+        "order": 19,
         "width": 5,
         "height": 6,
         "label": "250 MFC",
@@ -2976,9 +2959,9 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "4cb03dd4e1bf63fb",
-        "order": 8,
-        "width": 5,
-        "height": 6,
+        "order": 6,
+        "width": 7,
+        "height": 3,
         "gtype": "gage",
         "title": "BR outlet",
         "label": "oC",
@@ -3002,9 +2985,9 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "4cb03dd4e1bf63fb",
-        "order": 10,
-        "width": 5,
-        "height": 6,
+        "order": 12,
+        "width": 7,
+        "height": 3,
         "gtype": "gage",
         "title": "SR cat inlet ",
         "label": "oC",
@@ -3047,8 +3030,8 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "4cb03dd4e1bf63fb",
-        "order": 6,
-        "width": 5,
+        "order": 4,
+        "width": 7,
         "height": 6,
         "gtype": "wave",
         "title": "TC10",
@@ -3106,7 +3089,8 @@
         "y": 220,
         "wires": [
             [
-                "5b48da7e287904b7"
+                "5b48da7e287904b7",
+                "97f322aa73902575"
             ]
         ]
     },
@@ -3153,15 +3137,15 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "4cb03dd4e1bf63fb",
-        "order": 4,
-        "width": 5,
-        "height": 6,
+        "order": 7,
+        "width": 8,
+        "height": 3,
         "gtype": "donut",
         "title": "Burner Temp Rate",
         "label": "oC/s",
         "format": "{{value}}",
-        "min": "-20",
-        "max": "20",
+        "min": "-10",
+        "max": "10",
         "colors": [
             "#00b500",
             "#e6e600",
@@ -3184,10 +3168,8 @@
         "width": 30,
         "height": 1,
         "countdowns": [
-            "30",
-            "45",
-            "60",
-            "0.1"
+            "4",
+            "45"
         ],
         "onvalue": "Start to count down",
         "onvalueType": "str",
@@ -3239,9 +3221,15 @@
         "x": 430,
         "y": 200,
         "wires": [
-            [],
-            [],
-            []
+            [
+                "7a3e2ff5aa959c0e"
+            ],
+            [
+                "d2d51ef1e38c9ea3"
+            ],
+            [
+                "a43f58632a92bd4b"
+            ]
         ]
     },
     {
@@ -3321,10 +3309,354 @@
         "x": 420,
         "y": 280,
         "wires": [
-            [],
-            [],
+            [
+                "0f5b40e44dd8d2f9"
+            ],
+            [
+                "5ee7b9ba5da71e9f"
+            ],
+            [
+                "7668c71724e71cbb"
+            ]
+        ]
+    },
+    {
+        "id": "97f322aa73902575",
+        "type": "debug",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload",
+        "statusType": "auto",
+        "x": 1290,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "d2d51ef1e38c9ea3",
+        "type": "ui_toast",
+        "z": "6a163fc1071c16f5",
+        "position": "dialog",
+        "displayTime": "3",
+        "highlight": "",
+        "sendall": true,
+        "outputs": 1,
+        "ok": "OK",
+        "cancel": "",
+        "raw": false,
+        "topic": "",
+        "name": "",
+        "x": 670,
+        "y": 200,
+        "wires": [
             []
         ]
+    },
+    {
+        "id": "7a3e2ff5aa959c0e",
+        "type": "debug",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload",
+        "statusType": "auto",
+        "x": 670,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "a43f58632a92bd4b",
+        "type": "debug",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload",
+        "statusType": "auto",
+        "x": 670,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "0f5b40e44dd8d2f9",
+        "type": "debug",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload",
+        "statusType": "auto",
+        "x": 640,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "7668c71724e71cbb",
+        "type": "debug",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload",
+        "statusType": "auto",
+        "x": 650,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "5ee7b9ba5da71e9f",
+        "type": "debug",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload",
+        "statusType": "auto",
+        "x": 840,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "aef9e7d008a35a04",
+        "type": "batch",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "mode": "interval",
+        "count": 10,
+        "overlap": 0,
+        "interval": "12",
+        "allowEmptySequence": true,
+        "topics": [],
+        "x": 970,
+        "y": 180,
+        "wires": [
+            [
+                "eebfc37064e825d6"
+            ]
+        ]
+    },
+    {
+        "id": "eebfc37064e825d6",
+        "type": "join",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "mode": "auto",
+        "build": "object",
+        "property": "payload",
+        "propertyType": "msg",
+        "key": "topic",
+        "joiner": "\\n",
+        "joinerType": "str",
+        "accumulate": "false",
+        "timeout": "",
+        "count": "",
+        "reduceRight": false,
+        "x": 1130,
+        "y": 180,
+        "wires": [
+            [
+                "d52cfed26a6b6caf"
+            ]
+        ]
+    },
+    {
+        "id": "d52cfed26a6b6caf",
+        "type": "function",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "func": "msg.payload = (msg.payload[msg.payload.length - 1] - msg.payload[0]) / 10\nmsg.payload = parseFloat(msg.payload).toFixed(2)\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1300,
+        "y": 180,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "81fc52b02be9fbf9",
+        "type": "ui_gauge",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "group": "4cb03dd4e1bf63fb",
+        "order": 13,
+        "width": 8,
+        "height": 3,
+        "gtype": "donut",
+        "title": "SR_inlet Temp Rate",
+        "label": "oC/s",
+        "format": "{{value}}",
+        "min": "-10",
+        "max": "10",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "x": 1780,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "252793267f40f674",
+        "type": "ui_toast",
+        "z": "6a163fc1071c16f5",
+        "position": "dialog",
+        "displayTime": "3",
+        "highlight": "",
+        "sendall": true,
+        "outputs": 1,
+        "ok": "Noticed",
+        "cancel": "",
+        "raw": false,
+        "topic": "",
+        "name": "BW reformer air 200LPM max",
+        "x": 1270,
+        "y": 1780,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "9daf6c2a6bc219eb",
+        "type": "ui_gauge",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "group": "62c1eaa282dd444b",
+        "order": 2,
+        "width": 4,
+        "height": 4,
+        "gtype": "gage",
+        "title": "Scale",
+        "label": "g/min",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "15",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "x": 1050,
+        "y": 2180,
+        "wires": []
+    },
+    {
+        "id": "84870f91da3b195e",
+        "type": "batch",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "mode": "interval",
+        "count": 10,
+        "overlap": 0,
+        "interval": "12",
+        "allowEmptySequence": true,
+        "topics": [],
+        "x": 551.6666870117188,
+        "y": 2180.333251953125,
+        "wires": [
+            [
+                "9d691e7fa6e384e8"
+            ]
+        ]
+    },
+    {
+        "id": "9d691e7fa6e384e8",
+        "type": "join",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "mode": "auto",
+        "build": "object",
+        "property": "payload",
+        "propertyType": "msg",
+        "key": "topic",
+        "joiner": "\\n",
+        "joinerType": "str",
+        "accumulate": true,
+        "timeout": "",
+        "count": "",
+        "reduceRight": false,
+        "reduceExp": "",
+        "reduceInit": "",
+        "reduceInitType": "",
+        "reduceFixup": "",
+        "x": 711.6666870117188,
+        "y": 2180.333251953125,
+        "wires": [
+            [
+                "6f0f76b13c16620c"
+            ]
+        ]
+    },
+    {
+        "id": "6f0f76b13c16620c",
+        "type": "function",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "func": "msg.payload = (msg.payload[0] - msg.payload[msg.payload.length - 1]) / 10\nmsg.payload = parseFloat(msg.payload).toFixed(2)\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 881.6666870117188,
+        "y": 2180.333251953125,
+        "wires": [
+            [
+                "9daf6c2a6bc219eb",
+                "a9b474eb5c49a695"
+            ]
+        ]
+    },
+    {
+        "id": "a9b474eb5c49a695",
+        "type": "debug",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload",
+        "statusType": "auto",
+        "x": 1200,
+        "y": 2120,
+        "wires": []
     },
     {
         "id": "f8aea8534f5e2a70",
