@@ -15,7 +15,7 @@ import params
 
 #------------------------------Logger---------------------------------
 logger = logging.getLogger()
-logger.setLevel(logging.CRITICAL)
+logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter(
 	'[%(levelname)s %(asctime)s %(module)s:%(lineno)d] %(message)s',
 	datefmt='%Y%m%d %H:%M:%S')
@@ -109,23 +109,27 @@ def Modbus_Comm(start, device_port, slave):
     port = device_port.port
     collect_err = device_port.err_values.get(f'{slave.name}_collect_err')
     set_err = device_port.err_values.get(f'{slave.name}_set_err')
+    re_collect = device_port.recur_count.get(f'{slave.name}_collect_err')
+    re_set = device_port.recur_count.get(f'{slave.name}_set_err')
     try: # try to collect
         collect_err[1] += 1
+        #logging.debug(slave.r_rtu)
+        #logging.debug(bytes.fromhex(slave.r_rtu))
         port.write(bytes.fromhex(slave.r_rtu)) #hex to binary(byte) 
         slave.time_readings = time.time()-start
         time.sleep(params.time_out)
         #logging.debug(port.inWaiting())
-                
-        if port.inWaiting() >= slave.r_wait_len: 
-            readings = port.read(port.inWaiting()).hex() # after reading, the buffer will be clean
+        _data_len = port.inWaiting()
+        if _data_len >= slave.r_wait_len: 
+            readings = port.read(_data_len).hex() # after reading, the buffer will be clean
             #logging.debug(readings)
             if slave.name == 'GA':
                 slave.lst_readings.append(readings)
                 logging.info(f'Read from slave_{slave.name}')
             else:    
                 re = hex(int(slave.id))[2:].zfill(2) + '03' + hex(slave.r_wait_len-5)[2:].zfill(2)
-                #logging.debug(re)
-                if readings.index(re):
+                #logging.debug(readings.index(re))
+                if readings.index(re) >= 0:
                     readings = readings[readings.index(re):(readings.index(re)+slave.r_wait_len*2)]
                 logging.debug(readings)
                 crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
@@ -138,9 +142,18 @@ def Modbus_Comm(start, device_port, slave):
                     collect_err[0] += 1
                     err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: crc validation failed"
                     logging.error(err_msg)
+        elif _data_len == 0:
+            # recursive part if the rtu was transferred but crushed in between the lines
+            collect_err[2] += 1
+            err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: wrong rtu code led to null receiving"
+            logging.error(err_msg)
+            if re_collect[0] < 3:
+                re_collect[0] += 1
+                logging.debug(re_collect)
+                Modbus_Comm(start, device_port, slave)
         else: # if data len is less than the wait data
             collect_err[0] += 1
-            err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: data len is less than the wait data"
+            err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: data len_{_data_len} is less than the wait data"
             logging.error(err_msg)
     except Exception as e:
         collect_err[0] += 1
@@ -160,8 +173,9 @@ def Modbus_Comm(start, device_port, slave):
                 slave.write_rtu(f"{w_data_site:0>4}", device_port.sub_values[topic])
                 port.write(bytes.fromhex(slave.w_rtu)) #hex to binary(byte) 
                 time.sleep(params.time_out)
-                if port.inWaiting() >= slave.w_wait_len:
-                    readings = port.read(port.inWaiting()).hex() # after reading, the buffer will be clean
+                _data_len = port.inWaiting()
+                if _data_len >= slave.w_wait_len:
+                    readings = port.read(_data_len).hex() # after reading, the buffer will be clean
                     #logging.critical(readings)
                     re = hex(int(slave.id))[2:].zfill(2) + '06' + f"{w_data_site:0>4}"
                     #logging.critical(re)
@@ -180,7 +194,7 @@ def Modbus_Comm(start, device_port, slave):
                         logging.error(err_msg)
                 else: # if data len is less than the wait data
                     set_err[0] += 1
-                    err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: data len is less than the wait data"
+                    err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: data len_{_data_len} is less than the wait data"
                     logging.error(err_msg)
             except Exception as e:
                 set_err[0] += 1

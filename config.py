@@ -53,6 +53,7 @@ class device_port:
         self.sub_events = {}
         self.pub_values = {}
         self.err_values = {}
+        self.recur_count = {}
         self.thread_funcs = []
 
         for _slave in slaves:
@@ -65,7 +66,8 @@ class device_port:
                 self.pub_values[topic] = 0
             for topic in _slave.port_topics.err_topics:
                 self.err_topics.append(topic)
-                self.err_values[topic] = [0,0] #[err, click_throu]
+                self.err_values[topic] = [0,0,0] #[err, click_throu, recur]
+                self.recur_count[topic] = [0]
     
     def serial_funcs(self, start): 
         def thread_func():
@@ -296,7 +298,7 @@ ADAM_READ_slave = Slave(
                         port_topics=port_Topics(
                                 sub_topics=[],
                                 pub_topics=[
-                                    'SMC_0_PV', 'SMC_1_PV', 'ADAM_READ_PV2', 'ADAM_READ_PV3', 'ADAM_READ_PV4', 'ADAM_READ_PV5', 'Air_MFC_PV', 'H2_MFC_PV' # ADAM_READ_PV0 (SMC), ADAM_READ_PV1 (SMC), ADAM_READ_PV2, ADAM_READ_PV3, ADAM_READ_PV4(pump), ADAM_READ_PV5(Air_MFC), ADAM_READ_PV6(H2_MFC), ADAM_READ_PV7
+                                    'SMC_0_PV', 'SMC_1_PV', 'ADAM_READ_PV2', 'ADAM_READ_PV3', 'ADAM_READ_PV4', 'Lambda', 'Air_MFC_PV', 'H2_MFC_PV' # ADAM_READ_PV0 (SMC), ADAM_READ_PV1 (SMC), ADAM_READ_PV2, ADAM_READ_PV3, ADAM_READ_PV4(pump), ADAM_READ_PV5(Air_MFC), ADAM_READ_PV6(H2_MFC), ADAM_READ_PV7
                                 ],
                                 err_topics=[
                                     'ADAM_READ_collect_err', 'ADAM_READ_analyze_err',
@@ -391,7 +393,7 @@ GPIO_port = device_port(DFM_slave,
                         )
 
 lst_ports = [
-            #RS485_port,
+            RS485_port,
             #Scale_port, 
             #RS232_port, 
             Setup_port,
