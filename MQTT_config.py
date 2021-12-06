@@ -51,12 +51,13 @@ def multi_pub(client):
     while not params.kb_event.isSet():
         if not params.ticker.wait(params.sample_time):
             for device_port in config.lst_ports:
-                payload = {}
-                for key, value in device_port.pub_values.items():
-                    payload[key] = value
-                payload = json.dumps(payload)
-                client.publish(topic=f"{device_port.name}", payload=payload, qos=0, retain=False)
-                #print(f"pub f'{device_port.name}_pub':{payload} succeed from {client._client_id} >>> localhost")
+                for _slave in device_port.slaves:
+                    payload = {}
+                    for _topic in _slave.port_topics.pub_topics:
+                        payload[_topic] = device_port.pub_values[_topic]
+                    payload = json.dumps(payload)
+                    client.publish(topic=f"{_slave.name}", payload=payload, qos=0, retain=False)
+                    print(f"pub f'{_slave.name}_pub':{payload} succeed from {client._client_id} >>> localhost")
 
 #-------------------------MQTT instance--------------------------------------
 client_0 = connect_mqtt(client_id='client_0' ,hostname='localhost', port=1883, keepalive=60,) 
