@@ -216,7 +216,6 @@
         "y": 2740,
         "wires": [
             [
-                "a71e4673f1e889a4",
                 "84870f91da3b195e"
             ]
         ]
@@ -343,7 +342,7 @@
         "targetType": "full",
         "statusVal": "payload",
         "statusType": "auto",
-        "x": 550,
+        "x": 870,
         "y": 2660,
         "wires": []
     },
@@ -2655,7 +2654,7 @@
         "name": "Sum Table",
         "order": 18,
         "width": 10,
-        "height": 6,
+        "height": 5,
         "columns": [
             {
                 "field": "topic",
@@ -2709,7 +2708,7 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "4cb03dd4e1bf63fb",
-        "order": 15,
+        "order": 14,
         "width": 20,
         "height": 12,
         "label": "TC_BW chart",
@@ -2721,7 +2720,7 @@
         "dot": false,
         "ymin": "",
         "ymax": "",
-        "removeOlder": "120",
+        "removeOlder": "60",
         "removeOlderPoints": "",
         "removeOlderUnit": "60",
         "cutout": 0,
@@ -2797,7 +2796,7 @@
         "type": "function",
         "z": "6a163fc1071c16f5",
         "name": "",
-        "func": "msg.payload = 14.3 * msg.payload + 1.04\nreturn msg;",
+        "func": "msg.payload = 14.3 * msg.payload + 1.04\nmsg.payload = parseFloat(msg.payload).toFixed(2)\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
@@ -2809,7 +2808,7 @@
             [
                 "f4a46745c1d41e44",
                 "c1c50fea4f888a54",
-                "ee95899529d03d38"
+                "abdf14ed5d721bcc"
             ]
         ]
     },
@@ -2848,57 +2847,14 @@
         "wires": []
     },
     {
-        "id": "ee95899529d03d38",
-        "type": "ui_chart",
-        "z": "6a163fc1071c16f5",
-        "name": "",
-        "group": "4cb03dd4e1bf63fb",
-        "order": 16,
-        "width": 5,
-        "height": 6,
-        "label": "Pump",
-        "chartType": "bar",
-        "legend": "false",
-        "xformat": "HH:mm:ss",
-        "interpolate": "linear",
-        "nodata": "",
-        "dot": false,
-        "ymin": "0",
-        "ymax": "12",
-        "removeOlder": 1,
-        "removeOlderPoints": "",
-        "removeOlderUnit": "3600",
-        "cutout": 0,
-        "useOneColor": false,
-        "useUTC": false,
-        "colors": [
-            "#1f77b4",
-            "#aec7e8",
-            "#ff7f0e",
-            "#2ca02c",
-            "#98df8a",
-            "#d62728",
-            "#ff9896",
-            "#9467bd",
-            "#c5b0d5"
-        ],
-        "outputs": 1,
-        "useDifferentColor": false,
-        "x": 1730,
-        "y": 1560,
-        "wires": [
-            []
-        ]
-    },
-    {
         "id": "5ef5eac2e2fd4ba5",
         "type": "ui_chart",
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "4cb03dd4e1bf63fb",
-        "order": 17,
+        "order": 15,
         "width": 5,
-        "height": 6,
+        "height": 7,
         "label": "250 MFC",
         "chartType": "bar",
         "legend": "false",
@@ -2993,14 +2949,14 @@
         "label": "oC",
         "format": "{{value}}",
         "min": 0,
-        "max": "200",
+        "max": "280",
         "colors": [
             "#00b500",
             "#e6e600",
             "#ca3838"
         ],
-        "seg1": "100",
-        "seg2": "150",
+        "seg1": "150",
+        "seg2": "200",
         "x": 1750,
         "y": 1040,
         "wires": []
@@ -3030,7 +2986,7 @@
         "z": "6a163fc1071c16f5",
         "name": "",
         "group": "4cb03dd4e1bf63fb",
-        "order": 2,
+        "order": 1,
         "width": 7,
         "height": 6,
         "gtype": "wave",
@@ -3205,10 +3161,14 @@
         "key": "topic",
         "joiner": "\\n",
         "joinerType": "str",
-        "accumulate": "false",
+        "accumulate": true,
         "timeout": "",
         "count": "",
         "reduceRight": false,
+        "reduceExp": "",
+        "reduceInit": "",
+        "reduceInitType": "",
+        "reduceFixup": "",
         "x": 1130,
         "y": 740,
         "wires": [
@@ -3231,7 +3191,9 @@
         "x": 1300,
         "y": 740,
         "wires": [
-            []
+            [
+                "81fc52b02be9fbf9"
+            ]
         ]
     },
     {
@@ -3285,9 +3247,9 @@
         "type": "ui_gauge",
         "z": "6a163fc1071c16f5",
         "name": "",
-        "group": "62c1eaa282dd444b",
-        "order": 2,
-        "width": 4,
+        "group": "4cb03dd4e1bf63fb",
+        "order": 17,
+        "width": 5,
         "height": 4,
         "gtype": "gage",
         "title": "Scale",
@@ -3314,7 +3276,7 @@
         "mode": "interval",
         "count": 10,
         "overlap": 0,
-        "interval": "12",
+        "interval": "62",
         "allowEmptySequence": true,
         "topics": [],
         "x": 551.6666870117188,
@@ -3349,7 +3311,8 @@
         "y": 2740.333251953125,
         "wires": [
             [
-                "6f0f76b13c16620c"
+                "6f0f76b13c16620c",
+                "a71e4673f1e889a4"
             ]
         ]
     },
@@ -3358,7 +3321,7 @@
         "type": "function",
         "z": "6a163fc1071c16f5",
         "name": "",
-        "func": "msg.payload = (msg.payload[0] - msg.payload[msg.payload.length - 1]) / 10\nmsg.payload = parseFloat(msg.payload).toFixed(2)\nreturn msg;",
+        "func": "msg.payload = (msg.payload[0] - msg.payload[msg.payload.length - 1]) * 1000\nmsg.payload = parseFloat(msg.payload).toFixed(2)\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
@@ -3398,7 +3361,7 @@
         "label": "Countdown",
         "group": "f7b9b84f65a2452b",
         "order": 3,
-        "width": 28,
+        "width": "6",
         "height": 1,
         "countdowns": [
             "4",
@@ -3443,26 +3406,20 @@
         "id": "9c6ca3985344ab61",
         "type": "exec",
         "z": "6a163fc1071c16f5",
-        "command": "cd dev_iot; python3 Threads_rasp-001.py",
+        "command": "sudo systemctl start Threads_rasp-001.service",
         "addpay": "",
         "append": "",
         "useSpawn": "false",
         "timer": "",
         "winHide": false,
         "oldrc": false,
-        "name": "Run python script",
-        "x": 420,
-        "y": 300,
+        "name": "Start python script",
+        "x": 430,
+        "y": 440,
         "wires": [
-            [
-                "6e0988a7f7f77452"
-            ],
-            [
-                "508f3fa35d000d2d"
-            ],
-            [
-                "cc5e0c1dc039f68f"
-            ]
+            [],
+            [],
+            []
         ]
     },
     {
@@ -3490,8 +3447,8 @@
         "officon": "",
         "offcolor": "",
         "animate": false,
-        "x": 120,
-        "y": 360,
+        "x": 110,
+        "y": 500,
         "wires": [
             [
                 "1191b1ba89dac3c8"
@@ -3516,68 +3473,143 @@
         "checkall": "true",
         "repair": false,
         "outputs": 2,
-        "x": 250,
-        "y": 360,
+        "x": 240,
+        "y": 500,
         "wires": [
             [
                 "9c6ca3985344ab61"
             ],
             [
-                "0986a9b0ae3f6f06"
+                "7460049a8a0dc93f"
             ]
         ]
     },
     {
-        "id": "0986a9b0ae3f6f06",
+        "id": "3d01eae91f373998",
+        "type": "inject",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payloadType": "date",
+        "x": 120,
+        "y": 560,
+        "wires": [
+            [
+                "7460049a8a0dc93f"
+            ]
+        ]
+    },
+    {
+        "id": "7460049a8a0dc93f",
         "type": "exec",
         "z": "6a163fc1071c16f5",
-        "command": "cd dev_iot; pkill -f Threads_rasp-001.py",
+        "command": "sudo systemctl stop Threads_rasp-001.service",
         "addpay": "",
         "append": "",
         "useSpawn": "false",
         "timer": "",
         "winHide": false,
         "oldrc": false,
-        "name": "Kill python script",
-        "x": 410,
-        "y": 380,
+        "name": "Stop python script",
+        "x": 430,
+        "y": 560,
+        "wires": [
+            [],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "abdf14ed5d721bcc",
+        "type": "ui_gauge",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "group": "4cb03dd4e1bf63fb",
+        "order": 16,
+        "width": 5,
+        "height": 3,
+        "gtype": "gage",
+        "title": "Pump",
+        "label": "g/min",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "12",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "x": 1730,
+        "y": 1560,
+        "wires": []
+    },
+    {
+        "id": "dc305f42a97d6587",
+        "type": "function",
+        "z": "6a163fc1071c16f5",
+        "name": "",
+        "func": "var receive_msg = msg.payload;\nvar reply = {type:'text', text:'Testing a bot from nodered'};\nvar value = [receive_msg, reply];\n\nmsg.payload = value;\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 500,
+        "y": 3960,
         "wires": [
             [
-                "bdd8873f183d6deb"
-            ],
-            [
-                "4a6631ef630e40ab"
-            ],
-            [
-                "9ca827bff610736f"
+                "25698cd009b0a2d2",
+                "242b8216a306a7d1"
             ]
         ]
     },
     {
-        "id": "508f3fa35d000d2d",
-        "type": "ui_toast",
+        "id": "25698cd009b0a2d2",
+        "type": "linebot-client",
         "z": "6a163fc1071c16f5",
-        "position": "dialog",
-        "displayTime": "3",
-        "highlight": "",
-        "sendall": true,
-        "outputs": 1,
-        "ok": "OK",
-        "cancel": "",
-        "raw": false,
-        "topic": "",
-        "name": "",
-        "x": 660,
-        "y": 300,
+        "name": "RpiBot",
+        "channelAccessToken": "Yvh6thecCFQJQruKb6j4IkQem083QrWEZl/yRIX0KPHj/pjp66aR/I1NoNIL+RtZX6cPWXZgLGNCEKBJkwWb/37fbXYEsd5Ue1oHmxU1FLPLBl49fAFTLT/lFipNTeCk10CQ3/TKR95hiqzp4B4mqwdB04t89/1O/w1cDnyilFU=",
+        "channelSecret": "79618efd489c331fac01ae666870a0b7",
+        "x": 700,
+        "y": 3960,
         "wires": [
             []
         ]
     },
     {
-        "id": "6e0988a7f7f77452",
-        "type": "debug",
+        "id": "ed4bd4a8c33ecabe",
+        "type": "http in",
         "z": "6a163fc1071c16f5",
         "name": "",
+        "url": "/callback",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 120,
+        "y": 3900,
+        "wires": [
+            [
+                "33ec0ddca86c5c3d",
+                "4a635d13f5c1c562"
+            ]
+        ]
+    },
+    {
+        "id": "33ec0ddca86c5c3d",
+        "type": "debug",
+        "z": "6a163fc1071c16f5",
+        "name": "https",
         "active": true,
         "tosidebar": true,
         "console": false,
@@ -3586,15 +3618,15 @@
         "targetType": "msg",
         "statusVal": "payload",
         "statusType": "auto",
-        "x": 660,
-        "y": 140,
+        "x": 490,
+        "y": 3860,
         "wires": []
     },
     {
-        "id": "cc5e0c1dc039f68f",
+        "id": "242b8216a306a7d1",
         "type": "debug",
         "z": "6a163fc1071c16f5",
-        "name": "",
+        "name": "rpibot",
         "active": true,
         "tosidebar": true,
         "console": false,
@@ -3603,29 +3635,38 @@
         "targetType": "msg",
         "statusVal": "payload",
         "statusType": "auto",
-        "x": 660,
-        "y": 240,
+        "x": 580,
+        "y": 4100,
         "wires": []
     },
     {
-        "id": "bdd8873f183d6deb",
-        "type": "debug",
+        "id": "4a635d13f5c1c562",
+        "type": "switch",
         "z": "6a163fc1071c16f5",
-        "name": "",
-        "active": true,
-        "tosidebar": true,
-        "console": false,
-        "tostatus": true,
-        "complete": "payload",
-        "targetType": "msg",
-        "statusVal": "payload",
-        "statusType": "auto",
-        "x": 630,
-        "y": 360,
-        "wires": []
+        "name": "KeyWord_rpi",
+        "property": "payload.events[0].message.text",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "Rpi",
+                "vt": "str"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 1,
+        "x": 310,
+        "y": 3960,
+        "wires": [
+            [
+                "dc305f42a97d6587",
+                "209c57986fd6298c"
+            ]
+        ]
     },
     {
-        "id": "9ca827bff610736f",
+        "id": "209c57986fd6298c",
         "type": "debug",
         "z": "6a163fc1071c16f5",
         "name": "",
@@ -3637,25 +3678,8 @@
         "targetType": "msg",
         "statusVal": "payload",
         "statusType": "auto",
-        "x": 640,
-        "y": 420,
-        "wires": []
-    },
-    {
-        "id": "4a6631ef630e40ab",
-        "type": "debug",
-        "z": "6a163fc1071c16f5",
-        "name": "",
-        "active": true,
-        "tosidebar": true,
-        "console": false,
-        "tostatus": true,
-        "complete": "payload",
-        "targetType": "msg",
-        "statusVal": "payload",
-        "statusType": "auto",
-        "x": 830,
-        "y": 380,
+        "x": 370,
+        "y": 4080,
         "wires": []
     },
     {
