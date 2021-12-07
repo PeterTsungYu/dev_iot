@@ -55,7 +55,7 @@ try:
     insertSchema = f'INSERT INTO platform_{time} (' \
                     + ','.join(insert_col) \
                     + f') VALUES ({("?,"*len(insert_col))[:-1]})'
-    #print(insertSchema)
+    print(insert_col)
 
     def multi_insert(cur):
         while not params.kb_event.isSet():
