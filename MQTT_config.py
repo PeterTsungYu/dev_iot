@@ -19,7 +19,8 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
         
         # Subscribing in on_connect() means that if we lose the connection and
         # reconnect then subscriptions will be renewed.
-        client.subscribe("nodered_port", qos=0)
+        client.subscribe("Manual_Input", qos=0)
+        client.subscribe("NodeRed", qos=0)
         #client.subscribe([(u,0) for i in config.lst_ports for u in i.sub_topics])
         #client.subscribe([("Header_EVA_SV", 0), ("Header_BR_SV", 0)])
 
@@ -27,8 +28,12 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
     def on_message(client, userdata, msg):
         #print(msg.topic+ ": " + str(msg.payload) + f">>> {client_id}")
         resp = json.loads(msg.payload.decode('utf-8'))
-        for key, value in resp.items():    
-            if (key != 'nodered') and (value != None):
+        #print(resp)
+        for key, value in resp.items():
+            if (msg.topic == 'NodeRed'):
+                pass
+                #print(key, value)    
+            elif (msg.topic == 'Manual_Input'):
                 print(key, value)
                 if config.Setup_port.sub_values.get(key) != None:
                     config.Setup_port.sub_values[key] = float(value)
@@ -51,15 +56,15 @@ def multi_pub(client):
     while not params.kb_event.isSet():
         if not params.ticker.wait(params.sample_time):
             for device_port in config.lst_ports:
-                print(device_port.name)
+                #print(device_port.name)
                 for _slave in device_port.slaves:
                     payload = {}
-                    print(_slave.name)
+                    #print(_slave.name)
                     for _topic in _slave.port_topics.pub_topics:
                         payload[_topic] = device_port.pub_values[_topic]
                     payload = json.dumps(payload)
                     client.publish(topic=_slave.name, payload=payload, qos=0, retain=False)
-                    print(f"pub {_slave.name}:{payload} succeed from {client._client_id} >>> localhost")
+                    #print(f"pub {_slave.name}:{payload} succeed from {client._client_id} >>> localhost")
 
 #-------------------------MQTT instance--------------------------------------
 client_0 = connect_mqtt(client_id='client_0' ,hostname='localhost', port=1883, keepalive=60,) 
