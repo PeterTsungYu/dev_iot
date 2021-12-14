@@ -19,7 +19,7 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
         
         # Subscribing in on_connect() means that if we lose the connection and
         # reconnect then subscriptions will be renewed.
-        client.subscribe("Manual_Input", qos=0)
+        client.subscribe("Set_bit", qos=0)
         client.subscribe("NodeRed", qos=0)
         #client.subscribe([(u,0) for i in config.lst_ports for u in i.sub_topics])
         #client.subscribe([("Header_EVA_SV", 0), ("Header_BR_SV", 0)])
@@ -28,13 +28,21 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
     def on_message(client, userdata, msg):
         #print(msg.topic+ ": " + str(msg.payload) + f">>> {client_id}")
         resp = json.loads(msg.payload.decode('utf-8'))
-        #print(resp)
-        for key, value in resp.items():
-            if (msg.topic == 'NodeRed'):
-                pass
-                #print(key, value)    
-            elif (msg.topic == 'Manual_Input'):
-                print(key, value)
+        print(resp)
+        if (msg.topic == 'NodeRed'):
+            print(f'{hostname} Receive topic: NodeRed')
+            _resp = {}
+            for key, value in resp.items():
+                if type(value) == dict:
+                    for k, v in resp[key].items():
+                        _resp[k] = v
+                else:
+                    _resp[key] = value
+            config.NodeRed = _resp
+            print(config.NodeRed)
+        elif (msg.topic == 'Set_bit'):
+            print(f'{hostname} Receive topic: Set_bit')
+            for key, value in resp.items():
                 if config.Setup_port.sub_values.get(key) != None:
                     config.Setup_port.sub_values[key] = float(value)
                     config.Setup_port.sub_events[key].set()

@@ -57,6 +57,9 @@ try:
                     + f') VALUES ({("?,"*len(insert_col))[:-1]})'
     print(insert_col)
 
+    print(tuple(config.NodeRed.get(_k) for _k in insert_col))
+
+
     def multi_insert(cur):
         while not params.kb_event.isSet():
             if not params.ticker.wait(params.sample_time):
