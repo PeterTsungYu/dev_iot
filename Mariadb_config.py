@@ -55,10 +55,7 @@ try:
     insertSchema = f'INSERT INTO platform_{time} (' \
                     + ','.join(insert_col) \
                     + f') VALUES ({("?,"*len(insert_col))[:-1]})'
-    print(insert_col)
-
-    print(tuple(config.NodeRed.get(_k) for _k in insert_col))
-
+    #print(insert_col)
 
     def multi_insert(cur):
         while not params.kb_event.isSet():
@@ -67,7 +64,8 @@ try:
                     cur.execute(
                         insertSchema,
                         #tuple(i for i in config.Setup_port.sub_values.values()) + # sub value
-                        tuple(u for i in config.lst_ports for u in list(i.pub_values.values()) + list(i.sub_values.values())) # pub value
+                        #tuple(u for i in config.lst_ports for u in list(i.pub_values.values()) + list(i.sub_values.values())) # pub value
+                        tuple(config.NodeRed.get(_k) for _k in insert_col)
                         )
                     print(f"Successfully added entry to database. Last Inserted ID: {cur.lastrowid}")
                 except mariadb.Error as e:
