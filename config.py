@@ -20,7 +20,7 @@ Header_EVA_id = '01' # ReformerTP EVA_Header @ Setup_port_path
 Header_BR_id  = '02' # ReformerTP BR_Header @ Setup_port_path
 ADAM_SET_id   = '03' # ReformerTP ADAM_4024 for setting @ Setup_port_path
 ADAM_READ_id  = '04' # ReformerTP ADAM_4017+ for monitoring via oltage and current @ Setup_port_path
-ADAM_TC_id    = '03' # ReformerTP ADAM_4018+ for monitoring temp @ RS485_port_path
+ADAM_TC_id    = '05' # ReformerTP ADAM_4018+ for monitoring temp @ RS485_port_path
 Scale_id      = '06'
 DFM_id        = '07'
 DFM_AOG_id    = '08'
@@ -143,7 +143,7 @@ ADAM_TC_slave = Slave(
                     port_topics=port_Topics(sub_topics=[],
                                             pub_topics=[
                                                 'TC7', 'TC8', 'TC9', 'TC10', # # TC7(ADAM_TC_0), TC8(ADAM_TC_1), TC9(ADAM_TC_2), TC10(ADAM_TC_3) 
-                                                'TC11', 'EVA_out', 'RAD_in', 'RAD_out' # TC11(ADAM_TC_4), EVA_out(ADAM_TC_5), RAD_in(ADAM_TC_6), RAD_out(ADAM_TC_7)
+                                                'TC11', 'TC6', 'EVA_Out', 'RAD_out' # TC11(ADAM_TC_4), EVA_out(ADAM_TC_5), RAD_in(ADAM_TC_6), RAD_out(ADAM_TC_7)
                                             ],
                                             err_topics=[
                                                 'ADAM_TC_collect_err', 'ADAM_TC_analyze_err',
@@ -276,10 +276,10 @@ ADAM_SET_slave = Slave(
                         idno=ADAM_SET_id,
                         port_topics=port_Topics(
                                 sub_topics=[
-                                    'PCB_SET_SV', 'Pump_SET_SV', 'Air_MFC_SET_SV', 'H2_MFC_SET_SV' # PCB(ADAM_SET_SV0), Pump(ADAM_SET_SV1), Air_MFC(ADAM_SET_SV2), H2_MFC(ADAM_SET_SV3)
+                                    'PCB_SET_SV', 'Air_MFC_SET_SV', 'ADAM_SET_CH3_SV', 'ADAM_SET_CH4_SV' # PCB(ADAM_SET_SV0), Pump(ADAM_SET_SV1), Air_MFC(ADAM_SET_SV2), H2_MFC(ADAM_SET_SV3)
                                 ],
                                 pub_topics=[
-                                    'PCB_SET_PV', 'Pump_SET_PV', 'Air_MFC_SET_PV', 'H2_MFC_SET_PV', # PCB(ADAM_SET_PV0), Pump(ADAM_SET_PV1), Air_MFC(ADAM_SET_PV2), H2_MFC(ADAM_SET_PV3)
+                                    'PCB_SET_PV', 'Air_MFC_SET_PV', 'ADAM_SET_CH3_PV', 'ADAM_SET_CH4_PV', # PCB(ADAM_SET_PV0), Pump(ADAM_SET_PV1), Air_MFC(ADAM_SET_PV2), H2_MFC(ADAM_SET_PV3)
                                 ],
                                 err_topics=[
                                     'ADAM_SET_collect_err', 'ADAM_SET_set_err', 'ADAM_SET_analyze_err',
@@ -298,7 +298,7 @@ ADAM_READ_slave = Slave(
                         port_topics=port_Topics(
                                 sub_topics=[],
                                 pub_topics=[
-                                    'SMC_0_PV', 'SMC_1_PV', 'ADAM_READ_PV2', 'ADAM_READ_PV3', 'ADAM_READ_PV4', 'Lambda', 'Air_MFC_PV', 'H2_MFC_PV' # ADAM_READ_PV0 (SMC), ADAM_READ_PV1 (SMC), ADAM_READ_PV2, ADAM_READ_PV3, ADAM_READ_PV4(pump), ADAM_READ_PV5(Air_MFC), ADAM_READ_PV6(H2_MFC), ADAM_READ_PV7
+                                    'ADAM_READ_PV0', 'ADAM_READ_PV1', 'ADAM_READ_PV2', 'ADAM_READ_PV3', 'ADAM_READ_PV4', 'Air_MFC_PV', 'PT_PV', 'ADAM_READ_PV7' # ADAM_READ_PV0 (SMC), ADAM_READ_PV1 (SMC), ADAM_READ_PV2, ADAM_READ_PV3, ADAM_READ_PV4(pump), ADAM_READ_PV5(Air_MFC), ADAM_READ_PV6(H2_MFC), ADAM_READ_PV7
                                 ],
                                 err_topics=[
                                     'ADAM_READ_collect_err', 'ADAM_READ_analyze_err',
@@ -343,6 +343,7 @@ DFM_AOG_slave = Slave(
 print('Slaves are all set')
 
 #-----Port setting----------------------------------------------------------------
+'''
 RS485_port = device_port(
                         ADAM_TC_slave,
                         name='RS485_port',
@@ -370,6 +371,7 @@ RS232_port = device_port(GA_slave,
                                             stopbits=1, 
                                             parity='N'),
                         )
+'''
 
 Setup_port = device_port(
                         Header_EVA_slave,
@@ -378,9 +380,10 @@ Setup_port = device_port(
                         ADAM_READ_slave,
                         Header_EVA_SET_slave,
                         Header_BR_SET_slave,
+                        ADAM_TC_slave,
                         name='Setup_port',
                         port=serial.Serial(port=Setup_port_path,
-                                            baudrate=115200, 
+                                            baudrate=57600, 
                                             bytesize=8, 
                                             stopbits=1, 
                                             parity='N'),
@@ -393,7 +396,7 @@ GPIO_port = device_port(DFM_slave,
                         )
 
 lst_ports = [
-            RS485_port,
+            #RS485_port,
             #Scale_port, 
             #RS232_port, 
             Setup_port,

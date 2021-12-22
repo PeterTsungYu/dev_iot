@@ -113,16 +113,16 @@ def Modbus_Comm(start, device_port, slave):
     re_set = device_port.recur_count.get(f'{slave.name}_set_err')
     try: # try to collect
         collect_err[1] += 1
-        #logging.debug(slave.r_rtu)
+        logging.debug(slave.r_rtu)
         #logging.debug(bytes.fromhex(slave.r_rtu))
         port.write(bytes.fromhex(slave.r_rtu)) #hex to binary(byte) 
         slave.time_readings = time.time()-start
         time.sleep(params.time_out)
-        #logging.debug(port.inWaiting())
+        logging.debug(port.inWaiting())
         _data_len = port.inWaiting()
         if _data_len >= slave.r_wait_len: 
             readings = port.read(_data_len).hex() # after reading, the buffer will be clean
-            #logging.debug(readings)
+            logging.debug(readings)
             if slave.name == 'GA':
                 slave.lst_readings.append(readings)
                 logging.info(f'Read from slave_{slave.name}')
@@ -152,6 +152,7 @@ def Modbus_Comm(start, device_port, slave):
                 logging.debug(re_collect)
                 Modbus_Comm(start, device_port, slave)
         else: # if data len is less than the wait data
+            logging.debug(port.read(_data_len).hex())
             collect_err[0] += 1
             err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: data len_{_data_len} is less than the wait data"
             logging.error(err_msg)
@@ -282,14 +283,14 @@ def DFM_AOG_data_analyze(start, device_port, slave, **kwargs):
             
 
 @kb_event
-@sampling_event(params.sample_time_Scale)
+@sampling_event(params.sample_time)
 @analyze_decker
 def Scale_data_analyze(start, device_port, slave, **kwargs):
     _lst_readings = kwargs.get('_lst_readings')
     _time_readings = kwargs.get('_time_readings')
-    _lst_readings = [sum(i)/len(i) for i in _lst_readings] # average for 1s' data
-    _lst_readings = round((_lst_readings[-1] - _lst_readings[0]) / params.sample_time_Scale, 3) # average for 1min's data
-    _readings = tuple([round(_time_readings, 2), _lst_readings])
+    _arr_readings = np.array([sum(i)/len(i) for i in _lst_readings])
+    _lst_readings = tuple([np.sum(_arr_readings) / len(_lst_readings)])
+    _readings = tuple([round(_time_readings,2)]) + _lst_readings
     return _readings
 
 @kb_event

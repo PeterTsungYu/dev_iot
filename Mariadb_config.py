@@ -34,52 +34,52 @@ try:
 
     # Get Cursor for tx
     cur = conn.cursor()
+
+    #-------------------------create table--------------------------------------
+    Table_col = [u + ' FLOAT' for i in config.lst_ports for u in i.pub_topics + i.sub_topics]
+    TableSchema = f'create table platform_{time} (Id int NOT NULL AUTO_INCREMENT,' \
+                    + ','.join(Table_col) \
+                    + ',PRIMARY KEY (Id))'
+    #print(TableSchema)
+
+    try:
+        cur.execute(f'drop table if exists platform_{time}') 
+        cur.execute(TableSchema)
+        print('Create tables succeed')       
+    except mariadb.Error as e:
+        print(f"Error creating Table: {e}")
+        sys.exit(2)
+
+    #-------------------------db func--------------------------------------
+    insert_col = [u for i in config.lst_ports for u in i.pub_topics + i.sub_topics]
+    insertSchema = f'INSERT INTO platform_{time} (' \
+                    + ','.join(insert_col) \
+                    + f') VALUES ({("?,"*len(insert_col))[:-1]})'
+    #print(insertSchema)
+
+    def multi_insert(cur):
+        while not params.kb_event.isSet():
+            if not params.ticker.wait(params.sample_time):
+                try:
+                    cur.execute(
+                        insertSchema,
+                        #tuple(i for i in config.Setup_port.sub_values.values()) + # sub value
+                        tuple(u for i in config.lst_ports for u in list(i.pub_values.values()) + list(i.sub_values.values())) # pub value
+                        )
+                    print(f"Successfully added entry to database. Last Inserted ID: {cur.lastrowid}")
+                except mariadb.Error as e:
+                    print(f"Error adding entry to database: {e}")
+
+    #-------------------------main--------------------------------------
+    multi_insert = threading.Thread(
+        target=multi_insert,
+        args=(cur,),
+        )
+    multi_insert.start()
+
 except mariadb.Error as e:
     print(f"Error connecting to MariaDB Platform: {e}")
-    sys.exit(1)
+    #sys.exit(1)
 
-#-------------------------create table--------------------------------------
-Table_col = [u + ' FLOAT' for i in config.lst_ports for u in i.pub_topics + i.sub_topics]
-TableSchema = f'create table platform_{time} (Id int NOT NULL AUTO_INCREMENT,' \
-                + ','.join(Table_col) \
-                + ',PRIMARY KEY (Id))'
-#print(TableSchema)
-
-try:
-    cur.execute(f'drop table if exists platform_{time}') 
-    cur.execute(TableSchema)
-    print('Create tables succeed')       
-except mariadb.Error as e:
-    print(f"Error creating Table: {e}")
-    sys.exit(2)
-
-#-------------------------db func--------------------------------------
-insert_col = [u for i in config.lst_ports for u in i.pub_topics + i.sub_topics]
-insertSchema = f'INSERT INTO platform_{time} (' \
-                + ','.join(insert_col) \
-                + f') VALUES ({("?,"*len(insert_col))[:-1]})'
-#print(insertSchema)
-
-def multi_insert(cur):
-    while not params.kb_event.isSet():
-        if not params.ticker.wait(params.sample_time):
-            try:
-                cur.execute(
-                    insertSchema,
-                    #tuple(i for i in config.Setup_port.sub_values.values()) + # sub value
-                    tuple(u for i in config.lst_ports for u in list(i.pub_values.values()) + list(i.sub_values.values())) # pub value
-                    )
-                print(f"Successfully added entry to database. Last Inserted ID: {cur.lastrowid}")
-            except mariadb.Error as e:
-                print(f"Error adding entry to database: {e}")
-
-#-------------------------main--------------------------------------
-multi_insert = threading.Thread(
-    target=multi_insert,
-    args=(cur,),
-    )
-multi_insert.start()
-
-
-'''while True:
-    pass'''
+    '''while True:
+        pass'''
