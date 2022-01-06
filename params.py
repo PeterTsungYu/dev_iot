@@ -3,7 +3,7 @@ import signal
 
 #-------------------------Global var--------------------------------------
 time_out          = 0.1 # for collecting data
-sample_time       = 2 # for analyzing data
+sample_time       = 1 # for analyzing data
 sample_time_Scale = 60
 sample_time_DFM   = 60
 

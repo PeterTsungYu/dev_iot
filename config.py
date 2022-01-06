@@ -353,7 +353,7 @@ RS485_port = device_port(
                                             stopbits=1, 
                                             parity='N'),
                         )
-
+'''
 Scale_port = device_port(Scale_slave,
                         name='Scale_port',
                         port=serial.Serial(port=Scale_port_path,
@@ -371,7 +371,6 @@ RS232_port = device_port(GA_slave,
                                             stopbits=1, 
                                             parity='N'),
                         )
-'''
 
 Setup_port = device_port(
                         Header_EVA_slave,
@@ -397,10 +396,12 @@ GPIO_port = device_port(DFM_slave,
 
 lst_ports = [
             #RS485_port,
-            #Scale_port, 
-            #RS232_port, 
+            Scale_port, 
+            RS232_port, 
             Setup_port,
-            #GPIO_port
+            GPIO_port
             ]
+
+NodeRed = {}
 
 print('Ports are all set')

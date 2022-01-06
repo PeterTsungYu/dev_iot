@@ -14,10 +14,11 @@ import params
 import config
 
 #-------------------------time and tokens--------------------------------------
-time = datetime.now().strftime('%Y_%m_%d_%H')
+time = datetime.now().strftime('%Y_%m_%d_%H_%M')
 load_dotenv()
 username = os.environ.get("db_user")
 password = os.environ.get("db_pwd")
+host_vpn = os.environ.get("host_vpn")
 #print(username, password)
 
 #-------------------------mariadb conn--------------------------------------
@@ -26,7 +27,7 @@ try:
     conn = mariadb.connect(
         user=username,
         password=password,
-        host="rasp-002.local",
+        host=host_vpn,
         port=3306,
         database="reformer",
         autocommit=True
@@ -64,7 +65,8 @@ try:
                     cur.execute(
                         insertSchema,
                         #tuple(i for i in config.Setup_port.sub_values.values()) + # sub value
-                        tuple(u for i in config.lst_ports for u in list(i.pub_values.values()) + list(i.sub_values.values())) # pub value
+                        #tuple(u for i in config.lst_ports for u in list(i.pub_values.values()) + list(i.sub_values.values())) # pub value
+                        tuple(config.NodeRed.get(_k) for _k in insert_col)
                         )
                     print(f"Successfully added entry to database. Last Inserted ID: {cur.lastrowid}")
                 except mariadb.Error as e:
@@ -80,6 +82,3 @@ try:
 except mariadb.Error as e:
     print(f"Error connecting to MariaDB Platform: {e}")
     #sys.exit(1)
-
-    '''while True:
-        pass'''
