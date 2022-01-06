@@ -3,10 +3,14 @@ import threading
 import serial
 import RPi.GPIO as GPIO
 from crccheck.crc import Crc16Modbus
+from datetime import datetime
 
 #custom modules
 import Modbus
 import params
+
+#-----------------Database----------------------------------------------
+db_time = datetime.now().strftime('%Y_%m_%d_%H_%M')
 
 #-----------------Serial port and DeviceID------------------------------
 #_port_path = '/dev/ttyUSB'

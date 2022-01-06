@@ -6,7 +6,6 @@ import os
 import sys
 import threading
 import mariadb
-from datetime import datetime
 from dotenv import load_dotenv
 
 #custom modules
@@ -14,7 +13,6 @@ import params
 import config
 
 #-------------------------time and tokens--------------------------------------
-time = datetime.now().strftime('%Y_%m_%d_%H_%M')
 load_dotenv()
 username = os.environ.get("db_user")
 password = os.environ.get("db_pwd")
@@ -37,13 +35,13 @@ try:
 
         #-------------------------create table--------------------------------------
     Table_col = [u + ' FLOAT' for i in config.lst_ports for u in i.pub_topics + i.sub_topics]
-    TableSchema = f'create table platform_{time} (Id int NOT NULL AUTO_INCREMENT,' \
+    TableSchema = f'create table platform_{config.db_time} (Id int NOT NULL AUTO_INCREMENT,' \
                     + ','.join(Table_col) \
                     + ',PRIMARY KEY (Id))'
     #print(TableSchema)
 
     try:
-        cur.execute(f'drop table if exists platform_{time}') 
+        cur.execute(f'drop table if exists platform_{config.db_time}') 
         cur.execute(TableSchema)
         print('Create tables succeed')       
     except mariadb.Error as e:
@@ -52,7 +50,7 @@ try:
 
     #-------------------------db func--------------------------------------
     insert_col = [u for i in config.lst_ports for u in i.pub_topics + i.sub_topics]
-    insertSchema = f'INSERT INTO platform_{time} (' \
+    insertSchema = f'INSERT INTO platform_{config.db_time} (' \
                     + ','.join(insert_col) \
                     + f') VALUES ({("?,"*len(insert_col))[:-1]})'
     #print(insert_col)
