@@ -32,9 +32,9 @@ try:
     
     GPIO.setup(config.channel_DFM, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     GPIO.setup(config.channel_DFM_AOG, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-    def DFM_data_collect():
+    def DFM_data_collect(self):
         config.DFM_slave.time_readings.append(time.time())
-    def DFM_AOG_data_collect():
+    def DFM_AOG_data_collect(self):
         config.DFM_AOG_slave.time_readings.append(time.time())
     GPIO.add_event_detect(config.channel_DFM, GPIO.RISING, callback=DFM_data_collect)
     GPIO.add_event_detect(config.channel_DFM_AOG, GPIO.RISING, callback=DFM_AOG_data_collect)
