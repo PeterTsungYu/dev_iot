@@ -16,6 +16,7 @@ import config
 load_dotenv()
 username = os.environ.get("db_user")
 password = os.environ.get("db_pwd")
+host_vpn = os.environ.get("host_vpn")
 #print(username, password)
 
 #-------------------------mariadb conn--------------------------------------
@@ -24,7 +25,7 @@ try:
     conn = mariadb.connect(
         user=username,
         password=password,
-        host="rasp-002.local",
+        host=host_vpn,
         port=3306,
         database="reformer",
         autocommit=True

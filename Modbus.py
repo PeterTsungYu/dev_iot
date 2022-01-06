@@ -55,12 +55,24 @@ def analyze_decker(func):
         slave.lst_readings = []
         if device_port.name == 'GPIO_port':
             cond = len(_time_readings)
+            slave.time_readings = []
         else:    
             cond = len(_lst_readings)
         try:
             if cond > 0:
                 analyze_err[1] += 1
                 _readings = func(start, device_port, slave, _lst_readings=_lst_readings, _time_readings=_time_readings)
+                # casting
+                ind = 1
+                for topic in slave.port_topics.pub_topics:    
+                    device_port.pub_values[topic] = _readings[ind]
+                    ind += 1
+                ## to slave data list
+                slave.readings.append(_readings)
+                logging.info(f"{slave.name}_analyze done: record {_readings}")
+            elif (device_port.name == 'GPIO_port') and (cond == 0):
+                analyze_err[1] += 1
+                _readings = tuple([_time_readings, 0])
                 # casting
                 ind = 1
                 for topic in slave.port_topics.pub_topics:    
@@ -241,19 +253,22 @@ def DFM_data_analyze(start, device_port, slave, **kwargs):
     _time_readings = kwargs.get('_time_readings')
     _sampling_time = round(time.time()-start, 2)
     _average_interval_lst = []
-    # calc average min flow rate by each interval 
-    for interval in range(30, 55, 5):
-        _flow_rate_interval_lst = []
-        # for each interval, calculate the average flow rate
-        for i in range(interval, len(_time_readings), interval):
-            # flow rate in [liter/s]
-            # 0.1 liter / pulse
-            _flow_rate = 60 * 0.1 * (interval-1) / (_time_readings[i-1] - _time_readings[i-interval])
-            _flow_rate_interval_lst.append(round(_flow_rate, 2)) 
-        _average_flow_rate_interval = round(sum(_flow_rate_interval_lst) / len(_flow_rate_interval_lst), 2)          
-        _average_interval_lst.append(_average_flow_rate_interval)
+    # calc average min flow rate by each interval
+    try: 
+        for interval in range(30, 55, 5):
+            _flow_rate_interval_lst = []
+            # for each interval, calculate the average flow rate
+            for i in range(interval, len(_time_readings), interval):
+                # flow rate in [liter/s]
+                # 0.1 liter / pulse
+                _flow_rate = 60 * 0.1 * (interval-1) / (_time_readings[i-1] - _time_readings[i-interval])
+                _flow_rate_interval_lst.append(round(_flow_rate, 2)) 
+            _average_flow_rate_interval = round(sum(_flow_rate_interval_lst) / len(_flow_rate_interval_lst), 2)          
+            _average_interval_lst.append(_average_flow_rate_interval)
         _average = round(sum(_average_interval_lst) / len(_average_interval_lst), 1)
-    _readings = tuple([_sampling_time, _average])
+        _readings = tuple([_sampling_time, _average])
+    except:
+        _readings = tuple([_sampling_time, 0])
     return _readings
             
 
@@ -265,19 +280,22 @@ def DFM_AOG_data_analyze(start, device_port, slave, **kwargs):
     _sampling_time = round(time.time()-start, 2)
     _average_interval_lst = []
     # calc average min flow rate by each interval 
-    for interval in range(5, 30, 5):
-    #for interval in range(30, 55, 5):
-        _flow_rate_interval_lst = []
-        # for each interval, calculate the average flow rate
-        for i in range(interval, len(_time_readings), interval):
-            # flow rate in [liter/s]
-            # 0.01 liter / pulse
-            _flow_rate = 60 * 0.01 * (interval-1) / (_time_readings[i-1] - _time_readings[i-interval])
-            _flow_rate_interval_lst.append(round(_flow_rate, 2)) 
-        _average_flow_rate_interval = round(sum(_flow_rate_interval_lst) / len(_flow_rate_interval_lst), 2)          
-        _average_interval_lst.append(_average_flow_rate_interval)
+    try:
+        for interval in range(5, 30, 5):
+        #for interval in range(30, 55, 5):
+            _flow_rate_interval_lst = []
+            # for each interval, calculate the average flow rate
+            for i in range(interval, len(_time_readings), interval):
+                # flow rate in [liter/s]
+                # 0.01 liter / pulse
+                _flow_rate = 60 * 0.01 * (interval-1) / (_time_readings[i-1] - _time_readings[i-interval])
+                _flow_rate_interval_lst.append(round(_flow_rate, 2)) 
+            _average_flow_rate_interval = round(sum(_flow_rate_interval_lst) / len(_flow_rate_interval_lst), 2)          
+            _average_interval_lst.append(_average_flow_rate_interval)
         _average = round(sum(_average_interval_lst) / len(_average_interval_lst), 1)
-    _readings = tuple([_sampling_time, _average])
+        _readings = tuple([_sampling_time, _average])
+    except:
+        _readings = tuple([_sampling_time, 0])
     return _readings
             
 
