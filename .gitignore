@@ -3,3 +3,7 @@
 /.env
 /*.log
 /test*
+/bcm*
+/Jetsonnano*
+/RaspberryPI*
+/venv*

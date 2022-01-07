@@ -33,9 +33,11 @@ GA_id         = '11' # ReformerTP GA for monitoring gas conc. @ RS232_port_path
 #-----GPIO port setting----------------------------------------------------------------
 ## DFM
 # read High as 3.3V
+'''
 channel_DFM     = 18
 channel_DFM_AOG = 23
 GPIO.setmode(GPIO.BCM)
+'''
 
 #-----Cls----------------------------------------------------------------
 def tohex(value):
@@ -347,6 +349,7 @@ DFM_AOG_slave = Slave(
 print('Slaves are all set')
 
 #-----Port setting----------------------------------------------------------------
+'''
 RS485_port = device_port(
                         ADAM_TC_slave,
                         name='RS485_port',
@@ -395,15 +398,15 @@ GPIO_port = device_port(DFM_slave,
                         name='GPIO_port',
                         port='GPIO',
                         )
+'''
 
 lst_ports = [
-            RS485_port,
-            Scale_port, 
-            RS232_port, 
-            Setup_port,
-            GPIO_port
+            #RS485_port,
+            #Scale_port, 
+            #RS232_port, 
+            #Setup_port,
+            #GPIO_port
             ]
-
 NodeRed = {}
 
 print('Ports are all set')
