@@ -21,6 +21,7 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
         # reconnect then subscriptions will be renewed.
         client.subscribe("Set_bit", qos=0)
         client.subscribe("NodeRed", qos=0)
+        client.subscribe("ADDA_Set", qos=0)
         #client.subscribe([(u,0) for i in config.lst_ports for u in i.sub_topics])
         #client.subscribe([("Header_EVA_SV", 0), ("Header_BR_SV", 0)])
 
@@ -29,7 +30,7 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
         #print(msg.topic+ ": " + str(msg.payload) + f">>> {client_id}")
         resp = json.loads(msg.payload.decode('utf-8'))
         #print(resp)
-        if (msg.topic == 'NodeRed'):
+        '''if (msg.topic == 'NodeRed'):
             print(f'{hostname} Receive topic: NodeRed')
             _resp = {}
             for key, value in resp.items():
@@ -46,7 +47,14 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
                 if config.Setup_port.sub_values.get(key) != None:
                     config.Setup_port.sub_values[key] = float(value)
                     config.Setup_port.sub_events[key].set()
-        
+        '''
+        if (msg.topic == "ADDA_Set"):
+            print(f'{hostname} Receive topic: ADDA_Set')
+            for key, value in resp.items():
+                    if config.ADDA_port.sub_values.get(key) != None:
+                        config.ADDA_port.sub_values[key] = float(value)
+                        config.ADDA_port.sub_events[key].set()
+
     def on_publish(client, userdata, mid):
         print(mid)
 
@@ -77,7 +85,7 @@ def multi_pub(client):
             #client.publish(topic='DB_name', payload=config.db_time, qos=0, retain=False)
 
 #-------------------------MQTT instance--------------------------------------
-client_0 = connect_mqtt(client_id='client_0' ,hostname='localhost', port=1883, keepalive=60,) 
+client_0 = connect_mqtt(client_id='client_0' ,hostname='100.86.102.117', port=1883, keepalive=60,) 
 client_0.loop_start()
 
 multi_pub = threading.Thread(

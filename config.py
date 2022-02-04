@@ -28,6 +28,7 @@ ADAM_TC_id    = '03' # ReformerTP ADAM_4018+ for monitoring temp @ RS485_port_pa
 Scale_id      = '06'
 DFM_id        = '07'
 DFM_AOG_id    = '08'
+ADDA_id = '09'
 GA_id         = '11' # ReformerTP GA for monitoring gas conc. @ RS232_port_path
 
 #-----GPIO port setting----------------------------------------------------------------
@@ -38,7 +39,6 @@ channel_DFM     = 18
 channel_DFM_AOG = 23
 GPIO.setmode(GPIO.BCM)
 '''
-
 #-----Cls----------------------------------------------------------------
 def tohex(value):
     value = int(value)
@@ -346,7 +346,26 @@ DFM_AOG_slave = Slave(
                     analyze_func=Modbus.DFM_AOG_data_analyze
                     )
 
+ADDA_slave = Slave(
+                    name='ADDA',
+                    idno=ADDA_id, 
+                    port_topics=port_Topics(
+                                sub_topics=[
+                                    'Pump_SET_SV', 'DAC1',
+                                ],
+                                pub_topics=[
+                                    'AD0', 'AD1', 'AD2', 'AD3', 'AD4', 'AD5', 'AD6', 'AD7',
+                                ],
+                                err_topics=[
+                                    'ADDA_collect_err', 'ADDA_set_err', 'ADDA_analyze_err'
+                                ]
+                                ),
+                    comm_func=Modbus.ADDA_comm,
+                    #analyze_func=Modbus.,
+                    )
+
 print('Slaves are all set')
+
 
 #-----Port setting----------------------------------------------------------------
 '''
@@ -400,13 +419,20 @@ GPIO_port = device_port(DFM_slave,
                         )
 '''
 
+ADDA_port = device_port(ADDA_slave,
+                        name='ADDA_port',
+                        port='ADDA',
+                        )
+
 lst_ports = [
             #RS485_port,
             #Scale_port, 
             #RS232_port, 
             #Setup_port,
-            #GPIO_port
+            #GPIO_port,
+            ADDA_port
             ]
+
 NodeRed = {}
 
 print('Ports are all set')

@@ -9,6 +9,8 @@ import time
 import re
 from crccheck.crc import Crc16Modbus
 import logging
+import ADDA_ADS1256
+import ADDA_DAC8532
 
 #custom modules
 import params
@@ -30,6 +32,13 @@ fh.setFormatter(formatter)
 
 logger.addHandler(ch)
 logger.addHandler(fh)
+
+#-----ADDA port setting----------------------------------------------------------------
+ADC = ADDA_ADS1256.ADS1256()
+DAC = ADDA_DAC8532.DAC8532()
+ADC.ADS1256_init()
+DAC.DAC8532_Out_Voltage(ADDA_DAC8532.channel_A, 0)
+DAC.DAC8532_Out_Voltage(ADDA_DAC8532.channel_B, 0)
 
 #------------------------------Decker---------------------------------
 def kb_event(func):
@@ -117,7 +126,49 @@ def Scale_data_collect(start, device_port, slave):
         logging.info(f"{slave.name}_collect_err: {round((collect_err[1] - collect_err[0])/(collect_err[1]+0.00000000000000001)*100, 2)}%")
 
 
-def Modbus_Comm(start, device_port, slave):    
+def ADDA_comm(start, device_port, slave):
+    port = device_port.port
+    collect_err = device_port.err_values.get(f'{slave.name}_collect_err')
+    set_err = device_port.err_values.get(f'{slave.name}_set_err')
+    re_collect = device_port.recur_count.get(f'{slave.name}_collect_err')
+    re_set = device_port.recur_count.get(f'{slave.name}_set_err')
+    
+    '''collect:
+    #8ch 24bit high-precision ADC (4ch differential input), 30ksps sampling rate
+    ADC_Value = ADC.ADS1256_GetAll()
+    print(ADC_Value)
+    print ("0 ADC = %lf"%(ADC_Value[0]*5.0/0x7fffff)) #32-bit integer in hexadecimal with all but the highest bit set
+    print ("1 ADC = %lf"%(ADC_Value[1]*5.0/0x7fffff))
+    print ("2 ADC = %lf"%(ADC_Value[2]*5.0/0x7fffff))
+    print ("3 ADC = %lf"%(ADC_Value[3]*5.0/0x7fffff))
+    print ("4 ADC = %lf"%(ADC_Value[4]*5.0/0x7fffff))
+    print ("5 ADC = %lf"%(ADC_Value[5]*5.0/0x7fffff))
+    print ("6 ADC = %lf"%(ADC_Value[6]*5.0/0x7fffff))
+    print ("7 ADC = %lf"%(ADC_Value[7]*5.0/0x7fffff))
+    '''
+
+    for topic in slave.port_topics.sub_topics:
+        #logging.critical((slave.name, topic))
+        if device_port.sub_events[topic].isSet():
+            #logging.critical(device_port.sub_values[topic])
+            try: # try to set value
+                #2ch 16bit high-precision DAC
+                #temp = (ADC_Value[0]>>7)*5.0/0xffff #16-bit integer in hexadecimal with all but the highest bit set
+                print ("DAC_A :", device_port.sub_values[topic])
+                #print ("DAC_B :",ADDA_DAC8532.DAC_VREF - temp)
+                #print ("\33[10A") # for colored print
+                DAC.DAC8532_Out_Voltage(ADDA_DAC8532.channel_A, device_port.sub_values[topic])
+                device_port.sub_events[topic].clear()
+                #DAC.DAC8532_Out_Voltage(ADDA_DAC8532.channel_B, ADDA_DAC8532.DAC_VREF - temp)
+            except Exception as e:
+                set_err[0] += 1
+                err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: " + str(e)
+                logging.error(err_msg)
+            finally:
+                logging.info(f"{slave.name}_set_err: {round((set_err[1] - set_err[0])/(set_err[1]+0.00000000000000001)*100, 2)}%")
+
+
+def Modbus_Comm(start, device_port, slave):
     port = device_port.port
     collect_err = device_port.err_values.get(f'{slave.name}_collect_err')
     set_err = device_port.err_values.get(f'{slave.name}_set_err')

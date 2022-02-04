@@ -14,8 +14,6 @@ import config
 import MQTT_config
 import Mariadb_config
 import Modbus
-import ADDA_ADS1256
-import ADDA_DAC8532
 
 print('Import: succeed')
 
@@ -34,12 +32,7 @@ try:
             device_port.port.reset_input_buffer() #flush input buffer
             device_port.port.reset_output_buffer() #flush output buffer
     print('serial ports open')
-    
-    ADC = ADDA_ADS1256.ADS1256()
-    DAC = ADDA_DAC8532.DAC8532()
-    ADC.ADS1256_init()
-    DAC.DAC8532_Out_Voltage(0x30, 3)
-    DAC.DAC8532_Out_Voltage(0x34, 3)
+
     '''
     GPIO.setup(config.channel_DFM, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     GPIO.setup(config.channel_DFM_AOG, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
@@ -75,7 +68,7 @@ except Exception as ex:
         if type(device_port.port) is serial.serialposix.Serial:
             device_port.port.close()
     GPIO.cleanup()
-    print ("\r\nProgram end     ")
+    print ("\r\nProgram end")
     exit()
 
 #-------------------------Main Threadingggg-----------------------------------------
@@ -83,21 +76,6 @@ try:
     while not params.kb_event.isSet():
         if not params.ticker.wait(params.sample_time):
             print("=="*10 + f'Elapsed time: {round((time.time()-start),2)}' + "=="*10)
-            ADC_Value = ADC.ADS1256_GetAll()
-            print ("0 ADC = %lf"%(ADC_Value[0]*5.0/0x7fffff))
-            print ("1 ADC = %lf"%(ADC_Value[1]*5.0/0x7fffff))
-            print ("2 ADC = %lf"%(ADC_Value[2]*5.0/0x7fffff))
-            print ("3 ADC = %lf"%(ADC_Value[3]*5.0/0x7fffff))
-            print ("4 ADC = %lf"%(ADC_Value[4]*5.0/0x7fffff))
-            print ("5 ADC = %lf"%(ADC_Value[5]*5.0/0x7fffff))
-            print ("6 ADC = %lf"%(ADC_Value[6]*5.0/0x7fffff))
-            print ("7 ADC = %lf"%(ADC_Value[7]*5.0/0x7fffff))
-
-            temp = (ADC_Value[0]>>7)*5.0/0xffff
-            print ("DAC :",temp)
-            print ("\33[10A")
-            DAC.DAC8532_Out_Voltage(ADDA_DAC8532.channel_A, temp)
-            DAC.DAC8532_Out_Voltage(ADDA_DAC8532.channel_B, 3.3 - temp)
         
 except KeyboardInterrupt: 
     print(f"Keyboard Interrupt in main thread!")

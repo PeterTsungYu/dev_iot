@@ -7,7 +7,8 @@ channel_B   = 0x34
 
 DAC_Value_MAX = 65535
 
-DAC_VREF = 3.3
+#DAC_VREF = 3.3
+DAC_VREF = 5.0
 
 class DAC8532:
     def __init__(self):
