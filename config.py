@@ -28,7 +28,7 @@ ADAM_TC_id    = '03' # ReformerTP ADAM_4018+ for monitoring temp @ RS485_port_pa
 Scale_id      = '06'
 DFM_id        = '07'
 DFM_AOG_id    = '08'
-ADDA_id = '09'
+ADDA_id       = '09'
 GA_id         = '11' # ReformerTP GA for monitoring gas conc. @ RS232_port_path
 
 #-----GPIO port setting----------------------------------------------------------------

@@ -3,7 +3,7 @@ Description=My service
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/python3.7 -u Threads_rasp-001.py
+ExecStart=/home/pi/dev_iot/venv/bin/python3 -u Threads_rasp-001.py
 WorkingDirectory=/home/pi/dev_iot
 StandardOutput=file:/home/pi/dev_iot/outlog.log
 StandardError=file:/home/pi/dev_iot/errlog.log
