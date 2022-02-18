@@ -44,10 +44,12 @@ try:
     try:
         cur.execute(f'drop table if exists platform_{config.db_time}') 
         cur.execute(TableSchema)
+        config.db_connection = True
         print('Create tables succeed')       
     except mariadb.Error as e:
+        config.db_connection = False
         print(f"Error creating Table: {e}")
-        sys.exit(2)
+        #sys.exit(2)
 
     #-------------------------db func--------------------------------------
     insert_col = [u for i in config.lst_ports for u in i.pub_topics + i.sub_topics]
@@ -71,12 +73,17 @@ try:
                     print(f"Error adding entry to database: {e}")
 
     #-------------------------main--------------------------------------
-    multi_insert = threading.Thread(
-        target=multi_insert,
-        args=(cur,),
-        )
-    multi_insert.start()
+    try:
+        multi_insert = threading.Thread(
+            target=multi_insert,
+            args=(cur,),
+            )
+        multi_insert.start()
+    except mariadb.Error as e:
+        config.db_connection = False
+        print(f"Error multi_insert to MariaDB Platform: {e}")    
 
 except mariadb.Error as e:
+    config.db_connection = False
     print(f"Error connecting to MariaDB Platform: {e}")
     #sys.exit(1)

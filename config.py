@@ -11,6 +11,7 @@ import params
 
 #-----------------Database----------------------------------------------
 db_time = datetime.now().strftime('%Y_%m_%d_%H_%M')
+db_connection = False
 
 #-----------------Serial port and DeviceID------------------------------
 #_port_path = '/dev/ttyUSB'
@@ -28,7 +29,9 @@ ADAM_TC_id    = '03' # ReformerTP ADAM_4018+ for monitoring temp @ RS485_port_pa
 Scale_id      = '06'
 DFM_id        = '07'
 DFM_AOG_id    = '08'
+ADDA_id       = '09'
 GA_id         = '11' # ReformerTP GA for monitoring gas conc. @ RS232_port_path
+
 
 #-----GPIO port setting----------------------------------------------------------------
 ## DFM
@@ -280,10 +283,10 @@ ADAM_SET_slave = Slave(
                         idno=ADAM_SET_id,
                         port_topics=port_Topics(
                                 sub_topics=[
-                                    'PCB_SET_SV', 'Pump_SET_SV', 'Air_MFC_SET_SV', 'H2_MFC_SET_SV' # PCB(ADAM_SET_SV0), Pump(ADAM_SET_SV1), Air_MFC(ADAM_SET_SV2), H2_MFC(ADAM_SET_SV3)
+                                    'PCB_SET_SV', '_SET_SV', 'Air_MFC_SET_SV', 'H2_MFC_SET_SV' # PCB(ADAM_SET_SV0), Pump(ADAM_SET_SV1), Air_MFC(ADAM_SET_SV2), H2_MFC(ADAM_SET_SV3)
                                 ],
                                 pub_topics=[
-                                    'PCB_SET_PV', 'Pump_SET_PV', 'Air_MFC_SET_PV', 'H2_MFC_SET_PV', # PCB(ADAM_SET_PV0), Pump(ADAM_SET_PV1), Air_MFC(ADAM_SET_PV2), H2_MFC(ADAM_SET_PV3)
+                                    'PCB_SET_PV', '_SET_PV', 'Air_MFC_SET_PV', 'H2_MFC_SET_PV', # PCB(ADAM_SET_PV0), Pump(ADAM_SET_PV1), Air_MFC(ADAM_SET_PV2), H2_MFC(ADAM_SET_PV3)
                                 ],
                                 err_topics=[
                                     'ADAM_SET_collect_err', 'ADAM_SET_set_err', 'ADAM_SET_analyze_err',
@@ -344,6 +347,24 @@ DFM_AOG_slave = Slave(
                     analyze_func=Modbus.DFM_AOG_data_analyze
                     )
 
+ADDA_slave = Slave(
+                    name='ADDA',
+                    idno=ADDA_id, 
+                    port_topics=port_Topics(
+                                sub_topics=[
+                                    'Pump_SET_SV', 'DAC1',
+                                ],
+                                pub_topics=[
+                                    'AD0', 'AD1', 'AD2', 'AD3', 'AD4', 'AD5', 'AD6', 'AD7',
+                                ],
+                                err_topics=[
+                                    'ADDA_collect_err', 'ADDA_set_err', 'ADDA_analyze_err'
+                                ]
+                                ),
+                    #comm_func=Modbus.ADDA_comm,
+                    #analyze_func=Modbus.,
+                    )
+
 print('Slaves are all set')
 
 #-----Port setting----------------------------------------------------------------
@@ -351,7 +372,7 @@ RS485_port = device_port(
                         ADAM_TC_slave,
                         name='RS485_port',
                         port=serial.Serial(port=RS485_port_path,
-                                            baudrate=19200, 
+                                            baudrate=57600, 
                                             bytesize=8, 
                                             stopbits=1, 
                                             parity='N'),
@@ -396,12 +417,18 @@ GPIO_port = device_port(DFM_slave,
                         port='GPIO',
                         )
 
+ADDA_port = device_port(ADDA_slave,
+                        name='ADDA_port',
+                        port='ADDA',
+                        )
+
 lst_ports = [
             RS485_port,
             Scale_port, 
             RS232_port, 
             Setup_port,
-            GPIO_port
+            GPIO_port,
+            ADDA_port
             ]
 
 NodeRed = {}
