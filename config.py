@@ -15,7 +15,7 @@ db_connection = False
 
 #-----------------Serial port and DeviceID------------------------------
 #_port_path = '/dev/ttyUSB'
-RS485_port_path = '/dev/ttyUSB_RS485' # for monitoring (TC from ADAM)
+MFC_port_path = '/dev/ttyUSB_RS485' # for monitoring MFC (rasp-001_MFC branch)
 Scale_port_path = '/dev/ttyUSB_Scale' # for monitoring Scale
 RS232_port_path = '/dev/ttyUSB_RS232' # for monitoring GA
 Setup_port_path = '/dev/ttyUSB_PC' # for controling (ADAM, TCHeader)
@@ -31,6 +31,8 @@ DFM_id        = '07'
 DFM_AOG_id    = '08'
 ADDA_id       = '09'
 GA_id         = '11' # ReformerTP GA for monitoring gas conc. @ RS232_port_path
+Air_MFC_id    = '12'
+H2_MFC_id     = '13'
 
 
 #-----GPIO port setting----------------------------------------------------------------
@@ -365,14 +367,51 @@ ADDA_slave = Slave(
                     #analyze_func=Modbus.,
                     )
 
+Air_MFC_slave = Slave(
+                    name='Air_MFC',
+                    idno=Air_MFC_id, 
+                    port_topics=port_Topics(
+                                sub_topics=[
+                                    'Air_MFC_SET_SV',
+                                ],
+                                pub_topics=[
+                                    'Air_MFC_SET_PV', 'Air_MFC_PV'
+                                ],
+                                err_topics=[
+                                    'Air_MFC_collect_err', 'Air_MFC_set_err', 'Air_MFC_analyze_err'
+                                ]
+                                ),
+                    #comm_func=Modbus.ADDA_comm,
+                    #analyze_func=Modbus.,
+                    )
+
+H2_MFC_slave = Slave(
+                    name='H2_MFC',
+                    idno=H2_MFC_id, 
+                    port_topics=port_Topics(
+                                sub_topics=[
+                                    'H2_MFC_SET_SV',
+                                ],
+                                pub_topics=[
+                                    'H2_MFC_SET_PV', 'H2_MFC_PV'
+                                ],
+                                err_topics=[
+                                    'H2_MFC_collect_err', 'H2_MFC_set_err', 'H2_MFC_analyze_err'
+                                ]
+                                ),
+                    #comm_func=Modbus.ADDA_comm,
+                    #analyze_func=Modbus.,
+                    )
+
 print('Slaves are all set')
 
 #-----Port setting----------------------------------------------------------------
-RS485_port = device_port(
-                        ADAM_TC_slave,
-                        name='RS485_port',
-                        port=serial.Serial(port=RS485_port_path,
-                                            baudrate=57600, 
+MFC_port = device_port(
+                        Air_MFC_slave,
+                        H2_MFC_slave,
+                        name='MFC_port',
+                        port=serial.Serial(port=MFC_port_path,
+                                            baudrate=19200, 
                                             bytesize=8, 
                                             stopbits=1, 
                                             parity='N'),
@@ -399,6 +438,7 @@ RS232_port = device_port(GA_slave,
 Setup_port = device_port(
                         Header_EVA_slave,
                         Header_BR_slave,
+                        ADAM_TC_slave,
                         ADAM_SET_slave,
                         ADAM_READ_slave,
                         Header_EVA_SET_slave,
@@ -423,7 +463,7 @@ ADDA_port = device_port(ADDA_slave,
                         )
 
 lst_ports = [
-            RS485_port,
+            MFC_port,
             Scale_port, 
             RS232_port, 
             Setup_port,
