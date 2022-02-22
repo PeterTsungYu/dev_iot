@@ -66,6 +66,7 @@ def analyze_decker(func):
                 ind = 1
                 for topic in slave.port_topics.pub_topics:    
                     device_port.pub_values[topic] = _readings[ind]
+                    #logging.debug(device_port.pub_values)
                     ind += 1
                 ## to slave data list
                 slave.readings.append(_readings)
@@ -235,14 +236,14 @@ def MFC_Comm(start, device_port, slave):
         #logging.debug(port.inWaiting())
         _data_len = port.inWaiting()
         if _data_len >= slave.r_wait_len: 
-            readings = port.read(_data_len).decode('UTF-8') # after reading, the buffer will be clean
+            readings = str(port.read(_data_len)) # after reading, the buffer will be clean
             #logging.debug(readings)
             # validate received data
             re = slave.id
             #logging.debug(readings.index(re))
             if readings.index(re) >= 0:
                 readings = readings[readings.index(re):(readings.index(re)+slave.r_wait_len)]
-                logging.debug(readings)
+                logging.debug(f'collect: {readings}')
                 slave.lst_readings.append(readings)
                 logging.info(f'Read from slave_{slave.name}')
             else:
@@ -257,7 +258,7 @@ def MFC_Comm(start, device_port, slave):
             if re_collect[0] < 3:
                 re_collect[0] += 1
                 logging.debug(re_collect)
-                Modbus_Comm(start, device_port, slave)
+                MFC_Comm(start, device_port, slave)
         else: # if data len is less than the wait data
             collect_err[0] += 1
             err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: data len_{_data_len} is less than the wait data"
@@ -284,14 +285,13 @@ def MFC_Comm(start, device_port, slave):
                 _data_len = port.inWaiting()
                 #logging.debug(_data_len)
                 if _data_len >= slave.w_wait_len:
-                    readings = port.read(_data_len).decode('UTF-8') # after reading, the buffer will be clean
-                    #logging.debug(readings)
+                    readings = str(port.read(_data_len)) # after reading, the buffer will be clean
                     re = slave.id
                     #logging.critical(re)
                     if readings.index(re)  >= 0:
                         readings = readings[readings.index(re):(readings.index(re)+slave.w_wait_len)]
-                        logging.debug(readings)
-                        logging.critical(f'Read from slave_{slave.name}')
+                        logging.debug(f'write: {readings}')
+                        logging.info(f'Read from slave_{slave.name}')
                         device_port.sub_events[topic].clear()
                     else:
                         set_err[0] += 1
@@ -445,6 +445,30 @@ def ADAM_SET_analyze(start, device_port, slave, **kwargs):
         [[int(readings[6:-4][i:i+4],16)/(2**12)*20-10 for i in range(0,16,4)] # convert from hex to dec 
         for readings in _lst_readings]
         )
+    _lst_readings = tuple(np.sum(_arr_readings, 0) / len(_lst_readings))
+    _readings = tuple([round(_time_readings,2)]) + _lst_readings
+    return _readings
+
+@kb_event
+@sampling_event(params.sample_time)
+@analyze_decker
+def Air_MFC_analyze(start, device_port, slave, **kwargs):
+    _lst_readings = kwargs.get('_lst_readings')
+    _time_readings = kwargs.get('_time_readings')
+    _arr_readings = np.array([[float(i) for i in re.findall('\d+.\d+',readings)] for readings in _lst_readings])
+    logging.debug(_arr_readings)
+    _lst_readings = tuple(np.sum(_arr_readings, 0) / len(_lst_readings))
+    _readings = tuple([round(_time_readings,2)]) + _lst_readings
+    return _readings
+
+@kb_event
+@sampling_event(params.sample_time)
+@analyze_decker
+def H2_MFC_analyze(start, device_port, slave, **kwargs):
+    _lst_readings = kwargs.get('_lst_readings')
+    _time_readings = kwargs.get('_time_readings')
+    _arr_readings = np.array([[float(i) for i in re.findall('\d+.\d+',readings)] for readings in _lst_readings])
+    logging.debug(_arr_readings)
     _lst_readings = tuple(np.sum(_arr_readings, 0) / len(_lst_readings))
     _readings = tuple([round(_time_readings,2)]) + _lst_readings
     return _readings

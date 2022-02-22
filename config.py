@@ -15,7 +15,7 @@ db_connection = False
 
 #-----------------Serial port and DeviceID------------------------------
 #_port_path = '/dev/ttyUSB'
-MFC_port_path = '/dev/ttyUSB_MFC' # for monitoring MFC (rasp-001_MFC branch)
+MFC_port_path = '/dev/ttyUSB_RS485' # for monitoring MFC (rasp-001_MFC branch)
 Scale_port_path = '/dev/ttyUSB_Scale' # for monitoring Scale
 RS232_port_path = '/dev/ttyUSB_RS232' # for monitoring GA
 Setup_port_path = '/dev/ttyUSB_PC' # for controling (ADAM, TCHeader)
@@ -25,7 +25,7 @@ Header_EVA_id = '01' # ReformerTP EVA_Header @ Setup_port_path
 Header_BR_id  = '02' # ReformerTP BR_Header @ Setup_port_path
 ADAM_SET_id   = '03' # ReformerTP ADAM_4024 for setting @ Setup_port_path
 ADAM_READ_id  = '04' # ReformerTP ADAM_4017+ for monitoring via oltage and current @ Setup_port_path
-ADAM_TC_id    = '03' # ReformerTP ADAM_4018+ for monitoring temp @ RS485_port_path
+ADAM_TC_id    = '05' # ReformerTP ADAM_4018+ for monitoring temp @ RS485_port_path
 Scale_id      = '06'
 DFM_id        = '07'
 DFM_AOG_id    = '08'
@@ -383,14 +383,14 @@ Air_MFC_slave = Slave(
                                     'Air_MFC_SET_SV',
                                 ],
                                 pub_topics=[
-                                    'Air_MFC_SET_PV', 'Air_MFC_PV'
+                                    'Air_MFC_P', 'Air_MFC_T', 'Air_MFC_LPM', 'Air_MFC_SLPM', 'Air_MFC_SET_PV',
                                 ],
                                 err_topics=[
                                     'Air_MFC_collect_err', 'Air_MFC_set_err', 'Air_MFC_analyze_err'
                                 ]
                                 ),
                     comm_func=Modbus.MFC_Comm,
-                    #analyze_func=Modbus.,
+                    analyze_func=Modbus.Air_MFC_analyze,
                     )
 Air_MFC_slave.read_rtu(f'\r{Air_MFC_id}\r\r', wait_len=49)
 Air_MFC_slave.w_wait_len = 49
@@ -403,14 +403,14 @@ H2_MFC_slave = Slave(
                                     'H2_MFC_SET_SV',
                                 ],
                                 pub_topics=[
-                                    'H2_MFC_SET_PV', 'H2_MFC_PV'
+                                    'H2_MFC_P', 'H2_MFC_T', 'H2_MFC_LPM', 'H2_MFC_SLPM', 'H2_MFC_SET_PV',
                                 ],
                                 err_topics=[
                                     'H2_MFC_collect_err', 'H2_MFC_set_err', 'H2_MFC_analyze_err'
                                 ]
                                 ),
                     comm_func=Modbus.MFC_Comm,
-                    #analyze_func=Modbus.,
+                    analyze_func=Modbus.H2_MFC_analyze,
                     )
 H2_MFC_slave.read_rtu(f'\r{H2_MFC_id}\r\r', wait_len=49)
 H2_MFC_slave.w_wait_len = 49
@@ -419,7 +419,7 @@ print('Slaves are all set')
 
 #-----Port setting----------------------------------------------------------------
 MFC_port = device_port(
-                        #Air_MFC_slave,
+                        Air_MFC_slave,
                         H2_MFC_slave,
                         name='MFC_port',
                         port=serial.Serial(port=MFC_port_path,
@@ -457,7 +457,7 @@ Setup_port = device_port(
                         Header_BR_SET_slave,
                         name='Setup_port',
                         port=serial.Serial(port=Setup_port_path,
-                                            baudrate=115200, 
+                                            baudrate=57600, 
                                             bytesize=8, 
                                             stopbits=1, 
                                             parity='N'),
