@@ -133,7 +133,6 @@ class Slave: # Create Slave data store
             self.r_rtu = _fields[0]
 
     def write_rtu(self, *_fields):
-        self.w_wait_len = 8
         # _fields[0]:data_site
         # _fields[1]:value / data_len
         if len(_fields) == 2:
@@ -141,6 +140,9 @@ class Slave: # Create Slave data store
             data_struc = self.id + '06' + _fields[0] + _value
             crc = Crc16Modbus.calchex(bytearray.fromhex(data_struc))
             self.w_rtu = data_struc + crc[-2:] + crc[:2]
+        elif len(_fields) == 1:
+            if 'MFC' in self.name:
+                self.w_rtu = f'\r{self.id}S{_fields[0]}\r\r'
     
 
 #-------------------------RTU & Slave--------------------------------------
@@ -162,6 +164,7 @@ ADAM_TC_slave = Slave(
                     analyze_func=Modbus.ADAM_TC_analyze
                     )
 ADAM_TC_slave.read_rtu('0000', '0008', wait_len=21)
+ADAM_TC_slave.w_wait_len = 8
 
 # GA slave
 GA_slave = Slave(
@@ -219,6 +222,7 @@ Header_EVA_slave = Slave(
                         analyze_func=Modbus.TCHeader_analyze
                         )
 Header_EVA_slave.read_rtu('008A', '0001', wait_len=7)
+Header_EVA_slave.w_wait_len = 8
 
 Header_EVA_SET_slave = Slave(
                         name = 'Header_EVA_SET',
@@ -238,6 +242,7 @@ Header_EVA_SET_slave = Slave(
                         analyze_func=Modbus.TCHeader_analyze
                         )
 Header_EVA_SET_slave.read_rtu('0000', '0001', wait_len=7)
+Header_EVA_SET_slave.w_wait_len = 8
 
 Header_BR_slave = Slave(
                         name='Header_BR',
@@ -256,6 +261,7 @@ Header_BR_slave = Slave(
                         analyze_func=Modbus.TCHeader_analyze
                         )
 Header_BR_slave.read_rtu('008A', '0001', wait_len=7)
+Header_BR_slave.w_wait_len = 8
 
 Header_BR_SET_slave = Slave(
                         name='Header_BR_SET',
@@ -275,6 +281,7 @@ Header_BR_SET_slave = Slave(
                         analyze_func=Modbus.TCHeader_analyze
                         )
 Header_BR_SET_slave.read_rtu('0000', '0001', wait_len=7)
+Header_BR_SET_slave.w_wait_len = 8
 
 # ADAM_SET_slave, RTU func code 03, channel site at '0000-0003', data_len is 4 ('0004')
 ## ch00:+-10V, ch01:0-5V, ch02:0-5V, ch03:0-5V
@@ -298,6 +305,7 @@ ADAM_SET_slave = Slave(
                         analyze_func=Modbus.ADAM_SET_analyze
                     )
 ADAM_SET_slave.read_rtu('0000', '0004', wait_len=13)
+ADAM_SET_slave.w_wait_len = 8
 
 # ADAM_READ_slave, RTU func code 03, channel site at '0000-0008', data_len is 8 ('0008')
 ## ch00:4-20mA, ch01:0-5V, ch04:0-5V, ch05:0-5V, ch06:0-5V
@@ -385,6 +393,7 @@ Air_MFC_slave = Slave(
                     #analyze_func=Modbus.,
                     )
 Air_MFC_slave.read_rtu(f'\r{Air_MFC_id}\r\r', wait_len=49)
+Air_MFC_slave.w_wait_len = 49
 
 H2_MFC_slave = Slave(
                     name='H2_MFC',
@@ -404,6 +413,7 @@ H2_MFC_slave = Slave(
                     #analyze_func=Modbus.,
                     )
 H2_MFC_slave.read_rtu(f'\r{H2_MFC_id}\r\r', wait_len=49)
+H2_MFC_slave.w_wait_len = 49
 
 print('Slaves are all set')
 

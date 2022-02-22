@@ -274,30 +274,28 @@ def MFC_Comm(start, device_port, slave):
     for topic in slave.port_topics.sub_topics:
         #logging.critical((slave.name, topic))
         if device_port.sub_events[topic].isSet():
-            #logging.critical(device_port.sub_values[topic])
+            #logging.debug(device_port.sub_values[topic])
             try: # try to set value
                 set_err[1] += 1
-                slave.write_rtu(f"{w_data_site:0>4}", device_port.sub_values[topic])
-                port.write(bytes.fromhex(slave.w_rtu)) #hex to binary(byte) 
+                slave.write_rtu(device_port.sub_values[topic])
+                #logging.debug(slave.w_rtu)
+                port.write(bytes(slave.w_rtu, 'ASCII')) 
                 time.sleep(params.time_out)
                 _data_len = port.inWaiting()
+                #logging.debug(_data_len)
                 if _data_len >= slave.w_wait_len:
-                    readings = port.read(_data_len).hex() # after reading, the buffer will be clean
-                    #logging.critical(readings)
-                    re = hex(int(slave.id))[2:].zfill(2) + '06' + f"{w_data_site:0>4}"
+                    readings = port.read(_data_len).decode('UTF-8') # after reading, the buffer will be clean
+                    #logging.debug(readings)
+                    re = slave.id
                     #logging.critical(re)
-                    if readings.index(re):
-                        readings = readings[readings.index(re):(readings.index(re)+slave.w_wait_len*2)]
-                    #logging.critical(readings)
-                    crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
-                    # check sta, func code, datalen, crc
-                    if (crc[-2:] + crc[:2]) == readings[-4:]:
-                        logging.critical(readings)
+                    if readings.index(re)  >= 0:
+                        readings = readings[readings.index(re):(readings.index(re)+slave.w_wait_len)]
+                        logging.debug(readings)
                         logging.critical(f'Read from slave_{slave.name}')
                         device_port.sub_events[topic].clear()
                     else:
                         set_err[0] += 1
-                        err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: crc validation failed"
+                        err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: validation failed"
                         logging.error(err_msg)
                 else: # if data len is less than the wait data
                     set_err[0] += 1
