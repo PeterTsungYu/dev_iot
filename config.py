@@ -15,7 +15,7 @@ db_connection = False
 
 #-----------------Serial port and DeviceID------------------------------
 #_port_path = '/dev/ttyUSB'
-MFC_port_path = '/dev/ttyUSB_RS485' # for monitoring MFC (rasp-001_MFC branch)
+MFC_port_path = '/dev/ttyUSB_MFC' # for monitoring MFC (rasp-001_MFC branch)
 Scale_port_path = '/dev/ttyUSB_Scale' # for monitoring Scale
 RS232_port_path = '/dev/ttyUSB_RS232' # for monitoring GA
 Setup_port_path = '/dev/ttyUSB_PC' # for controling (ADAM, TCHeader)
@@ -464,11 +464,11 @@ ADDA_port = device_port(ADDA_slave,
 
 lst_ports = [
             MFC_port,
-            Scale_port, 
-            RS232_port, 
-            Setup_port,
-            GPIO_port,
-            ADDA_port
+            #Scale_port, 
+            #RS232_port, 
+            #Setup_port,
+            #GPIO_port,
+            #ADDA_port
             ]
 
 NodeRed = {}
