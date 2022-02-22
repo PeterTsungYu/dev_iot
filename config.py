@@ -31,8 +31,8 @@ DFM_id        = '07'
 DFM_AOG_id    = '08'
 ADDA_id       = '09'
 GA_id         = '11' # ReformerTP GA for monitoring gas conc. @ RS232_port_path
-Air_MFC_id    = '12'
-H2_MFC_id     = '13'
+Air_MFC_id    = 'A'
+H2_MFC_id     = 'B'
 
 
 #-----GPIO port setting----------------------------------------------------------------
@@ -381,9 +381,10 @@ Air_MFC_slave = Slave(
                                     'Air_MFC_collect_err', 'Air_MFC_set_err', 'Air_MFC_analyze_err'
                                 ]
                                 ),
-                    #comm_func=Modbus.ADDA_comm,
+                    comm_func=Modbus.MFC_Comm,
                     #analyze_func=Modbus.,
                     )
+Air_MFC_slave.read_rtu(f'\r{Air_MFC_id}\r\r', wait_len=49)
 
 H2_MFC_slave = Slave(
                     name='H2_MFC',
@@ -399,15 +400,16 @@ H2_MFC_slave = Slave(
                                     'H2_MFC_collect_err', 'H2_MFC_set_err', 'H2_MFC_analyze_err'
                                 ]
                                 ),
-                    #comm_func=Modbus.ADDA_comm,
+                    comm_func=Modbus.MFC_Comm,
                     #analyze_func=Modbus.,
                     )
+H2_MFC_slave.read_rtu(f'\r{H2_MFC_id}\r\r', wait_len=49)
 
 print('Slaves are all set')
 
 #-----Port setting----------------------------------------------------------------
 MFC_port = device_port(
-                        Air_MFC_slave,
+                        #Air_MFC_slave,
                         H2_MFC_slave,
                         name='MFC_port',
                         port=serial.Serial(port=MFC_port_path,

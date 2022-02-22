@@ -220,6 +220,100 @@ def Modbus_Comm(start, device_port, slave):
             w_data_site += 1
         
 
+def MFC_Comm(start, device_port, slave):    
+    port = device_port.port
+    collect_err = device_port.err_values.get(f'{slave.name}_collect_err')
+    set_err = device_port.err_values.get(f'{slave.name}_set_err')
+    re_collect = device_port.recur_count.get(f'{slave.name}_collect_err')
+    try: # try to collect
+        collect_err[1] += 1
+        #logging.debug(slave.r_rtu)
+        #logging.debug(bytes(slave.r_rtu, 'ASCII'))
+        port.write(bytes(slave.r_rtu, 'ASCII')) #ASCII to byte
+        slave.time_readings = time.time()-start
+        time.sleep(params.time_out)
+        #logging.debug(port.inWaiting())
+        _data_len = port.inWaiting()
+        if _data_len >= slave.r_wait_len: 
+            readings = port.read(_data_len).decode('UTF-8') # after reading, the buffer will be clean
+            #logging.debug(readings)
+            # validate received data
+            re = slave.id
+            #logging.debug(readings.index(re))
+            if readings.index(re) >= 0:
+                readings = readings[readings.index(re):(readings.index(re)+slave.r_wait_len)]
+                logging.debug(readings)
+                slave.lst_readings.append(readings)
+                logging.info(f'Read from slave_{slave.name}')
+            else:
+                collect_err[0] += 1
+                err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: validation failed"
+                logging.error(err_msg)
+        elif _data_len == 0:
+            # recursive part if the rtu was transferred but crushed in between the lines
+            collect_err[2] += 1
+            err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: wrong rtu code led to null receiving"
+            logging.error(err_msg)
+            if re_collect[0] < 3:
+                re_collect[0] += 1
+                logging.debug(re_collect)
+                Modbus_Comm(start, device_port, slave)
+        else: # if data len is less than the wait data
+            collect_err[0] += 1
+            err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: data len_{_data_len} is less than the wait data"
+            logging.error(err_msg)
+    except Exception as e:
+        collect_err[0] += 1
+        err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: " + str(e)
+        logging.error(err_msg)
+    finally:
+        port.reset_input_buffer()
+        logging.info(f"{slave.name}_collect_err: {round((collect_err[1] - collect_err[0])/(collect_err[1]+0.00000000000000001)*100, 2)}%")
+
+    w_data_site=0
+    for topic in slave.port_topics.sub_topics:
+        #logging.critical((slave.name, topic))
+        if device_port.sub_events[topic].isSet():
+            #logging.critical(device_port.sub_values[topic])
+            try: # try to set value
+                set_err[1] += 1
+                slave.write_rtu(f"{w_data_site:0>4}", device_port.sub_values[topic])
+                port.write(bytes.fromhex(slave.w_rtu)) #hex to binary(byte) 
+                time.sleep(params.time_out)
+                _data_len = port.inWaiting()
+                if _data_len >= slave.w_wait_len:
+                    readings = port.read(_data_len).hex() # after reading, the buffer will be clean
+                    #logging.critical(readings)
+                    re = hex(int(slave.id))[2:].zfill(2) + '06' + f"{w_data_site:0>4}"
+                    #logging.critical(re)
+                    if readings.index(re):
+                        readings = readings[readings.index(re):(readings.index(re)+slave.w_wait_len*2)]
+                    #logging.critical(readings)
+                    crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
+                    # check sta, func code, datalen, crc
+                    if (crc[-2:] + crc[:2]) == readings[-4:]:
+                        logging.critical(readings)
+                        logging.critical(f'Read from slave_{slave.name}')
+                        device_port.sub_events[topic].clear()
+                    else:
+                        set_err[0] += 1
+                        err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: crc validation failed"
+                        logging.error(err_msg)
+                else: # if data len is less than the wait data
+                    set_err[0] += 1
+                    err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: data len_{_data_len} is less than the wait data"
+                    logging.error(err_msg)
+            except Exception as e:
+                set_err[0] += 1
+                err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: " + str(e)
+                logging.error(err_msg)
+            finally:
+                logging.info(f"{slave.name}_set_err: {round((set_err[1] - set_err[0])/(set_err[1]+0.00000000000000001)*100, 2)}%")
+                port.reset_input_buffer()
+                w_data_site += 1
+        else:
+            w_data_site += 1
+
 
 @kb_event
 @sampling_event(params.sample_time)
