@@ -29,16 +29,16 @@ Scale_id      = '06'
 DFM_id        = '07'
 DFM_AOG_id    = '08'
 ADDA_id       = '09'
+Relay01_id    = '10' # control Relay for Lambda sensor and Glow Plug
 GA_id         = '11' # ReformerTP GA for monitoring gas conc. @ RS232_port_path
 
 #-----GPIO port setting----------------------------------------------------------------
 ## DFM
 # read High as 3.3V
-'''
-channel_DFM     = 18
-channel_DFM_AOG = 23
+channel_Relay01_IN1     = 24
+channel_Relay01_IN2     = 25
 GPIO.setmode(GPIO.BCM)
-'''
+
 #-----Cls----------------------------------------------------------------
 def tohex(value):
     value = int(value)
@@ -364,6 +364,22 @@ ADDA_slave = Slave(
                     #analyze_func=Modbus.,
                     )
 
+Relay01_slave = Slave(
+                    name='Relay01',
+                    idno=Relay01_id, 
+                    port_topics=port_Topics(
+                                sub_topics=[
+                                    'Relay01_Set',
+                                ],
+                                pub_topics=[
+                                ],
+                                err_topics=[
+                                    'Relay01_collect_err', 'Relay01_set_err', 'Relay01_analyze_err'
+                                ]
+                                ),
+                    comm_func=Modbus.Relay_comm,
+                    #analyze_func=Modbus.,
+                    )
 print('Slaves are all set')
 
 
@@ -411,13 +427,13 @@ Setup_port = device_port(
                                             stopbits=1, 
                                             parity='N'),
                         )
+'''
 
-GPIO_port = device_port(DFM_slave,
-                        DFM_AOG_slave,
+GPIO_port = device_port(Relay01_slave,
                         name='GPIO_port',
                         port='GPIO',
                         )
-'''
+
 
 ADDA_port = device_port(ADDA_slave,
                         name='ADDA_port',
@@ -429,8 +445,8 @@ lst_ports = [
             #Scale_port, 
             #RS232_port, 
             #Setup_port,
-            #GPIO_port,
-            ADDA_port
+            GPIO_port,
+            #ADDA_port
             ]
 
 NodeRed = {}
