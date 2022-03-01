@@ -21,6 +21,7 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
         # reconnect then subscriptions will be renewed.
         client.subscribe("Set_bit", qos=0)
         client.subscribe("NodeRed", qos=0)
+        client.subscribe("MFC_Set", qos=0)
         #client.subscribe([(u,0) for i in config.lst_ports for u in i.sub_topics])
         #client.subscribe([("Header_EVA_SV", 0), ("Header_BR_SV", 0)])
 
@@ -28,7 +29,7 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
     def on_message(client, userdata, msg):
         #print(msg.topic+ ": " + str(msg.payload) + f">>> {client_id}")
         resp = json.loads(msg.payload.decode('utf-8'))
-        #print(resp)
+        print(resp)
         if (msg.topic == 'NodeRed'):
             print(f'{hostname} Receive topic: NodeRed')
             _resp = {}
@@ -46,6 +47,12 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
                 if config.Setup_port.sub_values.get(key) != None:
                     config.Setup_port.sub_values[key] = float(value)
                     config.Setup_port.sub_events[key].set()
+        elif (msg.topic == 'MFC_Set'):
+            print(f'{hostname} Receive topic: MFC_Set')
+            for key, value in resp.items():
+                if config.MFC_port.sub_values.get(key) != None:
+                    config.MFC_port.sub_values[key] = float(value)
+                    config.MFC_port.sub_events[key].set()
         
     def on_publish(client, userdata, mid):
         print(mid)
