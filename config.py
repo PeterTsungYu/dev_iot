@@ -475,12 +475,12 @@ ADDA_port = device_port(ADDA_slave,
                         )
 
 lst_ports = [
-            MFC_port,
-            Scale_port, 
+            #MFC_port,
+            #Scale_port, 
             RS232_port, 
-            Setup_port,
-            GPIO_port,
-            ADDA_port
+            #Setup_port,
+            #GPIO_port,
+            #ADDA_port
             ]
 
 NodeRed = {}

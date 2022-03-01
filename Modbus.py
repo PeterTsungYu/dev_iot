@@ -408,14 +408,17 @@ def Scale_data_analyze(start, device_port, slave, **kwargs):
 def GA_data_analyze(start, device_port, slave, **kwargs):
     _lst_readings = kwargs.get('_lst_readings')
     _time_readings = kwargs.get('_time_readings')
+    print(_lst_readings)
     _arr_readings = np.array(
-        [[int(readings[i:i+4],16)/100 for i in range(8,20,4)] 
-        + [int(readings[24:28],16)/100] 
-        + [int(readings[-12:-8],16)/100] 
-        + [(lambda i: ((i[0]*256+i[1]+i[2])*256+i[3])/100)([int(readings[i:i+2],16) for i in range(-20,-12,2)])] 
+        [[int(readings[i:i+4],16)/100 if (int(readings[i:i+4],16)/100) <= 99.99 else 0 for i in range(8,20,4)] # CO, CO2, CH4
+        + [int(readings[24:28],16)/100] # H2
+        + [int(readings[-12:-8],16)/100] # N2
+        + [(lambda i: ((i[0]*256+i[1]+i[2])*256+i[3])/100)([int(readings[i:i+2],16) for i in range(-20,-12,2)])] # Heat
         for readings in _lst_readings]
         )
+    print(_arr_readings)
     _lst_readings = tuple(np.round(np.sum(_arr_readings, axis=0) / len(_lst_readings), 1))
+    print(_lst_readings)
     _readings = tuple([round(_time_readings,2)]) + _lst_readings
     return _readings
             
