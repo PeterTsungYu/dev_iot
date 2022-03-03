@@ -31,6 +31,7 @@ DFM_AOG_id    = '08'
 ADDA_id       = '09'
 Relay01_id    = '10' # control Relay for Lambda sensor and Glow Plug
 GA_id         = '11' # ReformerTP GA for monitoring gas conc. @ RS232_port_path
+BRPump_id     = '12'
 
 #-----GPIO port setting----------------------------------------------------------------
 ## DFM
@@ -380,6 +381,24 @@ Relay01_slave = Slave(
                     comm_func=Modbus.Relay_comm,
                     #analyze_func=Modbus.,
                     )
+
+BRPump_slave = Slave(
+                    name='BRPump',
+                    idno=BRPump_id, 
+                    port_topics=port_Topics(
+                                sub_topics=[
+                                    'BRPump_Flow_SV',
+                                ],
+                                pub_topics=[
+                                    'BRPump_Flow_PV'
+                                ],
+                                err_topics=[
+                                    'BRPump_collect_err', 'BRPump_set_err', 'BRPump_analyze_err'
+                                ]
+                                ),
+                    comm_func=Modbus.miniModbus_comm,
+                    #analyze_func=Modbus.,
+                    )
 print('Slaves are all set')
 
 
@@ -446,8 +465,18 @@ lst_ports = [
             #RS232_port, 
             #Setup_port,
             GPIO_port,
-            #ADDA_port
+            ADDA_port
             ]
+
+miniModbus_port = device_port(
+                        BRPump_slave,
+                        name='RS485_port',
+                        port=serial.Serial(port=RS485_port_path,
+                                            baudrate=19200, 
+                                            bytesize=8, 
+                                            stopbits=1, 
+                                            parity='N'),
+                        )
 
 NodeRed = {}
 
