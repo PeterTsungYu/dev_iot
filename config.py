@@ -8,6 +8,7 @@ from datetime import datetime
 #custom modules
 import Modbus
 import params
+import minimalmodbus
 
 #-----------------Database----------------------------------------------
 db_time = datetime.now().strftime('%Y_%m_%d_%H_%M')
@@ -18,6 +19,7 @@ RS485_port_path = '/dev/ttyUSB_RS485' # for monitoring (TC from ADAM)
 Scale_port_path = '/dev/ttyUSB_Scale' # for monitoring Scale
 RS232_port_path = '/dev/ttyUSB_RS232' # for monitoring GA
 Setup_port_path = '/dev/ttyUSB_PC' # for controling (ADAM, TCHeader)
+MiniModbus_port_path      = '/dev/ttyUSB_MiniModbus'
 
 ## device ID
 Header_EVA_id = '01' # ReformerTP EVA_Header @ Setup_port_path
@@ -62,6 +64,7 @@ class device_port:
         self.err_values = {}
         self.recur_count = {}
         self.thread_funcs = []
+        self.instrument = None
 
         for _slave in slaves:
             for topic in _slave.port_topics.sub_topics:
@@ -100,6 +103,17 @@ class device_port:
                         args=(start, self, slave,)
                     )
                 )
+    
+    def miniModbus_device_port(self, slave_id):
+        # minimalmodbus setting
+        port = self.port
+        instrument = minimalmodbus.Instrument(port.port, int(slave_id))
+        instrument.serial.baudrate = port.baudrate         # Baud
+        instrument.serial.bytesize = port.bytesize
+        instrument.serial.parity   = port.parity
+        instrument.serial.stopbits = port.stopbits
+        instrument.serial.timeout  = params.time_out          # seconds
+        self.instrument = instrument
 
 
 class port_Topics:
@@ -397,7 +411,7 @@ BRPump_slave = Slave(
                                 ]
                                 ),
                     comm_func=Modbus.miniModbus_comm,
-                    #analyze_func=Modbus.,
+                    analyze_func=Modbus.BRPump_READ_analyze,
                     )
 print('Slaves are all set')
 
@@ -459,24 +473,26 @@ ADDA_port = device_port(ADDA_slave,
                         port='ADDA',
                         )
 
-lst_ports = [
-            #RS485_port,
-            #Scale_port, 
-            #RS232_port, 
-            #Setup_port,
-            GPIO_port,
-            ADDA_port
-            ]
-
 miniModbus_port = device_port(
                         BRPump_slave,
                         name='RS485_port',
-                        port=serial.Serial(port=RS485_port_path,
-                                            baudrate=19200, 
+                        port=serial.Serial(port=MiniModbus_port_path,
+                                            baudrate=9600, 
                                             bytesize=8, 
                                             stopbits=1, 
-                                            parity='N'),
+                                            parity=serial.PARITY_EVEN),
                         )
+miniModbus_port.miniModbus_device_port(slave_id=BRPump_id)
+
+lst_ports = [
+            # RS485_port,
+            # Scale_port, 
+            #RS232_port, 
+            #Setup_port,
+            # GPIO_port,
+            # ADDA_port,
+            miniModbus_port
+            ]
 
 NodeRed = {}
 

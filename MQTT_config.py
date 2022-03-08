@@ -23,6 +23,7 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
         client.subscribe("NodeRed", qos=0)
         client.subscribe("ADDA_Set", qos=0)
         client.subscribe("Relay_Set", qos=0)
+        client.subscribe("BRPump_Set", qos=0)
         #client.subscribe([(u,0) for i in config.lst_ports for u in i.sub_topics])
         #client.subscribe([("Header_EVA_SV", 0), ("Header_BR_SV", 0)])
 
@@ -62,6 +63,13 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
                         config.GPIO_port.sub_values[key] = value
                         #print(type(value))
                         config.GPIO_port.sub_events[key].set()
+        elif (msg.topic == "BRPump_Set"):
+            print(f'{hostname} Receive topic: BRPump_Set')
+            for key, value in resp.items():
+                    if config.miniModbus_port.sub_values.get(key) != None:
+                        config.miniModbus_port.sub_values[key] = value
+                        #print(type(value))
+                        config.miniModbus_port.sub_events[key].set()
 
     def on_publish(client, userdata, mid):
         print(mid)
