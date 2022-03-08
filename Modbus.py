@@ -2,6 +2,7 @@
 # pip3 install numpy 
 ## for numpy, also do this: sudo apt-get install libatlas-base-dev
 # pip3 install pyserial
+# pip3 install -U minimalmodbus
 
 #python packages
 import numpy as np
@@ -15,6 +16,8 @@ import RPi.GPIO as GPIO
 
 #custom modules
 import params
+import minimalmodbus
+import serial
 
 #------------------------------Logger---------------------------------
 logger = logging.getLogger()
@@ -130,6 +133,62 @@ def Scale_data_collect(start, device_port, slave):
     finally:
         logging.info(f"{slave.name}_collect_err: {round((collect_err[1] - collect_err[0])/(collect_err[1]+0.00000000000000001)*100, 2)}%")
 
+def miniModbus_comm(start, device_port, slave):
+    port = device_port.port
+    collect_err = device_port.err_values.get(f'{slave.name}_collect_err')
+    set_err = device_port.err_values.get(f'{slave.name}_set_err')
+    re_collect = device_port.recur_count.get(f'{slave.name}_collect_err')
+    re_set = device_port.recur_count.get(f'{slave.name}_set_err')
+
+    # instrument adress
+    # 4126 open/close 1/0
+    # 4015 flow rate
+    # 4022 unit 2 for ml/min
+    # 4023 clockwise/anticlockwise 1/0
+
+    slave.time_readings = time.time()-start
+    instrument = device_port.instrument
+    if instrument.read_register(4126, 3) == 0:
+        # append 0 to readings when instrument closed
+        readings = 0
+        slave.lst_readings.append(round(readings, 4))
+        print('instrument close')
+        time.sleep(params.time_out)
+    else:
+        # append ml/min to readings
+        readings = instrument.read_float(4015 , 3)
+        slave.lst_readings.append(round(readings, 4))
+        time.sleep(params.time_out)
+
+    for topic in slave.port_topics.sub_topics:
+        #logging.critical((slave.name, topic))
+        if device_port.sub_events[topic].isSet():
+            #logging.critical(device_port.sub_values[topic])
+            try: # try to set value
+                collect_err[1] += 1
+                slave.time_readings = time.time()-start
+                time.sleep(params.time_out)
+                if device_port.sub_values[topic] == 0:
+                    instrument.write_register(4126, 0, 0, 6, False)
+                    logging.info(f'Read {0} from slave_{slave.name}')
+                    time.sleep(params.time_out)
+                else:
+                    instrument.write_register(4022, 2, 0, 6, False)
+                    instrument.write_register(4023, 0, 0, 6, False)    
+                    instrument.write_float(4015 ,float(device_port.sub_values[topic]) , 2, 0)
+                    instrument.write_register(4126, 1, 0, 6, False)
+                    logging.info(f'Read {readings} from slave_{slave.name}')
+                    time.sleep(params.time_out)
+            except Exception as e:
+                set_err[0] += 1
+                err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: " + str(e)
+                logging.error(err_msg)
+            finally:
+                logging.info(f"{slave.name}_set_err: {round((set_err[1] - set_err[0])/(set_err[1]+0.00000000000000001)*100, 2)}%")
+        time.sleep(params.time_out)
+        # slave.lst_readings.append(round(readings, 4))
+        port.reset_input_buffer()
+        device_port.sub_events[topic].clear()
 
 def Relay_comm(start, device_port, slave):
     port = device_port.port
@@ -437,5 +496,15 @@ def ADAM_SET_analyze(start, device_port, slave, **kwargs):
         for readings in _lst_readings]
         )
     _lst_readings = tuple(np.sum(_arr_readings, 0) / len(_lst_readings))
+    _readings = tuple([round(_time_readings,2)]) + _lst_readings
+    return _readings
+
+@kb_event
+@sampling_event(params.sample_time)
+@analyze_decker
+def BRPump_READ_analyze(start, device_port, slave, **kwargs):
+    _lst_readings = kwargs.get('_lst_readings')
+    _time_readings = kwargs.get('_time_readings')
+    _lst_readings = tuple([np.sum(_lst_readings) / len(_lst_readings)])
     _readings = tuple([round(_time_readings,2)]) + _lst_readings
     return _readings
