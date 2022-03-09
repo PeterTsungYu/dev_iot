@@ -347,7 +347,7 @@ def DFM_data_analyze(start, device_port, slave, **kwargs):
     _average_interval_lst = []
     # calc average min flow rate by each interval
     try: 
-        for interval in range(30, 55, 5):
+        for interval in range(2, 15, 5):
             _flow_rate_interval_lst = []
             # for each interval, calculate the average flow rate
             for i in range(interval, len(_time_readings), interval):
@@ -355,9 +355,12 @@ def DFM_data_analyze(start, device_port, slave, **kwargs):
                 # 0.1 liter / pulse
                 _flow_rate = 60 * 0.1 * (interval-1) / (_time_readings[i-1] - _time_readings[i-interval])
                 _flow_rate_interval_lst.append(round(_flow_rate, 2)) 
-            _average_flow_rate_interval = round(sum(_flow_rate_interval_lst) / len(_flow_rate_interval_lst), 2)          
+            _average_flow_rate_interval = round(sum(_flow_rate_interval_lst) / len(_flow_rate_interval_lst), 2)  
+            print(_average_flow_rate_interval)        
             _average_interval_lst.append(_average_flow_rate_interval)
+            print(_average_interval_lst)
         _average = round(sum(_average_interval_lst) / len(_average_interval_lst), 1)
+        print('here')
         _readings = tuple([_sampling_time, _average])
     except:
         _readings = tuple([_sampling_time, 0])

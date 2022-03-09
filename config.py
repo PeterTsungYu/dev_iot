@@ -293,10 +293,10 @@ ADAM_SET_slave = Slave(
                         idno=ADAM_SET_id,
                         port_topics=port_Topics(
                                 sub_topics=[
-                                    'PCB_SET_SV', '1_SET_SV', '2_SET_SV', '3_SET_SV' # PCB(ADAM_SET_SV0), Pump(ADAM_SET_SV1), Air_MFC(ADAM_SET_SV2), H2_MFC(ADAM_SET_SV3)
+                                    'PCB_SET_SV', 'PCB_AWG_SET_SV', '2_SET_SV', '3_SET_SV' # PCB(ADAM_SET_SV0), Pump(ADAM_SET_SV1), Air_MFC(ADAM_SET_SV2), H2_MFC(ADAM_SET_SV3)
                                 ],
                                 pub_topics=[
-                                    'PCB_SET_PV', '1_SET_PV', '2_SET_PV', '3_SET_PV', # PCB(ADAM_SET_PV0), Pump(ADAM_SET_PV1), Air_MFC(ADAM_SET_PV2), H2_MFC(ADAM_SET_PV3)
+                                    'PCB_SET_PV', 'PCB_AWG_SET_PV', '2_SET_PV', '3_SET_PV', # PCB(ADAM_SET_PV0), Pump(ADAM_SET_PV1), Air_MFC(ADAM_SET_PV2), H2_MFC(ADAM_SET_PV3)
                                 ],
                                 err_topics=[
                                     'ADAM_SET_collect_err', 'ADAM_SET_set_err', 'ADAM_SET_analyze_err',
@@ -476,12 +476,12 @@ ADDA_port = device_port(ADDA_slave,
                         )
 
 lst_ports = [
-            #MFC_port,
-            #Scale_port, 
-            RS232_port, 
-            #Setup_port,
-            #GPIO_port,
-            #ADDA_port
+            MFC_port,
+            # Scale_port, 
+            # RS232_port, 
+            # Setup_port,
+            GPIO_port,
+            # ADDA_port
             ]
 
 NodeRed = {}
