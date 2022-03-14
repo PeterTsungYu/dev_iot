@@ -10,7 +10,7 @@ import params
 
 #-----------------Serial port and DeviceID------------------------------
 #_port_path = '/dev/ttyUSB'
-RS485_port_path = '/dev/ttyUSB_RS485' # for monitoring (TC from ADAM)
+#RS485_port_path = '/dev/ttyUSB_RS485' # for monitoring (TC from ADAM)
 Scale_port_path = '/dev/ttyUSB_Scale' # for monitoring Scale
 RS232_port_path = '/dev/ttyUSB_RS232' # for monitoring GA
 Setup_port_path = '/dev/ttyUSB_PC' # for controling (ADAM, TCHeader)
@@ -20,10 +20,10 @@ Header_EVA_id = '01' # ReformerTP EVA_Header @ Setup_port_path
 Header_BR_id  = '02' # ReformerTP BR_Header @ Setup_port_path
 ADAM_SET_id   = '03' # ReformerTP ADAM_4024 for setting @ Setup_port_path
 ADAM_READ_id  = '04' # ReformerTP ADAM_4017+ for monitoring via oltage and current @ Setup_port_path
-ADAM_TC_id    = '05' # ReformerTP ADAM_4018+ for monitoring temp @ RS485_port_path
-Scale_id      = '06'
-DFM_id        = '07'
-DFM_AOG_id    = '08'
+ADAM_TC_id    = '05' # ReformerTP ADAM_4018+ for monitoring temp @ Setup_port_path
+Scale_id      = '06' # Scale_port_path
+DFM_id        = '07' # GPIO
+DFM_AOG_id    = '08' # GPIO
 GA_id         = '11' # ReformerTP GA for monitoring gas conc. @ RS232_port_path
 
 #-----GPIO port setting----------------------------------------------------------------
