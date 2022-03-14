@@ -3,10 +3,15 @@ import threading
 import serial
 import RPi.GPIO as GPIO
 from crccheck.crc import Crc16Modbus
+from datetime import datetime
 
 #custom modules
 import Modbus
 import params
+
+#-----------------Database----------------------------------------------
+db_time = datetime.now().strftime('%Y_%m_%d_%H_%M')
+db_connection = False
 
 #-----------------Serial port and DeviceID------------------------------
 #_port_path = '/dev/ttyUSB'
@@ -25,6 +30,9 @@ Scale_id      = '06' # Scale_port_path
 DFM_id        = '07' # GPIO
 DFM_AOG_id    = '08' # GPIO
 GA_id         = '11' # ReformerTP GA for monitoring gas conc. @ RS232_port_path
+Air_MFC_id    = 'A'
+H2_MFC_id     = 'B'
+
 
 #-----GPIO port setting----------------------------------------------------------------
 ## DFM
@@ -124,7 +132,6 @@ class Slave: # Create Slave data store
             self.r_rtu = _fields[0]
 
     def write_rtu(self, *_fields):
-        self.w_wait_len = 8
         # _fields[0]:data_site
         # _fields[1]:value / data_len
         if len(_fields) == 2:
@@ -132,6 +139,9 @@ class Slave: # Create Slave data store
             data_struc = self.id + '06' + _fields[0] + _value
             crc = Crc16Modbus.calchex(bytearray.fromhex(data_struc))
             self.w_rtu = data_struc + crc[-2:] + crc[:2]
+        elif len(_fields) == 1:
+            if 'MFC' in self.name:
+                self.w_rtu = f'\r{self.id}S{_fields[0]}\r\r'
     
 
 #-------------------------RTU & Slave--------------------------------------
@@ -153,6 +163,7 @@ ADAM_TC_slave = Slave(
                     analyze_func=Modbus.ADAM_TC_analyze
                     )
 ADAM_TC_slave.read_rtu('0000', '0008', wait_len=21)
+ADAM_TC_slave.w_wait_len = 8
 
 # GA slave
 GA_slave = Slave(
@@ -210,6 +221,7 @@ Header_EVA_slave = Slave(
                         analyze_func=Modbus.TCHeader_analyze
                         )
 Header_EVA_slave.read_rtu('008A', '0001', wait_len=7)
+Header_EVA_slave.w_wait_len = 8
 
 Header_EVA_SET_slave = Slave(
                         name = 'Header_EVA_SET',
@@ -229,6 +241,7 @@ Header_EVA_SET_slave = Slave(
                         analyze_func=Modbus.TCHeader_analyze
                         )
 Header_EVA_SET_slave.read_rtu('0000', '0001', wait_len=7)
+Header_EVA_SET_slave.w_wait_len = 8
 
 Header_BR_slave = Slave(
                         name='Header_BR',
@@ -247,6 +260,7 @@ Header_BR_slave = Slave(
                         analyze_func=Modbus.TCHeader_analyze
                         )
 Header_BR_slave.read_rtu('008A', '0001', wait_len=7)
+Header_BR_slave.w_wait_len = 8
 
 Header_BR_SET_slave = Slave(
                         name='Header_BR_SET',
@@ -266,6 +280,7 @@ Header_BR_SET_slave = Slave(
                         analyze_func=Modbus.TCHeader_analyze
                         )
 Header_BR_SET_slave.read_rtu('0000', '0001', wait_len=7)
+Header_BR_SET_slave.w_wait_len = 8
 
 # ADAM_SET_slave, RTU func code 03, channel site at '0000-0003', data_len is 4 ('0004')
 ## ch00:+-10V, ch01:0-5V, ch02:0-5V, ch03:0-5V
@@ -276,10 +291,10 @@ ADAM_SET_slave = Slave(
                         idno=ADAM_SET_id,
                         port_topics=port_Topics(
                                 sub_topics=[
-                                    'PCB_SET_SV', 'Air_MFC_SET_SV', 'ADAM_SET_CH3_SV', 'ADAM_SET_CH4_SV' # PCB(ADAM_SET_SV0), Pump(ADAM_SET_SV1), Air_MFC(ADAM_SET_SV2), H2_MFC(ADAM_SET_SV3)
+                                    'PCB_SET_SV', 'ADAM_SET_CH2_SV', 'ADAM_SET_CH3_SV', 'ADAM_SET_CH4_SV' # PCB(ADAM_SET_SV0), Pump(ADAM_SET_SV1), Air_MFC(ADAM_SET_SV2), H2_MFC(ADAM_SET_SV3)
                                 ],
                                 pub_topics=[
-                                    'PCB_SET_PV', 'Air_MFC_SET_PV', 'ADAM_SET_CH3_PV', 'ADAM_SET_CH4_PV', # PCB(ADAM_SET_PV0), Pump(ADAM_SET_PV1), Air_MFC(ADAM_SET_PV2), H2_MFC(ADAM_SET_PV3)
+                                    'PCB_SET_PV', 'ADAM_SET_CH2_PV', 'ADAM_SET_CH3_PV', 'ADAM_SET_CH4_PV', # PCB(ADAM_SET_PV0), Pump(ADAM_SET_PV1), Air_MFC(ADAM_SET_PV2), H2_MFC(ADAM_SET_PV3)
                                 ],
                                 err_topics=[
                                     'ADAM_SET_collect_err', 'ADAM_SET_set_err', 'ADAM_SET_analyze_err',
@@ -289,6 +304,7 @@ ADAM_SET_slave = Slave(
                         analyze_func=Modbus.ADAM_SET_analyze
                     )
 ADAM_SET_slave.read_rtu('0000', '0004', wait_len=13)
+ADAM_SET_slave.w_wait_len = 8
 
 # ADAM_READ_slave, RTU func code 03, channel site at '0000-0008', data_len is 8 ('0008')
 ## ch00:4-20mA, ch01:0-5V, ch04:0-5V, ch05:0-5V, ch06:0-5V
@@ -298,7 +314,7 @@ ADAM_READ_slave = Slave(
                         port_topics=port_Topics(
                                 sub_topics=[],
                                 pub_topics=[
-                                    'ADAM_READ_PV0', 'ADAM_READ_PV1', 'ADAM_READ_PV2', 'ADAM_READ_PV3', 'ADAM_READ_PV4', 'Air_MFC_PV', 'PT_PV', 'ADAM_READ_PV7' # ADAM_READ_PV0 (SMC), ADAM_READ_PV1 (SMC), ADAM_READ_PV2, ADAM_READ_PV3, ADAM_READ_PV4(pump), ADAM_READ_PV5(Air_MFC), ADAM_READ_PV6(H2_MFC), ADAM_READ_PV7
+                                    'ADAM_READ_PV0', 'ADAM_READ_PV1', 'ADAM_READ_PV2', 'ADAM_READ_PV3', 'ADAM_READ_PV4', 'ADAM_READ_PV5', 'ADAM_READ_PV6', 'ADAM_READ_PV7' # ADAM_READ_PV0 (SMC), ADAM_READ_PV1 (SMC), ADAM_READ_PV2, ADAM_READ_PV3, ADAM_READ_PV4(pump), ADAM_READ_PV5(Air_MFC), ADAM_READ_PV6(H2_MFC), ADAM_READ_PV7
                                 ],
                                 err_topics=[
                                     'ADAM_READ_collect_err', 'ADAM_READ_analyze_err',
@@ -340,20 +356,60 @@ DFM_AOG_slave = Slave(
                     analyze_func=Modbus.DFM_AOG_data_analyze
                     )
 
+Air_MFC_slave = Slave(
+                    name='Air_MFC',
+                    idno=Air_MFC_id, 
+                    port_topics=port_Topics(
+                                sub_topics=[
+                                    'Air_MFC_SET_SV',
+                                ],
+                                pub_topics=[
+                                    'Air_MFC_P', 'Air_MFC_T', 'Air_MFC_LPM', 'Air_MFC_SLPM', 'Air_MFC_SET_PV',
+                                ],
+                                err_topics=[
+                                    'Air_MFC_collect_err', 'Air_MFC_set_err', 'Air_MFC_analyze_err'
+                                ]
+                                ),
+                    comm_func=Modbus.MFC_Comm,
+                    analyze_func=Modbus.Air_MFC_analyze,
+                    )
+Air_MFC_slave.read_rtu(f'\r{Air_MFC_id}\r\r', wait_len=49)
+Air_MFC_slave.w_wait_len = 49
+
+H2_MFC_slave = Slave(
+                    name='H2_MFC',
+                    idno=H2_MFC_id, 
+                    port_topics=port_Topics(
+                                sub_topics=[
+                                    'H2_MFC_SET_SV',
+                                ],
+                                pub_topics=[
+                                    'H2_MFC_P', 'H2_MFC_T', 'H2_MFC_LPM', 'H2_MFC_SLPM', 'H2_MFC_SET_PV',
+                                ],
+                                err_topics=[
+                                    'H2_MFC_collect_err', 'H2_MFC_set_err', 'H2_MFC_analyze_err'
+                                ]
+                                ),
+                    comm_func=Modbus.MFC_Comm,
+                    analyze_func=Modbus.H2_MFC_analyze,
+                    )
+H2_MFC_slave.read_rtu(f'\r{H2_MFC_id}\r\r', wait_len=49)
+H2_MFC_slave.w_wait_len = 49
+
 print('Slaves are all set')
 
 #-----Port setting----------------------------------------------------------------
-'''
-RS485_port = device_port(
-                        ADAM_TC_slave,
-                        name='RS485_port',
-                        port=serial.Serial(port=RS485_port_path,
+MFC_port = device_port(
+                        Air_MFC_slave,
+                        H2_MFC_slave,
+                        name='MFC_port',
+                        port=serial.Serial(port=MFC_port_path,
                                             baudrate=19200, 
                                             bytesize=8, 
                                             stopbits=1, 
                                             parity='N'),
                         )
-'''
+
 Scale_port = device_port(Scale_slave,
                         name='Scale_port',
                         port=serial.Serial(port=Scale_port_path,
@@ -395,7 +451,7 @@ GPIO_port = device_port(DFM_slave,
                         )
 
 lst_ports = [
-            #RS485_port,
+            #MFC_port,
             Scale_port, 
             RS232_port, 
             Setup_port,

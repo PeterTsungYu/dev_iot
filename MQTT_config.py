@@ -21,6 +21,7 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
         # reconnect then subscriptions will be renewed.
         client.subscribe("Set_bit", qos=0)
         client.subscribe("NodeRed", qos=0)
+        client.subscribe("MFC_Set", qos=0)
         #client.subscribe([(u,0) for i in config.lst_ports for u in i.sub_topics])
         #client.subscribe([("Header_EVA_SV", 0), ("Header_BR_SV", 0)])
 
@@ -46,6 +47,12 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
                 if config.Setup_port.sub_values.get(key) != None:
                     config.Setup_port.sub_values[key] = float(value)
                     config.Setup_port.sub_events[key].set()
+        elif (msg.topic == 'MFC_Set'):
+            print(f'{hostname} Receive topic: MFC_Set')
+            for key, value in resp.items():
+                if config.MFC_port.sub_values.get(key) != None:
+                    config.MFC_port.sub_values[key] = float(value)
+                    config.MFC_port.sub_events[key].set()
         
     def on_publish(client, userdata, mid):
         print(mid)
@@ -74,7 +81,10 @@ def multi_pub(client):
                     client.publish(topic=_slave.name, payload=payload, qos=0, retain=False)
                     #print(f"pub {_slave.name}:{payload} succeed from {client._client_id} >>> localhost")
             client.publish(topic='DFM_total', payload=config.GPIO_port.pub_values['DFM_RichGas'] + config.GPIO_port.pub_values['DFM_AOG'], qos=0, retain=False)
-            #client.publish(topic='DB_name', payload=config.db_time, qos=0, retain=False)
+            if config.db_connection == True:
+                client.publish(topic='DB_name', payload=config.db_time, qos=0, retain=False)
+            elif config.db_connection == False:
+                client.publish(topic='DB_name', payload='', qos=0, retain=False)
 
 #-------------------------MQTT instance--------------------------------------
 client_0 = connect_mqtt(client_id='client_0' ,hostname='localhost', port=1883, keepalive=60,) 
