@@ -50,9 +50,9 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
         elif (msg.topic == 'MFC_Set'):
             print(f'{hostname} Receive topic: MFC_Set')
             for key, value in resp.items():
-                if config.MFC_port.sub_values.get(key) != None:
-                    config.MFC_port.sub_values[key] = float(value)
-                    config.MFC_port.sub_events[key].set()
+                if config.RS232_port.sub_values.get(key) != None:
+                    config.RS232_port.sub_values[key] = float(value)
+                    config.RS232_port.sub_events[key].set()
         
     def on_publish(client, userdata, mid):
         print(mid)

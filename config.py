@@ -291,10 +291,10 @@ ADAM_SET_slave = Slave(
                         idno=ADAM_SET_id,
                         port_topics=port_Topics(
                                 sub_topics=[
-                                    'PCB_SET_SV', 'ADAM_SET_CH2_SV', 'ADAM_SET_CH3_SV', 'ADAM_SET_CH4_SV' # PCB(ADAM_SET_SV0), Pump(ADAM_SET_SV1), Air_MFC(ADAM_SET_SV2), H2_MFC(ADAM_SET_SV3)
+                                    'PCB_SET_SV', 'ADAM_Air_SET_CH2_SV', 'H2_MFC_SET_SV', 'ADAM_SET_CH4_SV' # PCB(ADAM_SET_SV0), Pump(ADAM_SET_SV1), Air_MFC(ADAM_SET_SV2), H2_MFC(ADAM_SET_SV3)
                                 ],
                                 pub_topics=[
-                                    'PCB_SET_PV', 'ADAM_SET_CH2_PV', 'ADAM_SET_CH3_PV', 'ADAM_SET_CH4_PV', # PCB(ADAM_SET_PV0), Pump(ADAM_SET_PV1), Air_MFC(ADAM_SET_PV2), H2_MFC(ADAM_SET_PV3)
+                                    'PCB_SET_PV', 'ADAM_Air_SET_CH2_PV', 'H2_MFC_SET_PV', 'ADAM_SET_CH4_PV', # PCB(ADAM_SET_PV0), Pump(ADAM_SET_PV1), Air_MFC(ADAM_SET_PV2), H2_MFC(ADAM_SET_PV3)
                                 ],
                                 err_topics=[
                                     'ADAM_SET_collect_err', 'ADAM_SET_set_err', 'ADAM_SET_analyze_err',
@@ -314,7 +314,7 @@ ADAM_READ_slave = Slave(
                         port_topics=port_Topics(
                                 sub_topics=[],
                                 pub_topics=[
-                                    'ADAM_READ_PV0', 'ADAM_READ_PV1', 'ADAM_READ_PV2', 'ADAM_READ_PV3', 'ADAM_READ_PV4', 'ADAM_READ_PV5', 'ADAM_READ_PV6', 'ADAM_READ_PV7' # ADAM_READ_PV0 (SMC), ADAM_READ_PV1 (SMC), ADAM_READ_PV2, ADAM_READ_PV3, ADAM_READ_PV4(pump), ADAM_READ_PV5(Air_MFC), ADAM_READ_PV6(H2_MFC), ADAM_READ_PV7
+                                    'ADAM_P_Air', 'ADAM_P_H2', 'ADAM_P_N2', 'ADAM_P_NH', 'ADAM_P_Out', 'ADAM_READ_Air', 'H2_MFC_PV', 'ADAM_P_MeMix' # ADAM_READ_PV0 (SMC), ADAM_READ_PV1 (SMC), ADAM_READ_PV2, ADAM_READ_PV3, ADAM_READ_PV4(pump), ADAM_READ_PV5(Air_MFC), ADAM_READ_PV6(H2_MFC), ADAM_READ_PV7
                                 ],
                                 err_topics=[
                                     'ADAM_READ_collect_err', 'ADAM_READ_analyze_err',
@@ -399,17 +399,6 @@ H2_MFC_slave.w_wait_len = 49
 print('Slaves are all set')
 
 #-----Port setting----------------------------------------------------------------
-MFC_port = device_port(
-                        Air_MFC_slave,
-                        H2_MFC_slave,
-                        name='MFC_port',
-                        port=serial.Serial(port=MFC_port_path,
-                                            baudrate=19200, 
-                                            bytesize=8, 
-                                            stopbits=1, 
-                                            parity='N'),
-                        )
-
 Scale_port = device_port(Scale_slave,
                         name='Scale_port',
                         port=serial.Serial(port=Scale_port_path,
@@ -419,7 +408,9 @@ Scale_port = device_port(Scale_slave,
                                             parity='N'),
                         )
 
-RS232_port = device_port(GA_slave,
+RS232_port = device_port(#GA_slave,
+                        Air_MFC_slave,
+                        #H2_MFC_slave,
                         name='RS232_port',
                         port=serial.Serial(port=RS232_port_path,
                                             baudrate=9600, 
@@ -452,10 +443,10 @@ GPIO_port = device_port(DFM_slave,
 
 lst_ports = [
             #MFC_port,
-            Scale_port, 
+            #Scale_port, 
             RS232_port, 
             Setup_port,
-            GPIO_port
+            #GPIO_port
             ]
 
 NodeRed = {}

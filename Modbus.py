@@ -273,17 +273,17 @@ def MFC_Comm(start, device_port, slave):
 
     w_data_site=0
     for topic in slave.port_topics.sub_topics:
-        #logging.critical((slave.name, topic))
+        logging.critical((slave.name, topic))
         if device_port.sub_events[topic].isSet():
-            #logging.debug(device_port.sub_values[topic])
+            logging.debug(device_port.sub_values[topic])
             try: # try to set value
                 set_err[1] += 1
                 slave.write_rtu(device_port.sub_values[topic])
-                #logging.debug(slave.w_rtu)
+                logging.debug(slave.w_rtu)
                 port.write(bytes(slave.w_rtu, 'ASCII')) 
                 time.sleep(params.time_out)
                 _data_len = port.inWaiting()
-                #logging.debug(_data_len)
+                #logging.debug(str(port.read(_data_len)))
                 if _data_len >= slave.w_wait_len:
                     readings = str(port.read(_data_len)) # after reading, the buffer will be clean
                     re = slave.id
