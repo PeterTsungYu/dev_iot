@@ -408,7 +408,7 @@ Scale_port = device_port(Scale_slave,
                                             parity='N'),
                         )
 
-RS232_port = device_port(#GA_slave,
+RS232_port = device_port(GA_slave,
                         Air_MFC_slave,
                         #H2_MFC_slave,
                         name='RS232_port',
@@ -443,7 +443,7 @@ GPIO_port = device_port(DFM_slave,
 
 lst_ports = [
             #MFC_port,
-            #Scale_port, 
+            Scale_port, 
             RS232_port, 
             Setup_port,
             #GPIO_port
