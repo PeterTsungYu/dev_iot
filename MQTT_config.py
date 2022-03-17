@@ -8,6 +8,7 @@ import json
 #custom modules
 import params
 import config
+import time
 
 #-------------------------MQTT func--------------------------------------
 def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
@@ -29,7 +30,7 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
     def on_message(client, userdata, msg):
         #print(msg.topic+ ": " + str(msg.payload) + f">>> {client_id}")
         resp = json.loads(msg.payload.decode('utf-8'))
-        print(resp)
+        # print(resp)
         if (msg.topic == 'NodeRed'):
             print(f'{hostname} Receive topic: NodeRed')
             _resp = {}
@@ -69,6 +70,7 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
 
 def multi_pub(client):
     while not params.kb_event.isSet():
+        # print(time.time())
         if not params.ticker.wait(params.sample_time):
             for device_port in config.lst_ports:
                 #print(device_port.name)
@@ -88,10 +90,10 @@ def multi_pub(client):
 
 #-------------------------MQTT instance--------------------------------------
 client_0 = connect_mqtt(client_id='client_0' ,hostname='localhost', port=1883, keepalive=60,) 
-client_0.loop_start()
+#client_0.loop_start()
 
 multi_pub = threading.Thread(
     target=multi_pub,
     args=(client_0,),
     )
-multi_pub.start()
+#multi_pub.start()

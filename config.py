@@ -449,16 +449,16 @@ RS232_port = device_port(GA_slave,
                         )
 
 Setup_port = device_port(
-                        Header_EVA_slave,
-                        Header_BR_slave,
+                        # Header_EVA_slave,
+                        # Header_BR_slave,
                         ADAM_TC_slave,
                         ADAM_SET_slave,
                         ADAM_READ_slave,
-                        Header_EVA_SET_slave,
-                        Header_BR_SET_slave,
+                        # Header_EVA_SET_slave,
+                        # Header_BR_SET_slave,
                         name='Setup_port',
                         port=serial.Serial(port=Setup_port_path,
-                                            baudrate=57600, 
+                                            baudrate=9600, 
                                             bytesize=8, 
                                             stopbits=1, 
                                             parity='N'),
@@ -476,12 +476,12 @@ ADDA_port = device_port(ADDA_slave,
                         )
 
 lst_ports = [
-            MFC_port,
-            # Scale_port, 
-            # RS232_port, 
-            # Setup_port,
-            GPIO_port,
-            # ADDA_port
+            #MFC_port,
+            #Scale_port, 
+            #RS232_port, 
+            Setup_port,
+            #GPIO_port,
+            #ADDA_port
             ]
 
 NodeRed = {}
