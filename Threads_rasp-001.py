@@ -69,6 +69,8 @@ try:
     while not params.kb_event.isSet():
         if not params.ticker.wait(params.sample_time):
             print("=="*10 + f'Elapsed time: {round((time.time()-start),2)}' + "=="*10)
+            #for device_port in config.lst_ports: 
+                #print(device_port.thread_funcs)
         
 except KeyboardInterrupt: 
     print(f"Keyboard Interrupt in main thread!")

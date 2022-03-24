@@ -134,7 +134,7 @@ def Modbus_Comm(start, device_port, slave):
         #logging.debug(port.inWaiting())
         _data_len = port.inWaiting()
         if _data_len >= slave.r_wait_len: 
-            readings = port.read(_data_len).hex() # after reading, the buffer will be clean
+            readings = port.read(_data_len).hex() # after reading, the buffer will be clean        
             #logging.debug(readings)
             if slave.name == 'GA':
                 slave.lst_readings.append(readings)
@@ -344,18 +344,18 @@ def ADAM_READ_analyze(start, device_port, slave, **kwargs):
 def DFM_data_analyze(start, device_port, slave, **kwargs):
     _time_readings = kwargs.get('_time_readings')
     _sampling_time = round(time.time()-start, 2)
-    _flow_rate_interval_lst = []
-    _average_interval_lst = []
+    # _flow_rate_interval_lst = []
+    # _average_interval_lst = []
     # calc average min flow rate by each interval
     try: 
         # flow rate in [liter/s]
         # 0.1 liter / pulse
         _flow_rate = 60 * 0.1 * (len(_time_readings) - 1) / (_time_readings[-1] - _time_readings[0])
-        _flow_rate_interval_lst.append(round(_flow_rate, 2)) 
-        _average_flow_rate_interval = round(sum(_flow_rate_interval_lst) / len(_flow_rate_interval_lst), 2)         
-        _average_interval_lst.append(_average_flow_rate_interval)
-        _average = round(sum(_average_interval_lst) / len(_average_interval_lst), 1)
-        _readings = tuple([_sampling_time, _average])
+        # _flow_rate_interval_lst.append(round(_flow_rate, 2)) 
+        # _average_flow_rate_interval = round(sum(_flow_rate_interval_lst) / len(_flow_rate_interval_lst), 2)         
+        # _average_interval_lst.append(_average_flow_rate_interval)
+        # _average = round(sum(_average_interval_lst) / len(_average_interval_lst), 1)
+        _readings = tuple([_sampling_time, round(_flow_rate, 2)])
     except:
         _readings = tuple([_sampling_time, 0])
     return _readings
@@ -367,18 +367,24 @@ def DFM_data_analyze(start, device_port, slave, **kwargs):
 def DFM_AOG_data_analyze(start, device_port, slave, **kwargs):
     _time_readings = kwargs.get('_time_readings')
     _sampling_time = round(time.time()-start, 2)
-    _average_interval_lst = []
-    _flow_rate_interval_lst = []
+    # _average_interval_lst = []
+    # _flow_rate_interval_lst = []
     # calc average min flow rate by each interval 
     try:
         # flow rate in [liter/s]
         # 0.01 liter / pulse
+        #print(_time_readings)
         _flow_rate = 60 * 0.01 * (len(_time_readings) - 1) / (_time_readings[-1] - _time_readings[0])
-        _flow_rate_interval_lst.append(round(_flow_rate, 2)) 
-        _average_flow_rate_interval = round(sum(_flow_rate_interval_lst) / len(_flow_rate_interval_lst), 2)          
-        _average_interval_lst.append(_average_flow_rate_interval)
-        _average = round(sum(_average_interval_lst) / len(_average_interval_lst), 1)
-        _readings = tuple([_sampling_time, _average])
+        #print(_flow_rate)
+        # _flow_rate_interval_lst.append(round(_flow_rate, 2)) 
+        # print(_flow_rate_interval_lst)
+        # _average_flow_rate_interval = round(sum(_flow_rate_interval_lst) / len(_flow_rate_interval_lst), 2)          
+        # print(_average_flow_rate_interval)
+        # _average_interval_lst.append(_average_flow_rate_interval)
+        # print(_average_interval_lst)
+        # _average = round(sum(_average_interval_lst) / len(_average_interval_lst), 1)
+        _readings = tuple([_sampling_time, round(_flow_rate,2)])
+        print(_readings)
     except:
         _readings = tuple([_sampling_time, 0])
     return _readings
@@ -468,3 +474,6 @@ def H2_MFC_analyze(start, device_port, slave, **kwargs):
     _lst_readings = tuple(np.sum(_arr_readings, 0) / len(_lst_readings))
     _readings = tuple([round(_time_readings,2)]) + _lst_readings
     return _readings
+
+def VOID():
+    pass

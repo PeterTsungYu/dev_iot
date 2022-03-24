@@ -85,7 +85,6 @@ class device_port:
                 for slave in self.slaves:
                     if slave.kwargs.get('comm_func'):
                         slave.kwargs['comm_func'](start, self, slave)
-        
         self.thread_funcs.append(threading.Thread(
                                     name = f'{self.name}_comm',
                                     target=thread_func, 
@@ -340,6 +339,7 @@ DFM_slave = Slave(
                                     'DFM_collect_err', 'DFM_analyze_err', 
                                 ]
                                 ),
+                comm_func=Modbus.VOID,
                 analyze_func=Modbus.DFM_data_analyze
                 )
 
@@ -355,6 +355,7 @@ DFM_AOG_slave = Slave(
                                     'DFM_AOG_collect_err', 'DFM_AOG_analyze_err'
                                 ]
                                 ),
+                    comm_func=Modbus.VOID,
                     analyze_func=Modbus.DFM_AOG_data_analyze
                     )
 
@@ -372,8 +373,8 @@ ADDA_slave = Slave(
                                     'ADDA_collect_err', 'ADDA_set_err', 'ADDA_analyze_err'
                                 ]
                                 ),
-                    #comm_func=Modbus.ADDA_comm,
-                    #analyze_func=Modbus.,
+                    comm_func=Modbus.VOID,
+                    # analyze_func=Modbus.VOID,
                     )
 
 Air_MFC_slave = Slave(
@@ -449,13 +450,13 @@ RS232_port = device_port(GA_slave,
                         )
 
 Setup_port = device_port(
-                        # Header_EVA_slave,
-                        # Header_BR_slave,
+                        Header_BR_slave,
+                        Header_BR_SET_slave,
+                        Header_EVA_slave,
+                        Header_EVA_SET_slave,
                         ADAM_TC_slave,
-                        ADAM_SET_slave,
                         ADAM_READ_slave,
-                        # Header_EVA_SET_slave,
-                        # Header_BR_SET_slave,
+                        ADAM_SET_slave,
                         name='Setup_port',
                         port=serial.Serial(port=Setup_port_path,
                                             baudrate=9600, 
@@ -476,12 +477,12 @@ ADDA_port = device_port(ADDA_slave,
                         )
 
 lst_ports = [
-            #MFC_port,
-            #Scale_port, 
-            #RS232_port, 
+            MFC_port,
+            Scale_port, 
+            RS232_port, 
             Setup_port,
-            #GPIO_port,
-            #ADDA_port
+            GPIO_port,
+            ADDA_port
             ]
 
 NodeRed = {}

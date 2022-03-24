@@ -2,7 +2,7 @@ import threading
 import signal
 
 #-------------------------Global var--------------------------------------
-time_out          = 0.5 # for collecting data
+time_out          = 0.1 # for collecting data
 sample_time       = 1 # for analyzing data
 sample_time_DFM   = 5
 

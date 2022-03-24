@@ -74,15 +74,18 @@ def multi_pub(client):
         if not params.ticker.wait(params.sample_time):
             for device_port in config.lst_ports:
                 #print(device_port.name)
-                for _slave in device_port.slaves:
-                    payload = {}
-                    #print(_slave.name)
-                    for _topic in _slave.port_topics.pub_topics:
-                        payload[_topic] = device_port.pub_values[_topic]
-                    payload = json.dumps(payload)
-                    client.publish(topic=_slave.name, payload=payload, qos=0, retain=False)
-                    #print(f"pub {_slave.name}:{payload} succeed from {client._client_id} >>> localhost")
-            client.publish(topic='DFM_total', payload=config.GPIO_port.pub_values['DFM_RichGas'] + config.GPIO_port.pub_values['DFM_AOG'], qos=0, retain=False)
+                if (device_port.name != 'GPIO_port') and (device_port.name != 'ADDA_port'):
+                    for _slave in device_port.slaves:
+                        payload = {}
+                        #print(_slave.name)
+                        for _topic in _slave.port_topics.pub_topics:
+                            payload[_topic] = device_port.pub_values[_topic]
+                        payload = json.dumps(payload)
+                        client.publish(topic=_slave.name, payload=payload, qos=0, retain=False)
+                        #print(f"pub {_slave.name}:{payload} succeed from {client._client_id} >>> localhost")
+            client.publish(topic='DFM_total', payload=config.GPIO_port.pub_values['DFM_RichGas'] + config.GPIO_port.pub_values['DFM_AOG'], qos=2, retain=False)
+            client.publish(topic='DFM', payload=json.dumps({'DFM_RichGas':config.GPIO_port.pub_values['DFM_RichGas']}), qos=2, retain=False)
+            client.publish(topic='DFM_AOG', payload=json.dumps({'DFM_AOG':config.GPIO_port.pub_values['DFM_AOG']}), qos=2, retain=False)
             if config.db_connection == True:
                 client.publish(topic='DB_name', payload=config.db_time, qos=0, retain=False)
             elif config.db_connection == False:
@@ -90,10 +93,10 @@ def multi_pub(client):
 
 #-------------------------MQTT instance--------------------------------------
 client_0 = connect_mqtt(client_id='client_0' ,hostname='localhost', port=1883, keepalive=60,) 
-#client_0.loop_start()
+client_0.loop_start()
 
 multi_pub = threading.Thread(
     target=multi_pub,
     args=(client_0,),
     )
-#multi_pub.start()
+multi_pub.start()
