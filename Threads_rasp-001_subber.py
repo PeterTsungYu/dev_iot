@@ -35,13 +35,15 @@ try:
 
     GPIO.setup(config.channel_Relay01_IN1, GPIO.OUT, initial=1)
     GPIO.setup(config.channel_Relay01_IN2, GPIO.OUT, initial=1)
+    GPIO.setup(config.GPIO_PWM_1, GPIO.OUT)
+    GPIO.setup(config.GPIO_PWM_2, GPIO.OUT)
     '''def DFM_data_collect(self):
         config.DFM_slave.time_readings.append(time.time())
     def DFM_AOG_data_collect(self):
         config.DFM_AOG_slave.time_readings.append(time.time())
     GPIO.add_event_detect(config.channel_DFM, GPIO.RISING, callback=DFM_data_collect)
     GPIO.add_event_detect(config.channel_DFM_AOG, GPIO.RISING, callback=DFM_AOG_data_collect)'''
-    print('GPIO_Relay ports open')
+    print('GPIO ports open')
     
 except Exception as ex:
     print ("open serial port error: " + str(ex))

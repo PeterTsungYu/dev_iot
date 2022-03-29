@@ -145,6 +145,7 @@ def miniModbus_comm(start, device_port, slave):
     # 4015 flow rate
     # 4022 unit 2 for ml/min
     # 4023 clockwise/anticlockwise 1/0
+    # instrument.write_register(4026, 0, 0, 6, False)
 
     slave.time_readings = time.time()-start
     instrument = device_port.instrument
@@ -186,9 +187,39 @@ def miniModbus_comm(start, device_port, slave):
             finally:
                 logging.info(f"{slave.name}_set_err: {round((set_err[1] - set_err[0])/(set_err[1]+0.00000000000000001)*100, 2)}%")
         time.sleep(params.time_out)
+        # print(device_port.pub_values)
         # slave.lst_readings.append(round(readings, 4))
         port.reset_input_buffer()
         device_port.sub_events[topic].clear()
+
+
+def PWM_comm(start, device_port, slave):
+    port = device_port.port
+    collect_err = device_port.err_values.get(f'{slave.name}_collect_err')
+    set_err = device_port.err_values.get(f'{slave.name}_set_err')
+    re_collect = device_port.recur_count.get(f'{slave.name}_collect_err')
+    re_set = device_port.recur_count.get(f'{slave.name}_set_err')
+
+    # set Relay to ON / OFF 
+    for topic in slave.port_topics.sub_topics:
+        #logging.critical((slave.name, topic))
+        if device_port.sub_events[topic].isSet():
+            #logging.critical(device_port.sub_values[topic])
+            try: # try to set value
+                if device_port.sub_values[topic]:
+                    GPIO.output(channel_Relay01_IN1, 0)
+                    GPIO.output(channel_Relay01_IN2, 0)
+                else:
+                    GPIO.output(channel_Relay01_IN1, 1)
+                    GPIO.output(channel_Relay01_IN2, 1)
+                device_port.sub_events[topic].clear()
+            except Exception as e:
+                set_err[0] += 1
+                err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: " + str(e)
+                logging.error(err_msg)
+            finally:
+                logging.info(f"{slave.name}_set_err: {round((set_err[1] - set_err[0])/(set_err[1]+0.00000000000000001)*100, 2)}%")
+
 
 def Relay_comm(start, device_port, slave):
     port = device_port.port

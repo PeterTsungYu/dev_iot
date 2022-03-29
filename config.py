@@ -36,10 +36,11 @@ GA_id         = '11' # ReformerTP GA for monitoring gas conc. @ RS232_port_path
 BRPump_id     = '12'
 
 #-----GPIO port setting----------------------------------------------------------------
-## DFM
 # read High as 3.3V
 channel_Relay01_IN1     = 24
 channel_Relay01_IN2     = 25
+GPIO_PWM_1                   = 12
+GPIO_PWM_2                   = 16
 GPIO.setmode(GPIO.BCM)
 
 #-----Cls----------------------------------------------------------------
@@ -132,6 +133,7 @@ class Slave: # Create Slave data store
         self.readings = [] # for all data
         self.port_topics = port_topics
         self.kwargs = kwargs # dict of funcs
+        self.GPIO_instance = None
 
     def read_rtu(self, *_fields, wait_len):
         self.r_wait_len = wait_len
@@ -154,6 +156,9 @@ class Slave: # Create Slave data store
             crc = Crc16Modbus.calchex(bytearray.fromhex(data_struc))
             self.w_rtu = data_struc + crc[-2:] + crc[:2]
     
+    def PWM_instance(self, frequency=0, duty=0):
+        self.GPIO_instance = GPIO.PWM(self.id, frequency)  # channel=12 frequency=50Hz
+        self.GPIO_instance.start(duty)
 
 #-------------------------RTU & Slave--------------------------------------
 # ADAM_TC
@@ -396,6 +401,44 @@ Relay01_slave = Slave(
                     #analyze_func=Modbus.,
                     )
 
+PWM01_slave = Slave(
+                    name='PWM01',
+                    idno=GPIO_PWM_1, #GPIO
+                    port_topics=port_Topics(
+                                sub_topics=[
+                                    'PWM01_open_SV', 'PWM01_f_SV', 'PWM01_duty_SV'
+                                ],
+                                pub_topics=[
+                                ],
+                                err_topics=[
+                                    'PWM01_collect_err', 'PWM01_set_err', 'PWM01_analyze_err'
+                                ]
+                                ),
+                    comm_func=Modbus.PWM_comm,
+                    #analyze_func=Modbus.,
+                    )
+PWM01_slave.PWM_instance()
+
+
+PWM02_slave = Slave(
+                    name='PWM02',
+                    idno=GPIO_PWM_2, #GPIO
+                    port_topics=port_Topics(
+                                sub_topics=[
+                                    'PWM02_open_SV', 'PWM02_f_SV', 'PWM02_duty_SV'
+                                ],
+                                pub_topics=[
+                                ],
+                                err_topics=[
+                                    'PWM02_collect_err', 'PWM02_set_err', 'PWM02_analyze_err'
+                                ]
+                                ),
+                    comm_func=Modbus.PWM_comm,
+                    #analyze_func=Modbus.,
+                    )
+PWM02_slave.PWM_instance()
+
+
 BRPump_slave = Slave(
                     name='BRPump',
                     idno=BRPump_id, 
@@ -463,6 +506,8 @@ Setup_port = device_port(
 '''
 
 GPIO_port = device_port(Relay01_slave,
+                        PWM01_slave,
+                        #PWM02_slave,
                         name='GPIO_port',
                         port='GPIO',
                         )
@@ -487,10 +532,10 @@ miniModbus_port.miniModbus_device_port(slave_id=BRPump_id)
 lst_ports = [
             # RS485_port,
             # Scale_port, 
-            #RS232_port, 
-            #Setup_port,
-            # GPIO_port,
-            # ADDA_port,
+            # RS232_port, 
+            # Setup_port,
+            GPIO_port,
+            ADDA_port,
             miniModbus_port
             ]
 

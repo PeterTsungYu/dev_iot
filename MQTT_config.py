@@ -95,7 +95,7 @@ def multi_pub(client):
                     for _topic in _slave.port_topics.pub_topics:
                         payload[_topic] = device_port.pub_values[_topic]
                     payload = json.dumps(payload)
-                    client.publish(topic=_slave.name, payload=payload, qos=0, retain=False)
+                    client.publish(topic=_slave.name, payload=payload, qos=1, retain=False)
                     #print(f"pub {_slave.name}:{payload} succeed from {client._client_id} >>> localhost")
             #client.publish(topic='DFM_total', payload=config.GPIO_port.pub_values['DFM_RichGas'] + config.GPIO_port.pub_values['DFM_AOG'], qos=0, retain=False)
             #client.publish(topic='DB_name', payload=config.db_time, qos=0, retain=False)
