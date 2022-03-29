@@ -199,20 +199,31 @@ def PWM_comm(start, device_port, slave):
     set_err = device_port.err_values.get(f'{slave.name}_set_err')
     re_collect = device_port.recur_count.get(f'{slave.name}_collect_err')
     re_set = device_port.recur_count.get(f'{slave.name}_set_err')
-
-    # set Relay to ON / OFF 
+    # set PWM to ON / OFF, frequency, duty 
     for topic in slave.port_topics.sub_topics:
         #logging.critical((slave.name, topic))
         if device_port.sub_events[topic].isSet():
             #logging.critical(device_port.sub_values[topic])
             try: # try to set value
-                if device_port.sub_values[topic]:
-                    GPIO.output(channel_Relay01_IN1, 0)
-                    GPIO.output(channel_Relay01_IN2, 0)
-                else:
-                    GPIO.output(channel_Relay01_IN1, 1)
-                    GPIO.output(channel_Relay01_IN2, 1)
+                print(topic)
+                if 'open_SV' in topic:
+                    if device_port.sub_values[topic]:
+                        duty = device_port.sub_values[f'{slave.name}_duty_SV']
+                        f = device_port.sub_values[f'{slave.name}_f_SV']
+                        slave.GPIO_instance.start(duty) # start at 0 duty
+                        slave.GPIO_instance.ChangeFrequency(f)
+                        print(f"open at duty:{duty}, f: {f}")
+                    else:
+                        slave.GPIO_instance.stop()
+                        print('close')
+                elif 'f_SV' in topic:
+                    slave.GPIO_instance.ChangeFrequency(device_port.sub_values[topic]) 
+                    print(f'change f: {device_port.sub_values[topic]}')
+                elif 'duty_SV' in topic:
+                    slave.GPIO_instance.ChangeDutyCycle(device_port.sub_values[topic]) 
+                    print(f'change duty: {device_port.sub_values[topic]}')
                 device_port.sub_events[topic].clear()
+                print('clear flag')
             except Exception as e:
                 set_err[0] += 1
                 err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: " + str(e)

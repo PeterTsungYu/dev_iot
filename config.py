@@ -39,8 +39,8 @@ BRPump_id     = '12'
 # read High as 3.3V
 channel_Relay01_IN1     = 24
 channel_Relay01_IN2     = 25
-GPIO_PWM_1                   = 12
-GPIO_PWM_2                   = 16
+GPIO_PWM_1              = 12
+GPIO_PWM_2              = 16
 GPIO.setmode(GPIO.BCM)
 
 #-----Cls----------------------------------------------------------------
@@ -156,7 +156,8 @@ class Slave: # Create Slave data store
             crc = Crc16Modbus.calchex(bytearray.fromhex(data_struc))
             self.w_rtu = data_struc + crc[-2:] + crc[:2]
     
-    def PWM_instance(self, frequency=0, duty=0):
+    def PWM_instance(self, frequency=1.0, duty=0):
+        GPIO.setup(self.id, GPIO.OUT)
         self.GPIO_instance = GPIO.PWM(self.id, frequency)  # channel=12 frequency=50Hz
         self.GPIO_instance.start(duty)
 
@@ -505,7 +506,7 @@ Setup_port = device_port(
                         )
 '''
 
-GPIO_port = device_port(Relay01_slave,
+GPIO_port = device_port(#Relay01_slave,
                         PWM01_slave,
                         #PWM02_slave,
                         name='GPIO_port',
@@ -535,8 +536,8 @@ lst_ports = [
             # RS232_port, 
             # Setup_port,
             GPIO_port,
-            ADDA_port,
-            miniModbus_port
+            #ADDA_port,
+            #miniModbus_port
             ]
 
 NodeRed = {}

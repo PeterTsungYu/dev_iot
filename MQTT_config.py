@@ -19,10 +19,11 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
         
         # Subscribing in on_connect() means that if we lose the connection and
         # reconnect then subscriptions will be renewed.
-        client.subscribe("Set_bit", qos=0)
-        client.subscribe("NodeRed", qos=0)
+        #client.subscribe("Set_bit", qos=0)
+        #client.subscribe("NodeRed", qos=0)
         client.subscribe("ADDA_Set", qos=0)
         client.subscribe("Relay_Set", qos=0)
+        client.subscribe("PWM_Set", qos=0)
         client.subscribe("BRPump_Set", qos=0)
         #client.subscribe([(u,0) for i in config.lst_ports for u in i.sub_topics])
         #client.subscribe([("Header_EVA_SV", 0), ("Header_BR_SV", 0)])
@@ -62,6 +63,13 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
                     if config.GPIO_port.sub_values.get(key) != None:
                         config.GPIO_port.sub_values[key] = value
                         #print(type(value))
+                        config.GPIO_port.sub_events[key].set()
+        elif (msg.topic == "PWM_Set"):
+            print(f'{hostname} Receive topic: PWM_Set')
+            for key, value in resp.items():
+                    if config.GPIO_port.sub_values.get(key) != None:
+                        config.GPIO_port.sub_values[key] = value
+                        print(value)
                         config.GPIO_port.sub_events[key].set()
         elif (msg.topic == "BRPump_Set"):
             print(f'{hostname} Receive topic: BRPump_Set')
