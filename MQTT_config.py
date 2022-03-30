@@ -44,16 +44,15 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
             #print(config.NodeRed)
         elif (msg.topic == 'Set_bit'):
             print(f'{hostname} Receive topic: Set_bit')
-            for key, value in resp.items():
-                if config.Setup_port.sub_values.get(key) != None:
-                    config.Setup_port.sub_values[key] = float(value)
-                    config.Setup_port.sub_events[key].set()
+            port = config.Setup_port
         elif (msg.topic == 'MFC_Set'):
             print(f'{hostname} Receive topic: MFC_Set')
-            for key, value in resp.items():
-                if config.MFC_port.sub_values.get(key) != None:
-                    config.MFC_port.sub_values[key] = float(value)
-                    config.MFC_port.sub_events[key].set()
+            port = config.MFC_port
+        for key, value in resp.items():
+            if port.sub_values.get(key) != None:
+                if port.sub_values[key] != float(value):
+                    port.sub_values[key] = float(value)
+                    port.sub_events[key].set()
         
     def on_publish(client, userdata, mid):
         print(mid)
