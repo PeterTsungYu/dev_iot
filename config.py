@@ -442,11 +442,11 @@ GPIO_port = device_port(DFM_slave,
                         )
 
 lst_ports = [
-            #MFC_port,
+            # MFC_port,
             Scale_port, 
             RS232_port, 
             Setup_port,
-            #GPIO_port
+            GPIO_port
             ]
 
 NodeRed = {}
