@@ -246,10 +246,10 @@ def Relay_comm(start, device_port, slave):
             #logging.critical(device_port.sub_values[topic])
             try: # try to set value
                 if device_port.sub_values[topic]:
-                    GPIO.output(channel_Relay01_IN1, 0)
+                    #GPIO.output(channel_Relay01_IN1, 0)
                     GPIO.output(channel_Relay01_IN2, 0)
                 else:
-                    GPIO.output(channel_Relay01_IN1, 1)
+                    #GPIO.output(channel_Relay01_IN1, 1)
                     GPIO.output(channel_Relay01_IN2, 1)
                 device_port.sub_events[topic].clear()
             except Exception as e:

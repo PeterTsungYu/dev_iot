@@ -506,7 +506,7 @@ Setup_port = device_port(
                         )
 '''
 
-GPIO_port = device_port(#Relay01_slave,
+GPIO_port = device_port(Relay01_slave,
                         PWM01_slave,
                         #PWM02_slave,
                         name='GPIO_port',

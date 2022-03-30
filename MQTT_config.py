@@ -53,31 +53,22 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
         '''
         if (msg.topic == "ADDA_Set"):
             print(f'{hostname} Receive topic: ADDA_Set')
-            for key, value in resp.items():
-                    if config.ADDA_port.sub_values.get(key) != None:
-                        config.ADDA_port.sub_values[key] = float(value)
-                        config.ADDA_port.sub_events[key].set()
+            port = config.ADDA_port
         elif (msg.topic == "Relay_Set"):
             print(f'{hostname} Receive topic: Relay_Set')
-            for key, value in resp.items():
-                    if config.GPIO_port.sub_values.get(key) != None:
-                        config.GPIO_port.sub_values[key] = value
-                        #print(type(value))
-                        config.GPIO_port.sub_events[key].set()
+            port = config.GPIO_port
         elif (msg.topic == "PWM_Set"):
             print(f'{hostname} Receive topic: PWM_Set')
-            for key, value in resp.items():
-                    if config.GPIO_port.sub_values.get(key) != None:
-                        config.GPIO_port.sub_values[key] = value
-                        print(value)
-                        config.GPIO_port.sub_events[key].set()
+            port = config.GPIO_port
         elif (msg.topic == "BRPump_Set"):
             print(f'{hostname} Receive topic: BRPump_Set')
-            for key, value in resp.items():
-                    if config.miniModbus_port.sub_values.get(key) != None:
-                        config.miniModbus_port.sub_values[key] = value
+            port = config.miniModbus_port
+        for key, value in resp.items():
+                if config.GPIO_port.sub_values.get(key) != None:
+                    if config.GPIO_port.sub_values[key] != value:
+                        config.GPIO_port.sub_values[key] = value
                         #print(type(value))
-                        config.miniModbus_port.sub_events[key].set()
+                        config.GPIO_port.sub_events[key].set()
 
     def on_publish(client, userdata, mid):
         print(mid)
