@@ -64,11 +64,11 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
             print(f'{hostname} Receive topic: BRPump_Set')
             port = config.miniModbus_port
         for key, value in resp.items():
-                if config.GPIO_port.sub_values.get(key) != None:
-                    if config.GPIO_port.sub_values[key] != value:
-                        config.GPIO_port.sub_values[key] = value
+                if port.sub_values.get(key) != None:
+                    if port.sub_values[key] != value:
+                        port.sub_values[key] = value
                         #print(type(value))
-                        config.GPIO_port.sub_events[key].set()
+                        port.sub_events[key].set()
 
     def on_publish(client, userdata, mid):
         print(mid)
