@@ -210,8 +210,8 @@ def PWM_comm(start, device_port, slave):
                     if device_port.sub_values[topic]:
                         duty = device_port.sub_values[f'{slave.name}_duty_SV']
                         f = device_port.sub_values[f'{slave.name}_f_SV']
-                        slave.GPIO_instance.start(duty) # start at 0 duty
-                        slave.GPIO_instance.ChangeFrequency(f)
+                        slave.GPIO_instance.start(duty) # start at initial duty
+                        slave.GPIO_instance.ChangeFrequency(f) # start at initial frequency
                         print(f"open at duty:{duty}, f: {f}")
                     else:
                         slave.GPIO_instance.stop()

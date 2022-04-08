@@ -36,11 +36,27 @@ GA_id         = '11' # ReformerTP GA for monitoring gas conc. @ RS232_port_path
 BRPump_id     = '12'
 
 #-----GPIO port setting----------------------------------------------------------------
+'''
+ADDA Pin connection:
+Pin connections can be viewed in Config.py and will be repeated here:
+OLED   =>    Raspberry Pi/RPI(BCM)
+VCC    ->    3.3
+GND    ->    GND
+DIN    ->    GPIO 10(MOSI)
+CLK    ->    GPIO 11(SCLK)
+DAC8532
+CS     ->    GPIO 23
+ADS1256
+CS     ->    GPIO 22
+DIR    ->    GPIO 17
+RST    ->    GPIO 18
+
+'''
 # read High as 3.3V
 channel_Relay01_IN1     = 24
 channel_Relay01_IN2     = 25
-GPIO_PWM_1              = 12
-GPIO_PWM_2              = 16
+GPIO_PWM_1              = 12 #GPIO 12 (PWM0)
+GPIO_PWM_2              = 13 #GPIO 13 (PWM1)
 GPIO.setmode(GPIO.BCM)
 
 #-----Cls----------------------------------------------------------------
@@ -508,7 +524,7 @@ Setup_port = device_port(
 
 GPIO_port = device_port(Relay01_slave,
                         PWM01_slave,
-                        #PWM02_slave,
+                        PWM02_slave,
                         name='GPIO_port',
                         port='GPIO',
                         )
