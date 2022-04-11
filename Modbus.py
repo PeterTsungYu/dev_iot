@@ -13,6 +13,7 @@ import logging
 import ADDA_ADS1256
 import ADDA_DAC8532
 import RPi.GPIO as GPIO
+import pigpio
 
 #custom modules
 import params
@@ -46,7 +47,8 @@ DAC.DAC8532_Out_Voltage(ADDA_DAC8532.channel_B, 0)
 
 channel_Relay01_IN1     = 24
 channel_Relay01_IN2     = 25
-GPIO.setmode(GPIO.BCM)
+GPIO.setmode(GPIO.BCM) # for software PWM
+PIG = pigpio.pi() # for hardware PWM
 
 #------------------------------Decker---------------------------------
 def kb_event(func):
@@ -225,6 +227,38 @@ def PWM_comm(start, device_port, slave):
                 device_port.sub_events[topic].clear()
                 print('clear flag')
             except Exception as e:
+                set_err[0] += 1
+                err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: " + str(e)
+                logging.error(err_msg)
+            finally:
+                logging.info(f"{slave.name}_set_err: {round((set_err[1] - set_err[0])/(set_err[1]+0.00000000000000001)*100, 2)}%")
+
+def PIG_PWM_comm(start, device_port, slave):
+    port = device_port.port
+    collect_err = device_port.err_values.get(f'{slave.name}_collect_err')
+    set_err = device_port.err_values.get(f'{slave.name}_set_err')
+    re_collect = device_port.recur_count.get(f'{slave.name}_collect_err')
+    re_set = device_port.recur_count.get(f'{slave.name}_set_err')
+    # set PWM to ON / OFF, frequency, duty 
+    for topic in slave.port_topics.sub_topics:
+        #logging.critical((slave.name, topic))
+        if device_port.sub_events[topic].isSet():
+            #logging.critical(device_port.sub_values[topic])
+            try: # try to set value
+                print(topic)
+                open_SV = device_port.sub_values[f'{slave.name}_open_SV']
+                duty = device_port.sub_values[f'{slave.name}_duty_SV']
+                f = device_port.sub_values[f'{slave.name}_f_SV']
+                if open_SV:
+                    PIG.hardware_PWM(slave.id, int(f * 1e3), int(duty * 1e4))
+                    print(f"open at duty:{duty}%, f: {f}kHz")
+                else:
+                    PIG.write(slave.id, 0)
+                    print('close')
+                device_port.sub_events[topic].clear()
+                print('clear flag')
+            except Exception as e:
+                PIG.write(slave.id, 0)
                 set_err[0] += 1
                 err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: " + str(e)
                 logging.error(err_msg)

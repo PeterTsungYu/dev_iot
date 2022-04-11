@@ -5,7 +5,6 @@
 
 import time
 from datetime import datetime
-import RPi.GPIO as GPIO
 import serial
 
 # custome modules
@@ -33,8 +32,8 @@ try:
             device_port.port.reset_output_buffer() #flush output buffer
     print('serial ports open')
 
-    GPIO.setup(config.channel_Relay01_IN1, GPIO.OUT, initial=1)
-    GPIO.setup(config.channel_Relay01_IN2, GPIO.OUT, initial=1)
+    Modbus.GPIO.setup(config.channel_Relay01_IN1, Modbus.GPIO.OUT, initial=1)
+    Modbus.GPIO.setup(config.channel_Relay01_IN2, Modbus.GPIO.OUT, initial=1)
     '''def DFM_data_collect(self):
         config.DFM_slave.time_readings.append(time.time())
     def DFM_AOG_data_collect(self):
@@ -65,7 +64,7 @@ except Exception as ex:
     for device_port in config.lst_ports:
         if type(device_port.port) is serial.serialposix.Serial:
             device_port.port.close()
-    GPIO.cleanup()
+    Modbus.GPIO.cleanup()
     print ("\r\nProgram end")
     exit()
 
@@ -87,7 +86,7 @@ finally:
         if type(device_port.port) is serial.serialposix.Serial:
             device_port.port.close()
         elif device_port.port == 'GPIO':
-            GPIO.cleanup()
+            Modbus.GPIO.cleanup()
         Modbus.logger.info(f'Close {device_port.name}, err are {device_port.err_values}')
         Modbus.logger.info(f'correct rates : {[f"{k}:{round((v[1]-v[0])/(v[1] + 0.00000000000000001)*100,2)}%" for k,v in device_port.err_values.items()]}')
     Modbus.logger.info(f"Program duration: {time.time() - start}")
@@ -100,6 +99,7 @@ finally:
     MQTT_config.client_0.disconnect()
     print("close connection to MQTT broker")
     print ("close GPIO")
-    GPIO.cleanup()
+    Modbus.GPIO.cleanup()
+    Modbus.PIG.stop()
     print('kill main thread')
     exit()

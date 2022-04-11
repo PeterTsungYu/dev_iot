@@ -1,7 +1,6 @@
 #python packages
 import threading
 import serial
-import RPi.GPIO as GPIO
 from crccheck.crc import Crc16Modbus
 from datetime import datetime
 
@@ -57,7 +56,6 @@ channel_Relay01_IN1     = 24
 channel_Relay01_IN2     = 25
 GPIO_PWM_1              = 12 #GPIO 12 (PWM0)
 GPIO_PWM_2              = 13 #GPIO 13 (PWM1)
-GPIO.setmode(GPIO.BCM)
 
 #-----Cls----------------------------------------------------------------
 def tohex(value):
@@ -172,10 +170,15 @@ class Slave: # Create Slave data store
             crc = Crc16Modbus.calchex(bytearray.fromhex(data_struc))
             self.w_rtu = data_struc + crc[-2:] + crc[:2]
     
-    def PWM_instance(self, frequency=1.0, duty=0):
-        GPIO.setup(self.id, GPIO.OUT)
-        self.GPIO_instance = GPIO.PWM(self.id, frequency)  # channel=12 frequency=50Hz
-        self.GPIO_instance.start(duty)
+    def PWM_instance(self, mode: str, frequency=1.0, duty=0):
+        if mode == 'software':
+            Modbus.GPIO.setup(self.id, Modbus.GPIO.OUT)
+            self.GPIO_instance = Modbus.GPIO.PWM(self.id, frequency)  # channel=12 frequency=50Hz
+            self.GPIO_instance.start(duty)
+        elif mode == 'hardware':
+            Modbus.PIG.set_mode(self.id, Modbus.pigpio.ALT5)
+            Modbus.PIG.hardware_PWM(self.id, 0, 0)
+
 
 #-------------------------RTU & Slave--------------------------------------
 # ADAM_TC
@@ -434,7 +437,7 @@ PWM01_slave = Slave(
                     comm_func=Modbus.PWM_comm,
                     #analyze_func=Modbus.,
                     )
-PWM01_slave.PWM_instance()
+PWM01_slave.PWM_instance('software')
 
 
 PWM02_slave = Slave(
@@ -450,10 +453,10 @@ PWM02_slave = Slave(
                                     'PWM02_collect_err', 'PWM02_set_err', 'PWM02_analyze_err'
                                 ]
                                 ),
-                    comm_func=Modbus.PWM_comm,
+                    comm_func=Modbus.PIG_PWM_comm,
                     #analyze_func=Modbus.,
                     )
-PWM02_slave.PWM_instance()
+PWM02_slave.PWM_instance('hardware')
 
 
 BRPump_slave = Slave(
@@ -523,7 +526,7 @@ Setup_port = device_port(
 '''
 
 GPIO_port = device_port(Relay01_slave,
-                        PWM01_slave,
+                        #PWM01_slave,
                         PWM02_slave,
                         name='GPIO_port',
                         port='GPIO',
