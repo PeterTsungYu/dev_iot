@@ -1,6 +1,3 @@
-import matplotlib.pyplot as plt
-import numpy as np
-
 class PID:
     """ An implementation of a PID control class for use in process control simulations.
     """
@@ -39,7 +36,8 @@ class PID:
         and manipulated variable (MV) that can be plotted with the .plot() method.
         """
         self._log.append([t,SP,PV,MV])
-        
+
+    '''
     def plot(self):
         """Create historical plot of SP,PV, and MV using the controller's internal log file.
         """
@@ -55,7 +53,8 @@ class PID:
         plt.title('Manipulated Variable')
         plt.xlabel('Time')
         plt.tight_layout()
-    
+    '''
+
     @property
     def beta(self):
         """beta is the setpoint weighting for proportional control where the proportional error
@@ -71,7 +70,7 @@ class PID:
     def DirectAction(self):
         """DirectAction is a logical variable setting the direction of the control. A True
         value means the controller output MV should increase for PV > SP. If False the controller
-        is reverse acting, and ouput MV will increase for SP > PV. IFf the steady state
+        is reverse acting, and ouput MV will increase for SP > PV. If the steady state
         process gain is positive then a control will be reverse acting. 
         
         The default value is False.
@@ -194,4 +193,7 @@ class PID:
         self._logger(t,self.SP,self.PV,self.MV)
         return self.MV 
 
-print('here')
+if __name__ == "__main__":
+    pid = PID()
+    print(pid.beta)
+    print(pid.gamma)

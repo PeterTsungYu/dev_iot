@@ -12,6 +12,7 @@ import logging
 
 #custom modules
 import params
+import PIDsim
 
 #------------------------------Logger---------------------------------
 logger = logging.getLogger()
@@ -477,3 +478,26 @@ def H2_MFC_analyze(start, device_port, slave, **kwargs):
 
 def VOID():
     pass
+
+#------------------------------PID Control---------------------------------
+'''
+# reactor temperature setpoint
+Tsp = 390
+
+# set initial conditions and cooling flow
+IC = [C0,T0,Tcf]
+
+# do simulation at fixed time steps dt
+tstart = 0
+tstop = 8
+tstep = 0.05
+
+# configure controller. Creates a PID object.
+reactorPID = PID(Kp=8,Ki=30,Kd=5,MVrange=(0,300),DirectAction=True)
+
+c,T,Tc = IC                                          # reactor initial conditions
+qc = 150                                             # initial condition of the MV
+for t in np.arange(tstart,tstop,tstep):              # simulate from tstart to tstop
+    qc = reactorPID.update(t,Tsp,T,qc)               # update manipulated variable
+    c,T,Tc = odeint(deriv,[c,T,Tc],[t,t+dt])[-1]     # start at t, find state at t + dt
+'''
