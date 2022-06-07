@@ -8,6 +8,7 @@ from datetime import datetime
 #custom modules
 import Modbus
 import params
+import PIDsim
 
 #-----------------Database----------------------------------------------
 db_time = datetime.now().strftime('%Y_%m_%d_%H_%M')
@@ -32,6 +33,9 @@ DFM_AOG_id    = '08' # GPIO
 GA_id         = '11' # ReformerTP GA for monitoring gas conc. @ RS232_port_path
 Air_MFC_id    = 'A'
 H2_MFC_id     = 'B'
+lambdapid_id  = '12'
+currentpid_id = '13'
+catbedpid_id  = '14'
 
 
 #-----GPIO port setting----------------------------------------------------------------
@@ -101,6 +105,16 @@ class device_port:
                         args=(start, self, slave,)
                     )
                 )
+            elif slave.kwargs.get('control_func'):
+                _sub_values = self.sub_values
+                _pub_values = self.pub_values
+                self.thread_funcs.append(
+                    threading.Thread(
+                        name=f'{slave.name}_control',
+                        target=slave.kwargs['control_func'],
+                        args=(slave.controller, _sub_values.get(f'{slave.name}_SP'), _sub_values.get(f'{slave.name}_PV'), _pub_values.get(f'{slave.name}_MV'), self, slave)
+                    )
+                )
 
 
 class port_Topics:
@@ -142,6 +156,9 @@ class Slave: # Create Slave data store
         elif len(_fields) == 1:
             if 'MFC' in self.name:
                 self.w_rtu = f'\r{self.id}S{_fields[0]}\r\r'
+    
+    def control_constructor(self, Kp=8, Ki=30, Kd=5, MVrange=(0,100), DirectAction=False):
+        self.controller = PIDsim(Kp=Kp, Ki=Ki, Kd=Kd, MVrange=MVrange, DirectAction=DirectAction)
     
 
 #-------------------------RTU & Slave--------------------------------------
@@ -396,6 +413,72 @@ H2_MFC_slave = Slave(
 H2_MFC_slave.read_rtu(f'\r{H2_MFC_id}\r\r', wait_len=49)
 H2_MFC_slave.w_wait_len = 49
 
+LambdaPID_slave = Slave(
+                        name='LambdaPID',
+                        idno=lambdapid_id, 
+                        port_topics=port_Topics(
+                            sub_topics=[
+                                'LambdaPID_PV', 'LambdaPID_SP',
+                            ],
+                            pub_topics=[
+                                'LambdaPID_MV'
+                            ],
+                            err_topics=[
+                                'LambdaPID_collect_err', 'LambdaPID_set_err', 'LambdaPID_analyze_err'
+                            ]
+                            ),
+                        #comm_func=Modbus.,
+                        #analyze_func=Modbus.,
+                        control_func=Modbus.control,
+                        )
+#CV_01: Lambda value; MV: Air
+## lambda_PV > lambda_SP => Air down => DirectAction=False
+LambdaPID_slave.control_constructor(Kp=8, Ki=30, Kd=5, MVrange=(0,100), DirectAction=False)
+
+CurrentPID_slave = Slave(
+                        name='CurrentPID',
+                        idno=currentpid_id, 
+                        port_topics=port_Topics(
+                            sub_topics=[
+                                'CurrentPID_PV', 'CurrentPID_SP',
+                            ],
+                            pub_topics=[
+                                'CurrentPID_MV'
+                            ],
+                            err_topics=[
+                                'CurrentPID_collect_err', 'CurrentPID_set_err', 'CurrentPID_analyze_err'
+                            ]
+                            ),
+                        #comm_func=Modbus.,
+                        #analyze_func=Modbus.,
+                        control_func=Modbus.control,
+                        )
+# CV_02: SetCurrent; MV: RF_Pump flow rate
+## current_PV > current_SP => RF_Pump down => DirectAction=False
+CurrentPID_slave.control_constructor(Kp=8, Ki=30, Kd=5, MVrange=(0,100), DirectAction=False)
+
+CatBedPID_slave = Slave(
+                        name='CatBedPID',
+                        idno=catbedpid_id, 
+                        port_topics=port_Topics(
+                            sub_topics=[
+                                'CatBedPID_PV', 'CatBedPID_SP',
+                            ],
+                            pub_topics=[
+                                'CatBedPID_MV'
+                            ],
+                            err_topics=[
+                                'CatBedPID_collect_err', 'CatBedPID_set_err', 'CatBedPID_analyze_err'
+                            ]
+                            ),
+                        #comm_func=Modbus.,
+                        #analyze_func=Modbus.,
+                        control_func=Modbus.control,
+                        )
+# CV_03: CatBed TC; MV: Fuel to BR
+## CatBed_PV > CatBed_SP => BR_Fuel down => DirectAction=False
+CatBedPID_slave.control_constructor(Kp=8, Ki=30, Kd=5, MVrange=(0,100), DirectAction=False)
+
 print('Slaves are all set')
 
 #-----Port setting----------------------------------------------------------------
@@ -441,12 +524,20 @@ GPIO_port = device_port(DFM_slave,
                         port='GPIO',
                         )
 
+
+PID_port = device_port(LambdaPID_slave,
+                    name='PID_port',
+                    port='PID',
+                    )
+
+
 lst_ports = [
             # MFC_port,
             Scale_port, 
             RS232_port, 
             Setup_port,
-            GPIO_port
+            GPIO_port,
+            #PID_port,
             ]
 
 NodeRed = {}

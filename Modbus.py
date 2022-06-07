@@ -12,7 +12,6 @@ import logging
 
 #custom modules
 import params
-import PIDsim
 
 #------------------------------Logger---------------------------------
 logger = logging.getLogger()
@@ -466,3 +465,12 @@ def H2_MFC_analyze(start, device_port, slave, **kwargs):
     _lst_readings = tuple(np.sum(_arr_readings, 0) / len(_lst_readings))
     _readings = tuple([round(_time_readings,2)]) + _lst_readings
     return _readings
+
+#------------------------------PID controller---------------------------------
+@kb_event
+def control(PID, SP, PV, MV, device_port, slave):
+    # update manipulated variable
+    MV_update = PID.update(params.tstep, SP, PV, MV)
+    for topic in slave.port_topics.pub_topics:    
+        device_port.pub_values[topic] = MV_update
+    time.sleep(params.tstep)

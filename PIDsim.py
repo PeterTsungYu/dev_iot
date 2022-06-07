@@ -1,5 +1,5 @@
-import matplotlib.pyplot as plt
-import numpy as np
+#import matplotlib.pyplot as plt
+#import numpy as np
 
 class PID:
     """ An implementation of a PID control class for use in process control simulations.
@@ -14,7 +14,7 @@ class PID:
         self.gamma = gamma
         self.MVrange = MVrange
         self.DirectAction = DirectAction
-        self._mode = 'inAuto'
+        self._mode = 'inManual'
         self._log = []
         self._errorP0 = 0
         self._errorD0 = 0
@@ -40,7 +40,7 @@ class PID:
         """
         self._log.append([t,SP,PV,MV])
 
-    
+    '''
     def plot(self):
         """Create historical plot of SP,PV, and MV using the controller's internal log file.
         """
@@ -56,6 +56,7 @@ class PID:
         plt.title('Manipulated Variable')
         plt.xlabel('Time')
         plt.tight_layout()
+    '''
 
     @property
     def beta(self):
@@ -72,7 +73,7 @@ class PID:
     def DirectAction(self):
         """DirectAction is a logical variable setting the direction of the control. A True
         value means the controller output MV should increase for PV > SP. If False the controller
-        is reverse acting, and ouput MV will increase for SP > PV. IFf the steady state
+        is reverse acting, and ouput MV will increase for SP > PV. If the steady state
         process gain is positive then a control will be reverse acting. 
         
         The default value is False.
@@ -172,25 +173,22 @@ class PID:
     def PV(self,PV):
         self._PV = PV
 
-    def update(self,t,SP,PV,MV):
+    def update(self, tstep, SP, PV, MV):
         self.SP = SP
         self.PV = PV
         self.MV = MV 
-        if t > self._lastT:
-            dt = t - self._lastT
-            self._lastT = t
-            if self._mode=='inManual':
-                self.SP = PV
-            self._errorP1 = self._errorP0
-            self._errorP0 = self.beta*self.SP - self.PV
-            self._errorI0 = self.SP - self.PV            
-            self._errorD2 = self._errorD1
-            self._errorD1 = self._errorD0
-            self._errorD0 = self.gamma*self.SP - self.PV
-            if self._mode=='inAuto':
-                self._deltaMV = self.Kp*(self._errorP0 - self._errorP1) \
-                    + self.Ki*dt*self._errorI0 \
-                    + self.Kd*(self._errorD0 - 2*self._errorD1 + self._errorD2)/dt
-                self.MV -= self._action*self._deltaMV
-        self._logger(t,self.SP,self.PV,self.MV)
+        if self._mode=='inManual':
+            self.SP = PV
+        self._errorP1 = self._errorP0
+        self._errorP0 = self.beta*self.SP - self.PV
+        self._errorI0 = self.SP - self.PV            
+        self._errorD2 = self._errorD1
+        self._errorD1 = self._errorD0
+        self._errorD0 = self.gamma*self.SP - self.PV
+        if self._mode=='inAuto':
+            self._deltaMV = self.Kp*(self._errorP0 - self._errorP1) \
+                + self.Ki*tstep*self._errorI0 \
+                + self.Kd*(self._errorD0 - 2*self._errorD1 + self._errorD2)/tstep
+            self.MV -= self._action*self._deltaMV
+        self._logger(self.SP,self.PV,self.MV)
         return self.MV 
