@@ -56,6 +56,7 @@ channel_Relay01_IN1     = 24
 channel_Relay01_IN2     = 25
 GPIO_PWM_1              = 12 #GPIO 12 (PWM0)
 GPIO_PWM_2              = 13 #GPIO 13 (PWM1)
+GPIO_PWM_3              = 26 #GPIO 26 (PWM)
 
 #-----Cls----------------------------------------------------------------
 def tohex(value):
@@ -173,7 +174,7 @@ class Slave: # Create Slave data store
     def PWM_instance(self, mode: str, frequency=1.0, duty=0):
         if mode == 'software':
             Modbus.GPIO.setup(self.id, Modbus.GPIO.OUT)
-            self.GPIO_instance = Modbus.GPIO.PWM(self.id, frequency)  # channel=12 frequency=50Hz
+            self.GPIO_instance = Modbus.GPIO.PWM(self.id, frequency)  # channel=12 frequency=50Hz (1 Hz up to few kiloHertz.)
             self.GPIO_instance.start(duty)
         elif mode == 'hardware':
             Modbus.PIG.set_mode(self.id, Modbus.pigpio.ALT5)
@@ -459,6 +460,25 @@ PWM02_slave = Slave(
 PWM02_slave.PWM_instance('hardware')
 
 
+PWM03_slave = Slave(
+                    name='PWM03',
+                    idno=GPIO_PWM_3, #GPIO
+                    port_topics=port_Topics(
+                                sub_topics=[
+                                    'PWM03_open_SV', 'PWM03_f_SV', 'PWM03_duty_SV'
+                                ],
+                                pub_topics=[
+                                ],
+                                err_topics=[
+                                    'PWM03_collect_err', 'PWM03_set_err', 'PWM03_analyze_err'
+                                ]
+                                ),
+                    comm_func=Modbus.PWM_comm,
+                    #analyze_func=Modbus.,
+                    )
+PWM03_slave.PWM_instance('software')
+
+
 BRPump_slave = Slave(
                     name='BRPump',
                     idno=BRPump_id, 
@@ -526,8 +546,9 @@ Setup_port = device_port(
 '''
 
 GPIO_port = device_port(Relay01_slave,
-                        #PWM01_slave,
+                        PWM01_slave,
                         PWM02_slave,
+                        PWM03_slave,
                         name='GPIO_port',
                         port='GPIO',
                         )
