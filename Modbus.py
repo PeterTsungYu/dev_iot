@@ -164,9 +164,10 @@ def miniModbus_comm(start, device_port, slave):
         time.sleep(params.time_out)
 
     for topic in slave.port_topics.sub_topics:
-        #logging.critical((slave.name, topic))
+        logging.critical((slave.name, topic))
+        logging.critical(device_port.sub_events[topic].isSet())
         if device_port.sub_events[topic].isSet():
-            #logging.critical(device_port.sub_values[topic])
+            logging.critical(device_port.sub_values[topic])
             try: # try to set value
                 collect_err[1] += 1
                 slave.time_readings = time.time()-start
@@ -182,6 +183,8 @@ def miniModbus_comm(start, device_port, slave):
                     instrument.write_register(4126, 1, 0, 6, False)
                     logging.info(f'Read {readings} from slave_{slave.name}')
                     time.sleep(params.time_out)
+                port.reset_input_buffer()
+                device_port.sub_events[topic].clear()
             except Exception as e:
                 set_err[0] += 1
                 err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: " + str(e)
@@ -191,8 +194,6 @@ def miniModbus_comm(start, device_port, slave):
         time.sleep(params.time_out)
         # print(device_port.pub_values)
         # slave.lst_readings.append(round(readings, 4))
-        port.reset_input_buffer()
-        device_port.sub_events[topic].clear()
 
 
 def PWM_comm(start, device_port, slave):
@@ -207,7 +208,8 @@ def PWM_comm(start, device_port, slave):
         if device_port.sub_events[topic].isSet():
             #logging.critical(device_port.sub_values[topic])
             try: # try to set value
-                print(topic)
+                print('here')
+                print(slave, topic)
                 if 'open_SV' in topic:
                     if device_port.sub_values[topic]:
                         duty = device_port.sub_values[f'{slave.name}_duty_SV']
@@ -232,6 +234,7 @@ def PWM_comm(start, device_port, slave):
                 logging.error(err_msg)
             finally:
                 logging.info(f"{slave.name}_set_err: {round((set_err[1] - set_err[0])/(set_err[1]+0.00000000000000001)*100, 2)}%")
+
 
 def PIG_PWM_comm(start, device_port, slave):
     port = device_port.port
