@@ -152,8 +152,8 @@ ADAM_TC_slave = Slave(
                     idno=ADAM_TC_id,
                     port_topics=port_Topics(sub_topics=[],
                                             pub_topics=[
-                                                'TC7', 'TC8', 'TC9', 'TC10', # # TC7(ADAM_TC_0), TC8(ADAM_TC_1), TC9(ADAM_TC_2), TC10(ADAM_TC_3) 
-                                                'TC11', 'TC6', 'EVA_Out', 'RAD_out' # TC11(ADAM_TC_4), EVA_out(ADAM_TC_5), RAD_in(ADAM_TC_6), RAD_out(ADAM_TC_7)
+                                                'TC12', 'Exhaust_gas', 'TC9', 'TC10', # # TC7(ADAM_TC_0), TC8(ADAM_TC_1), TC9(ADAM_TC_2), TC10(ADAM_TC_3) 
+                                                'TC11', 'TC6', 'Header_EVA_PV', 'RAD_Out' # TC11(ADAM_TC_4), EVA_out(ADAM_TC_5), RAD_in(ADAM_TC_6), RAD_out(ADAM_TC_7)
                                             ],
                                             err_topics=[
                                                 'ADAM_TC_collect_err', 'ADAM_TC_analyze_err',
@@ -211,7 +211,7 @@ Header_EVA_slave = Slave(
                                 sub_topics=[
                                 ],
                                 pub_topics=[
-                                    'Header_EVA_PV', # Header EVA(Header_EVA_PV)
+                                    'EVA_Out', # Header EVA(Header_EVA_PV)
                                 ],
                                 err_topics=[
                                     'Header_EVA_collect_err', 'Header_EVA_set_err', 'Header_EVA_analyze_err',
@@ -291,10 +291,10 @@ ADAM_SET_slave = Slave(
                         idno=ADAM_SET_id,
                         port_topics=port_Topics(
                                 sub_topics=[
-                                    'PCB_SET_SV', 'ADAM_Air_SET_CH2_SV', 'H2_MFC_SET_SV', 'ADAM_SET_CH4_SV' # PCB(ADAM_SET_SV0), Pump(ADAM_SET_SV1), Air_MFC(ADAM_SET_SV2), H2_MFC(ADAM_SET_SV3)
+                                    'PCB_SET_SV', 'H2_MFC_SET_SV', 'RF_Pump_SET_SV', 'BR_Pump_SET_SV' # PCB(ADAM_SET_SV0), Pump(ADAM_SET_SV1), Air_MFC(ADAM_SET_SV2), H2_MFC(ADAM_SET_SV3)
                                 ],
                                 pub_topics=[
-                                    'PCB_SET_PV', 'ADAM_Air_SET_CH2_PV', 'H2_MFC_SET_PV', 'ADAM_SET_CH4_PV', # PCB(ADAM_SET_PV0), Pump(ADAM_SET_PV1), Air_MFC(ADAM_SET_PV2), H2_MFC(ADAM_SET_PV3)
+                                    'PCB_SET_PV', 'H2_MFC_SET_PV', 'RF_Pump_SET_PV', 'BR_Pump_SET_PV', # PCB(ADAM_SET_PV0), Pump(ADAM_SET_PV1), Air_MFC(ADAM_SET_PV2), H2_MFC(ADAM_SET_PV3)
                                 ],
                                 err_topics=[
                                     'ADAM_SET_collect_err', 'ADAM_SET_set_err', 'ADAM_SET_analyze_err',
@@ -330,7 +330,7 @@ DFM_slave = Slave(
                 name='DFM',
                 idno=DFM_id,
                 port_topics=port_Topics(
-                                sub_topics=[],
+                                sub_topics=['DFM_RichGas_1min','current',],
                                 pub_topics=[
                                     'DFM_RichGas',
                                 ],
@@ -345,9 +345,9 @@ DFM_AOG_slave = Slave(
                     name='DFM_AOG',
                     idno=DFM_AOG_id, 
                     port_topics=port_Topics(
-                                sub_topics=[],
+                                sub_topics=['DFM_AOG_1min',],
                                 pub_topics=[
-                                    'DFM_AOG'
+                                    'DFM_AOG',
                                 ],
                                 err_topics=[
                                     'DFM_AOG_collect_err', 'DFM_AOG_analyze_err'

@@ -12,6 +12,7 @@ import logging
 
 #custom modules
 import params
+import PIDsim
 
 #------------------------------Logger---------------------------------
 logger = logging.getLogger()
