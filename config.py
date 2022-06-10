@@ -17,9 +17,12 @@ db_connection = False
 #-----------------Serial port and DeviceID------------------------------
 #_port_path = '/dev/ttyUSB'
 #RS485_port_path = '/dev/ttyUSB_RS485' # for monitoring (TC from ADAM)
-Scale_port_path = '/dev/ttyUSB_Scale' # for monitoring Scale
-RS232_port_path = '/dev/ttyUSB_RS232' # for monitoring GA
-Setup_port_path = '/dev/ttyUSB_PC' # for controling (ADAM, TCHeader)
+port_path_dict = {}
+port_path_dict['Scale_port_path'] = '/dev/ttyUSB_Scale' # for monitoring Scale
+port_path_dict['RS232_port_path'] = '/dev/ttyUSB_RS232' # for monitoring GA
+port_path_dict['Setup_port_path'] = '/dev/ttyUSB_PC' # for controling (ADAM, TCHeader)
+port_path_dict['GPIO_port'] = 'GPIO_port'
+port_path_dict['PID_port'] = 'PID_port'
 
 ## device ID
 Header_EVA_id = '01' # ReformerTP EVA_Header @ Setup_port_path
@@ -106,13 +109,11 @@ class device_port:
                     )
                 )
             elif slave.kwargs.get('control_func'):
-                _sub_values = self.sub_values
-                _pub_values = self.pub_values
                 self.thread_funcs.append(
                     threading.Thread(
                         name=f'{slave.name}_control',
                         target=slave.kwargs['control_func'],
-                        args=(slave.controller, _sub_values.get(f'{slave.name}_SP'), _sub_values.get(f'{slave.name}_PV'), _pub_values.get(f'{slave.name}_MV'), self, slave)
+                        args=(slave.controller, self, slave,)
                     )
                 )
 
@@ -158,7 +159,7 @@ class Slave: # Create Slave data store
                 self.w_rtu = f'\r{self.id}S{_fields[0]}\r\r'
     
     def control_constructor(self, Kp=8, Ki=30, Kd=5, MVrange=(0,100), DirectAction=False):
-        self.controller = PIDsim(Kp=Kp, Ki=Ki, Kd=Kd, MVrange=MVrange, DirectAction=DirectAction)
+        self.controller = PIDsim.PID(Kp=Kp, Ki=Ki, Kd=Kd, MVrange=MVrange, DirectAction=DirectAction)
     
 
 #-------------------------RTU & Slave--------------------------------------
@@ -418,10 +419,10 @@ LambdaPID_slave = Slave(
                         idno=lambdapid_id, 
                         port_topics=port_Topics(
                             sub_topics=[
-                                'LambdaPID_PV', 'LambdaPID_SP',
+                                'LambdaPID_PV', 'LambdaPID_SP', 'LambdaPID_mode' 
                             ],
                             pub_topics=[
-                                'LambdaPID_MV'
+                                'LambdaPID_MV', 'LambdaPID_P', 'LambdaPID_I', 'LambdaPID_D'
                             ],
                             err_topics=[
                                 'LambdaPID_collect_err', 'LambdaPID_set_err', 'LambdaPID_analyze_err'
@@ -433,17 +434,17 @@ LambdaPID_slave = Slave(
                         )
 #CV_01: Lambda value; MV: Air
 ## lambda_PV > lambda_SP => Air down => DirectAction=False
-LambdaPID_slave.control_constructor(Kp=8, Ki=30, Kd=5, MVrange=(0,100), DirectAction=False)
+LambdaPID_slave.control_constructor(Kp=8, Ki=30, Kd=5, MVrange=(-0.5,0.5), DirectAction=False)
 
 CurrentPID_slave = Slave(
                         name='CurrentPID',
                         idno=currentpid_id, 
                         port_topics=port_Topics(
                             sub_topics=[
-                                'CurrentPID_PV', 'CurrentPID_SP',
+                                'CurrentPID_PV', 'CurrentPID_SP', 'CurrentPID_mode'
                             ],
                             pub_topics=[
-                                'CurrentPID_MV'
+                                'CurrentPID_MV', 'CurrentPID_P', 'CurrentPID_I', 'CurrentPID_D'
                             ],
                             err_topics=[
                                 'CurrentPID_collect_err', 'CurrentPID_set_err', 'CurrentPID_analyze_err'
@@ -455,17 +456,17 @@ CurrentPID_slave = Slave(
                         )
 # CV_02: SetCurrent; MV: RF_Pump flow rate
 ## current_PV > current_SP => RF_Pump down => DirectAction=False
-CurrentPID_slave.control_constructor(Kp=8, Ki=30, Kd=5, MVrange=(0,100), DirectAction=False)
+CurrentPID_slave.control_constructor(Kp=8, Ki=30, Kd=5, MVrange=(-0.1,0.1), DirectAction=False)
 
 CatBedPID_slave = Slave(
                         name='CatBedPID',
                         idno=catbedpid_id, 
                         port_topics=port_Topics(
                             sub_topics=[
-                                'CatBedPID_PV', 'CatBedPID_SP',
+                                'CatBedPID_PV', 'CatBedPID_SP', 'CatBedPID_mode'
                             ],
                             pub_topics=[
-                                'CatBedPID_MV'
+                                'CatBedPID_MV', 'CatBedPID_P', 'CatBedPID_I', 'CatBedPID_D'
                             ],
                             err_topics=[
                                 'CatBedPID_collect_err', 'CatBedPID_set_err', 'CatBedPID_analyze_err'
@@ -477,14 +478,14 @@ CatBedPID_slave = Slave(
                         )
 # CV_03: CatBed TC; MV: Fuel to BR
 ## CatBed_PV > CatBed_SP => BR_Fuel down => DirectAction=False
-CatBedPID_slave.control_constructor(Kp=8, Ki=30, Kd=5, MVrange=(0,100), DirectAction=False)
+CatBedPID_slave.control_constructor(Kp=8, Ki=30, Kd=5, MVrange=(-0.1, 0.1), DirectAction=False)
 
 print('Slaves are all set')
 
 #-----Port setting----------------------------------------------------------------
 Scale_port = device_port(Scale_slave,
                         name='Scale_port',
-                        port=serial.Serial(port=Scale_port_path,
+                        port=serial.Serial(port=port_path_dict['Scale_port_path'],
                                             baudrate=9600, 
                                             bytesize=8, 
                                             stopbits=1, 
@@ -495,7 +496,7 @@ RS232_port = device_port(GA_slave,
                         Air_MFC_slave,
                         #H2_MFC_slave,
                         name='RS232_port',
-                        port=serial.Serial(port=RS232_port_path,
+                        port=serial.Serial(port=port_path_dict['RS232_port_path'],
                                             baudrate=9600, 
                                             bytesize=8, 
                                             stopbits=1, 
@@ -503,15 +504,15 @@ RS232_port = device_port(GA_slave,
                         )
 
 Setup_port = device_port(
-                        Header_EVA_slave,
-                        Header_BR_slave,
-                        ADAM_SET_slave,
-                        ADAM_READ_slave,
-                        Header_EVA_SET_slave,
-                        Header_BR_SET_slave,
+                        #Header_EVA_slave,
+                        #Header_BR_slave,
+                        #ADAM_SET_slave,
+                        #ADAM_READ_slave,
+                        #Header_EVA_SET_slave,
+                        #Header_BR_SET_slave,
                         ADAM_TC_slave,
                         name='Setup_port',
-                        port=serial.Serial(port=Setup_port_path,
+                        port=serial.Serial(port=port_path_dict['Setup_port_path'],
                                             baudrate=57600, 
                                             bytesize=8, 
                                             stopbits=1, 
@@ -525,7 +526,10 @@ GPIO_port = device_port(DFM_slave,
                         )
 
 
-PID_port = device_port(LambdaPID_slave,
+PID_port = device_port(
+                    LambdaPID_slave,
+                    CurrentPID_slave,
+                    CatBedPID_slave,
                     name='PID_port',
                     port='PID',
                     )
@@ -533,11 +537,11 @@ PID_port = device_port(LambdaPID_slave,
 
 lst_ports = [
             # MFC_port,
-            Scale_port, 
-            RS232_port, 
+            #Scale_port, 
+            #RS232_port, 
             Setup_port,
-            GPIO_port,
-            #PID_port,
+            #GPIO_port,
+            PID_port,
             ]
 
 NodeRed = {}

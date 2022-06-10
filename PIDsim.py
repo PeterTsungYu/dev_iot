@@ -1,6 +1,9 @@
 #import matplotlib.pyplot as plt
 #import numpy as np
 
+from numpy import True_
+
+
 class PID:
     """ An implementation of a PID control class for use in process control simulations.
     """
@@ -14,7 +17,7 @@ class PID:
         self.gamma = gamma
         self.MVrange = MVrange
         self.DirectAction = DirectAction
-        self._mode = 'inManual'
+        self._mode = False
         self._log = []
         self._errorP0 = 0
         self._errorD0 = 0
@@ -26,13 +29,15 @@ class PID:
         """Change to automatic control mode. In automatic control mode the .update()
         method computes new values for the manipulated variable using a velocity algorithm.
         """
-        self._mode = 'inAuto'
+        #self._mode = 'inAuto'
+        self._mode = True
         
     def manual(self):
         """Change to manual control mode. In manual mode the setpoint tracks the process 
         variable to provide bumpless transfer on return to automatic model.
         """
-        self._mode = 'inManual'
+        #self._mode = 'inManual'
+        self._mode = False
         
     def _logger(self,t,SP,PV,MV):
         """The PID simulator logs values of time (t), setpoint (SP), process variable (PV),
@@ -177,18 +182,24 @@ class PID:
         self.SP = SP
         self.PV = PV
         self.MV = MV 
-        if self._mode=='inManual':
+
+        if self._mode==False:
             self.SP = PV
+            return self.MV, 0, 0, 0
+
         self._errorP1 = self._errorP0
         self._errorP0 = self.beta*self.SP - self.PV
+        print(self._errorP1, self._errorP0)
         self._errorI0 = self.SP - self.PV            
         self._errorD2 = self._errorD1
         self._errorD1 = self._errorD0
         self._errorD0 = self.gamma*self.SP - self.PV
-        if self._mode=='inAuto':
-            self._deltaMV = self.Kp*(self._errorP0 - self._errorP1) \
-                + self.Ki*tstep*self._errorI0 \
-                + self.Kd*(self._errorD0 - 2*self._errorD1 + self._errorD2)/tstep
+        if self._mode==True:
+            P = self.Kp*(self._errorP0 - self._errorP1)
+            I = self.Ki*tstep*self._errorI0
+            D = self.Kd*(self._errorD0 - 2*self._errorD1 + self._errorD2)/tstep
+            self._deltaMV =  P + I + D
             self.MV -= self._action*self._deltaMV
-        self._logger(self.SP,self.PV,self.MV)
-        return self.MV 
+        #self._logger(self.SP,self.PV,self.MV)
+        
+        return self.MV, P, I, D

@@ -468,9 +468,20 @@ def H2_MFC_analyze(start, device_port, slave, **kwargs):
 
 #------------------------------PID controller---------------------------------
 @kb_event
-def control(PID, SP, PV, MV, device_port, slave):
+def control(PID, device_port, slave):
+    _sub_values = device_port.sub_values
+    _pub_values = device_port.pub_values
+    SP = _sub_values.get(f'{slave.name}_SP')
+    PV = _sub_values.get(f'{slave.name}_PV')
+    MV = _pub_values.get(f'{slave.name}_MV')
+    if _sub_values.get(f'{slave.name}_mode') == True:
+        PID.auto()
+    else:
+        PID.manual()
     # update manipulated variable
-    MV_update = PID.update(params.tstep, SP, PV, MV)
-    for topic in slave.port_topics.pub_topics:    
-        device_port.pub_values[topic] = MV_update
+    print(PID._mode, SP, PV, MV)
+    updates = PID.update(params.tstep, SP, PV, MV)
+    print(updates)
+    for idx, topic in enumerate(slave.port_topics.pub_topics):    
+        device_port.pub_values[topic] = updates[idx]
     time.sleep(params.tstep)
