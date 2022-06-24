@@ -468,19 +468,33 @@ def H2_MFC_analyze(start, device_port, slave, **kwargs):
 
 #------------------------------PID controller---------------------------------
 @kb_event
-def control(PID, device_port, slave):
+def control(device_port, slave):
+    _init = False
+    for topic in slave.port_topics.sub_topics:
+        logging.critical((slave.name, topic))
+        if topic in [f'{slave.name}_Kp', f'{slave.name}_Ki', f'{slave.name}_Kd', f'{slave.name}_MVrange', f'{slave.name}_mode']:
+            if device_port.sub_events[topic].isSet():
+                logging.debug(device_port.sub_values[topic])
+                _init = True
+                device_port.sub_events[topic].clear()
+            
     _sub_values = device_port.sub_values
     _pub_values = device_port.pub_values
+    Kp = _sub_values.get(f'{slave.name}_Kp')
+    Ki = _sub_values.get(f'{slave.name}_Ki')
+    Kd = _sub_values.get(f'{slave.name}_Kd')
+    MVrange = _sub_values.get(f'{slave.name}_MVrange')
+    mode = _sub_values.get(f'{slave.name}_mode')
     SP = _sub_values.get(f'{slave.name}_SP')
     PV = _sub_values.get(f'{slave.name}_PV')
     MV = _pub_values.get(f'{slave.name}_MV')
-    if _sub_values.get(f'{slave.name}_mode') == True:
-        PID.auto()
-    else:
-        PID.manual()
+    if _init:
+        slave.control_constructor(Kp=Kp, Ki=Ki, Kd=Kd, MVrange=MVrange, DirectAction=False, mode=mode)
+
     # update manipulated variable
-    print(PID._mode, SP, PV, MV)
-    updates = PID.update(params.tstep, SP, PV, MV)
+    print(Kp, Ki, Kd, MVrange)
+    print(slave.controller.mode, SP, PV, MV)
+    updates = slave.controller.update(params.tstep, SP, PV, MV)
     print(updates)
     for idx, topic in enumerate(slave.port_topics.pub_topics):    
         device_port.pub_values[topic] = updates[idx]

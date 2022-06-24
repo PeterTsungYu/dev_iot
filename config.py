@@ -113,7 +113,7 @@ class device_port:
                     threading.Thread(
                         name=f'{slave.name}_control',
                         target=slave.kwargs['control_func'],
-                        args=(slave.controller, self, slave,)
+                        args=(self, slave,)
                     )
                 )
 
@@ -158,8 +158,8 @@ class Slave: # Create Slave data store
             if 'MFC' in self.name:
                 self.w_rtu = f'\r{self.id}S{_fields[0]}\r\r'
     
-    def control_constructor(self, Kp=8, Ki=30, Kd=5, MVrange=(0,100), DirectAction=False):
-        self.controller = PIDsim.PID(Kp=Kp, Ki=Ki, Kd=Kd, MVrange=MVrange, DirectAction=DirectAction)
+    def control_constructor(self, Kp=0, Ki=0, Kd=0, MVrange=(0,0), DirectAction=False, mode=False):
+        self.controller = PIDsim.PID(Kp=Kp, Ki=Ki, Kd=Kd, MVrange=MVrange, DirectAction=DirectAction, mode=mode)
     
 
 #-------------------------RTU & Slave--------------------------------------
@@ -419,7 +419,7 @@ LambdaPID_slave = Slave(
                         idno=lambdapid_id, 
                         port_topics=port_Topics(
                             sub_topics=[
-                                'LambdaPID_PV', 'LambdaPID_SP', 'LambdaPID_mode' 
+                                'LambdaPID_Kp', 'LambdaPID_Ki', 'LambdaPID_Kd', 'LambdaPID_MVrange', 'LambdaPID_PV', 'LambdaPID_SP', 'LambdaPID_mode'
                             ],
                             pub_topics=[
                                 'LambdaPID_MV', 'LambdaPID_P', 'LambdaPID_I', 'LambdaPID_D'
@@ -434,14 +434,14 @@ LambdaPID_slave = Slave(
                         )
 #CV_01: Lambda value; MV: Air
 ## lambda_PV > lambda_SP => Air down => DirectAction=False
-LambdaPID_slave.control_constructor(Kp=8, Ki=30, Kd=5, MVrange=(-0.5,0.5), DirectAction=False)
+LambdaPID_slave.control_constructor()
 
 CurrentPID_slave = Slave(
                         name='CurrentPID',
                         idno=currentpid_id, 
                         port_topics=port_Topics(
                             sub_topics=[
-                                'CurrentPID_PV', 'CurrentPID_SP', 'CurrentPID_mode'
+                                'CurrentPID_Kp', 'CurrentPID_Ki', 'CurrentPID_Kd', 'CurrentPID_MVrange', 'CurrentPID_PV', 'CurrentPID_SP', 'CurrentPID_mode'
                             ],
                             pub_topics=[
                                 'CurrentPID_MV', 'CurrentPID_P', 'CurrentPID_I', 'CurrentPID_D'
@@ -456,14 +456,14 @@ CurrentPID_slave = Slave(
                         )
 # CV_02: SetCurrent; MV: RF_Pump flow rate
 ## current_PV > current_SP => RF_Pump down => DirectAction=False
-CurrentPID_slave.control_constructor(Kp=8, Ki=30, Kd=5, MVrange=(-0.1,0.1), DirectAction=False)
+CurrentPID_slave.control_constructor()
 
 CatBedPID_slave = Slave(
                         name='CatBedPID',
                         idno=catbedpid_id, 
                         port_topics=port_Topics(
                             sub_topics=[
-                                'CatBedPID_PV', 'CatBedPID_SP', 'CatBedPID_mode'
+                                'CatBedPID_Kp', 'CatBedPID_Ki', 'CatBedPID_Kd', 'CatBedPID_MVrange', 'CatBedPID_PV', 'CatBedPID_SP', 'CatBedPID_mode'
                             ],
                             pub_topics=[
                                 'CatBedPID_MV', 'CatBedPID_P', 'CatBedPID_I', 'CatBedPID_D'
@@ -478,7 +478,7 @@ CatBedPID_slave = Slave(
                         )
 # CV_03: CatBed TC; MV: Fuel to BR
 ## CatBed_PV > CatBed_SP => BR_Fuel down => DirectAction=False
-CatBedPID_slave.control_constructor(Kp=8, Ki=30, Kd=5, MVrange=(-0.1, 0.1), DirectAction=False)
+CatBedPID_slave.control_constructor()
 
 print('Slaves are all set')
 
