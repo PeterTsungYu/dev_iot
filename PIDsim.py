@@ -7,23 +7,22 @@ from numpy import True_
 class PID:
     """ An implementation of a PID control class for use in process control simulations.
     """
-    def __init__(self, name=None, SP=None, Kp=0.2, Ki=0, Kd=0, beta=1, gamma=0, MVrange=(0,100), DirectAction=False, mode=False):
+    def __init__(self, name=None):
         self.name = name
-        self.SP = SP
-        self.Kp = Kp
-        self.Ki = Ki
-        self.Kd = Kd
-        self.beta = beta
-        self.gamma = gamma
-        self.MVrange = MVrange
-        self.DirectAction = DirectAction
-        self.mode = mode
+        self.SP = None
+        self.Kp = None
+        self.Ki = None
+        self.Kd = None
+        self.beta = 0 # 0~1
+        self.gamma = 0 # 0~1
+        self.MVmin = 0
+        self.MVmax = 0
+        self.DirectAction = False
+        self.mode = False
         self._log = []
         self._errorP0 = 0
         self._errorD0 = 0
         self._errorD1 = 0
-        self._lastT = 0
-        self._currT = 0
         
     def auto(self):
         """Change to automatic control mode. In automatic control mode the .update()
@@ -147,16 +146,20 @@ class PID:
         self._MV = max(self._MVmin,min(self._MVmax,MV))
         
     @property
-    def MVrange(self):
-        """range is a tuple specifying the minimum and maximum controller output.
-        Default value is (0,100).
-        """
-        return (self._MVmin,self._MVmax)
+    def MVmin(self):
+        return self._MVmin
     
-    @MVrange.setter
-    def MVrange(self,MVrange):
-        self._MVmin = MVrange[0]
-        self._MVmax = MVrange[1]
+    @MVmin.setter
+    def MVmin(self, MVmin):
+        self._MVmin = MVmin
+
+    @property
+    def MVmax(self):
+        return self._MVmax
+    
+    @MVmax.setter
+    def MVmax(self, MVmax):
+        self._MVmax = MVmax
 
     @property
     def SP(self):
@@ -178,28 +181,42 @@ class PID:
     def PV(self,PV):
         self._PV = PV
 
+    def update_paramater(self, Kp=0, Ki=0, Kd=0, beta=0, gamma=0, MVmin=0, MVmax=0, DirectAction=False, mode=False):
+        self.Kp = Kp
+        self.Ki = Ki
+        self.Kd = Kd
+        self.Kd = Kd
+        self.MVmin = MVmin
+        self.MVmax = MVmax
+        self.beta = beta
+        self.gamma = gamma
+        self.DirectAction = DirectAction
+        self.mode = mode
+
     def update(self, tstep, SP, PV, MV):
         self.SP = SP
         self.PV = PV
-        self.MV = MV 
+        self.MV = MV # MV tracking
 
         if self.mode == False:
-            #self.SP = PV
-            return self.MV, 0, 0, 0
+            # Setpoint tracking
+            self.SP = PV 
 
         self._errorP1 = self._errorP0
-        self._errorP0 = self.beta*self.SP - self.PV
-        print(self._errorP1, self._errorP0)
+        self._errorP0 = self.beta*self.SP - self.PV # setpoint weighting
         self._errorI0 = self.SP - self.PV            
         self._errorD2 = self._errorD1
         self._errorD1 = self._errorD0
-        self._errorD0 = self.gamma*self.SP - self.PV
+        self._errorD0 = self.gamma*self.SP - self.PV # setpoint weighting
         if self.mode == True:
             P = self.Kp*(self._errorP0 - self._errorP1)
             I = self.Ki*tstep*self._errorI0
             D = self.Kd*(self._errorD0 - 2*self._errorD1 + self._errorD2)/tstep
             self._deltaMV =  P + I + D
+            print(self._deltaMV)
+            print(self.MV)
             self.MV -= self._action*self._deltaMV
+            print(self.MV)
         #self._logger(self.SP,self.PV,self.MV)
         
         return self.MV, P, I, D

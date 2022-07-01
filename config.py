@@ -158,8 +158,8 @@ class Slave: # Create Slave data store
             if 'MFC' in self.name:
                 self.w_rtu = f'\r{self.id}S{_fields[0]}\r\r'
     
-    def control_constructor(self, Kp=0, Ki=0, Kd=0, MVrange=(0,0), DirectAction=False, mode=False):
-        self.controller = PIDsim.PID(Kp=Kp, Ki=Ki, Kd=Kd, MVrange=MVrange, DirectAction=DirectAction, mode=mode)
+    def control_constructor(self):
+        self.controller = PIDsim.PID(name=f'{self.name}_controller')
     
 
 #-------------------------RTU & Slave--------------------------------------
@@ -187,10 +187,12 @@ ADAM_TC_slave.w_wait_len = 8
 GA_slave = Slave(
                 name = 'GA',
                 idno=GA_id,
-                port_topics=port_Topics(sub_topics=[],
+                port_topics=port_Topics(sub_topics=[
+                                        'H2', 'CO2', 'CO', 'MeOH', 'H2O'
+                                        ],
                                         pub_topics=[
                                             'GA_CO', 'GA_CO2', 'GA_CH4',
-                                            'GA_H2', 'GA_N2', 'GA_HEAT'
+                                            'GA_H2', 'GA_N2', 'GA_HEAT',
                                         ],
                                         err_topics=[
                                             'GA_collect_err', 'GA_analyze_err',
@@ -348,7 +350,8 @@ DFM_slave = Slave(
                 name='DFM',
                 idno=DFM_id,
                 port_topics=port_Topics(
-                                sub_topics=['DFM_RichGas_1min','current',],
+                                sub_topics=['DFM_RichGas_1min','current','Convertion',
+                                ],
                                 pub_topics=[
                                     'DFM_RichGas',
                                 ],
@@ -363,7 +366,8 @@ DFM_AOG_slave = Slave(
                     name='DFM_AOG',
                     idno=DFM_AOG_id, 
                     port_topics=port_Topics(
-                                sub_topics=['DFM_AOG_1min',],
+                                sub_topics=['DFM_AOG_1min','Ratio'
+                                ],
                                 pub_topics=[
                                     'DFM_AOG',
                                 ],
@@ -419,7 +423,7 @@ LambdaPID_slave = Slave(
                         idno=lambdapid_id, 
                         port_topics=port_Topics(
                             sub_topics=[
-                                'LambdaPID_Kp', 'LambdaPID_Ki', 'LambdaPID_Kd', 'LambdaPID_MVrange', 'LambdaPID_PV', 'LambdaPID_SP', 'LambdaPID_mode'
+                                'LambdaPID_Kp', 'LambdaPID_Ki', 'LambdaPID_Kd', 'LambdaPID_MVmin', 'LambdaPID_MVmax', 'LambdaPID_PV', 'LambdaPID_SP', 'LambdaPID_mode'
                             ],
                             pub_topics=[
                                 'LambdaPID_MV', 'LambdaPID_P', 'LambdaPID_I', 'LambdaPID_D'
@@ -441,7 +445,7 @@ CurrentPID_slave = Slave(
                         idno=currentpid_id, 
                         port_topics=port_Topics(
                             sub_topics=[
-                                'CurrentPID_Kp', 'CurrentPID_Ki', 'CurrentPID_Kd', 'CurrentPID_MVrange', 'CurrentPID_PV', 'CurrentPID_SP', 'CurrentPID_mode'
+                                'CurrentPID_Kp', 'CurrentPID_Ki', 'CurrentPID_Kd', 'CurrentPID_MVmin', 'CurrentPID_MVmax', 'CurrentPID_PV', 'CurrentPID_SP', 'CurrentPID_mode'
                             ],
                             pub_topics=[
                                 'CurrentPID_MV', 'CurrentPID_P', 'CurrentPID_I', 'CurrentPID_D'
@@ -463,7 +467,7 @@ CatBedPID_slave = Slave(
                         idno=catbedpid_id, 
                         port_topics=port_Topics(
                             sub_topics=[
-                                'CatBedPID_Kp', 'CatBedPID_Ki', 'CatBedPID_Kd', 'CatBedPID_MVrange', 'CatBedPID_PV', 'CatBedPID_SP', 'CatBedPID_mode'
+                                'CatBedPID_Kp', 'CatBedPID_Ki', 'CatBedPID_Kd', 'CatBedPID_MVmin',  'CatBedPID_MVmax', 'CatBedPID_PV', 'CatBedPID_SP', 'CatBedPID_mode'
                             ],
                             pub_topics=[
                                 'CatBedPID_MV', 'CatBedPID_P', 'CatBedPID_I', 'CatBedPID_D'
@@ -504,12 +508,12 @@ RS232_port = device_port(GA_slave,
                         )
 
 Setup_port = device_port(
-                        #Header_EVA_slave,
-                        #Header_BR_slave,
-                        #ADAM_SET_slave,
-                        #ADAM_READ_slave,
-                        #Header_EVA_SET_slave,
-                        #Header_BR_SET_slave,
+                        Header_EVA_slave,
+                        Header_BR_slave,
+                        ADAM_SET_slave,
+                        ADAM_READ_slave,
+                        Header_EVA_SET_slave,
+                        Header_BR_SET_slave,
                         ADAM_TC_slave,
                         name='Setup_port',
                         port=serial.Serial(port=port_path_dict['Setup_port_path'],
@@ -527,9 +531,9 @@ GPIO_port = device_port(DFM_slave,
 
 
 PID_port = device_port(
-                    LambdaPID_slave,
+                    # LambdaPID_slave,
                     CurrentPID_slave,
-                    CatBedPID_slave,
+                    # CatBedPID_slave,
                     name='PID_port',
                     port='PID',
                     )
@@ -537,10 +541,10 @@ PID_port = device_port(
 
 lst_ports = [
             # MFC_port,
-            #Scale_port, 
-            #RS232_port, 
+            Scale_port, 
+            # RS232_port, 
             Setup_port,
-            #GPIO_port,
+            # GPIO_port,
             PID_port,
             ]
 

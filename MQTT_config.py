@@ -56,6 +56,7 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
                     port = config.RS232_port
             elif (msg.topic == 'PID_Set'):
                 print(f'{hostname} Receive topic: PID_Set')
+                print(resp)
                 if config.port_path_dict.get('PID_port'):
                     port = config.PID_port
             if port:

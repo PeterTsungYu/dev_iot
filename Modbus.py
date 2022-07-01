@@ -143,13 +143,13 @@ def Modbus_Comm(start, device_port, slave):
                 #logging.debug(readings.index(re))
                 if readings.index(re) >= 0:
                     readings = readings[readings.index(re):(readings.index(re)+slave.r_wait_len*2)]
-                logging.debug(readings)
+                #logging.debug(readings)
                 crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
                 #logging.debug(crc)
                 # check sta, func code, datalen, crc
                 if (crc[-2:] + crc[:2]) == readings[-4:]:
                     slave.lst_readings.append(readings)
-                    logging.info(f'Read from slave_{slave.name}')
+                    #logging.info(f'Read from slave_{slave.name}')
                 else:
                     collect_err[0] += 1
                     err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: crc validation failed"
@@ -469,13 +469,11 @@ def H2_MFC_analyze(start, device_port, slave, **kwargs):
 #------------------------------PID controller---------------------------------
 @kb_event
 def control(device_port, slave):
-    _init = False
+    _update_parameter = False
     for topic in slave.port_topics.sub_topics:
-        logging.critical((slave.name, topic))
-        if topic in [f'{slave.name}_Kp', f'{slave.name}_Ki', f'{slave.name}_Kd', f'{slave.name}_MVrange', f'{slave.name}_mode']:
+        if topic in [f'{slave.name}_Kp', f'{slave.name}_Ki', f'{slave.name}_Kd', f'{slave.name}_MVmin',  f'{slave.name}_MVmax', f'{slave.name}_mode']:
             if device_port.sub_events[topic].isSet():
-                logging.debug(device_port.sub_values[topic])
-                _init = True
+                _update_parameter = True
                 device_port.sub_events[topic].clear()
             
     _sub_values = device_port.sub_values
@@ -483,19 +481,20 @@ def control(device_port, slave):
     Kp = _sub_values.get(f'{slave.name}_Kp')
     Ki = _sub_values.get(f'{slave.name}_Ki')
     Kd = _sub_values.get(f'{slave.name}_Kd')
-    MVrange = _sub_values.get(f'{slave.name}_MVrange')
+    MVmin = _sub_values.get(f'{slave.name}_MVmin')
+    MVmax = _sub_values.get(f'{slave.name}_MVmax')
     mode = _sub_values.get(f'{slave.name}_mode')
     SP = _sub_values.get(f'{slave.name}_SP')
     PV = _sub_values.get(f'{slave.name}_PV')
     MV = _pub_values.get(f'{slave.name}_MV')
-    if _init:
-        slave.control_constructor(Kp=Kp, Ki=Ki, Kd=Kd, MVrange=MVrange, DirectAction=False, mode=mode)
+    if _update_parameter:
+        slave.controller.update_paramater(Kp=Kp, Ki=Ki, Kd=Kd, MVmin=MVmin, MVmax=MVmax, mode=mode)
 
     # update manipulated variable
-    print(Kp, Ki, Kd, MVrange)
-    print(slave.controller.mode, SP, PV, MV)
+    #print(slave.controller.Kp, slave.controller.Ki, slave.controller.Kd, slave.controller.MVrange, slave.controller.mode)
+    #print(SP, PV, MV)
     updates = slave.controller.update(params.tstep, SP, PV, MV)
-    print(updates)
+    #print(updates)
     for idx, topic in enumerate(slave.port_topics.pub_topics):    
         device_port.pub_values[topic] = updates[idx]
     time.sleep(params.tstep)
