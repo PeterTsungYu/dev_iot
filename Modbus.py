@@ -486,13 +486,14 @@ def control(device_port, slave):
     mode = _sub_values.get(f'{slave.name}_mode')
     SP = _sub_values.get(f'{slave.name}_SP')
     PV = _sub_values.get(f'{slave.name}_PV')
-    MV = _pub_values.get(f'{slave.name}_MV')
+    MV = _sub_values.get(f'{slave.name}_setting')
     if _update_parameter:
         slave.controller.update_paramater(Kp=Kp, Ki=Ki, Kd=Kd, MVmin=MVmin, MVmax=MVmax, mode=mode)
 
     # update manipulated variable
-    #print(slave.controller.Kp, slave.controller.Ki, slave.controller.Kd, slave.controller.MVrange, slave.controller.mode)
-    #print(SP, PV, MV)
+    print('here')
+    print(slave.controller.Kp, slave.controller.Ki, slave.controller.Kd, slave.controller.mode)
+    # print(SP, PV, MV)
     updates = slave.controller.update(params.tstep, SP, PV, MV)
     #print(updates)
     for idx, topic in enumerate(slave.port_topics.pub_topics):    

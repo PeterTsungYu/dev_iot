@@ -208,15 +208,15 @@ class PID:
         self._errorD2 = self._errorD1
         self._errorD1 = self._errorD0
         self._errorD0 = self.gamma*self.SP - self.PV # setpoint weighting
-        if self.mode == True:
-            P = self.Kp*(self._errorP0 - self._errorP1)
-            I = self.Ki*tstep*self._errorI0
-            D = self.Kd*(self._errorD0 - 2*self._errorD1 + self._errorD2)/tstep
-            self._deltaMV =  P + I + D
-            print(self._deltaMV)
-            print(self.MV)
-            self.MV -= self._action*self._deltaMV
-            print(self.MV)
+        # if self.mode == True:
+        P = self.Kp*(self._errorP0 - self._errorP1)
+        I = self.Ki*tstep*self._errorI0
+        D = self.Kd*(self._errorD0 - 2*self._errorD1 + self._errorD2)/tstep
+        self._deltaMV =  P + I + D
+        print(self._deltaMV)
+        print(self.MV)
+        self.MV -= self._action*self._deltaMV
+        print(self.MV)
         #self._logger(self.SP,self.PV,self.MV)
         
         return self.MV, P, I, D

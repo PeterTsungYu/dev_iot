@@ -207,7 +207,9 @@ GA_slave.read_rtu('11 01 60 8E', wait_len=31)
 Scale_slave = Slave(
                     name = 'Scale',
                     idno=Scale_id,
-                    port_topics=port_Topics(sub_topics=[],
+                    port_topics=port_Topics(sub_topics=[
+                                              'Scale_byPython'  
+                                            ],
                                             pub_topics=[
                                                 'Scale'
                                             ],
@@ -445,7 +447,7 @@ CurrentPID_slave = Slave(
                         idno=currentpid_id, 
                         port_topics=port_Topics(
                             sub_topics=[
-                                'CurrentPID_Kp', 'CurrentPID_Ki', 'CurrentPID_Kd', 'CurrentPID_MVmin', 'CurrentPID_MVmax', 'CurrentPID_PV', 'CurrentPID_SP', 'CurrentPID_mode'
+                                'CurrentPID_Kp', 'CurrentPID_Ki', 'CurrentPID_Kd', 'CurrentPID_MVmin', 'CurrentPID_MVmax', 'CurrentPID_PV', 'CurrentPID_SP', 'CurrentPID_mode', 'CurrentPID_setting'
                             ],
                             pub_topics=[
                                 'CurrentPID_MV', 'CurrentPID_P', 'CurrentPID_I', 'CurrentPID_D'
@@ -542,9 +544,9 @@ PID_port = device_port(
 lst_ports = [
             # MFC_port,
             Scale_port, 
-            # RS232_port, 
+            RS232_port, 
             Setup_port,
-            # GPIO_port,
+            GPIO_port,
             PID_port,
             ]
 
