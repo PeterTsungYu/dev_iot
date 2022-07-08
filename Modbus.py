@@ -15,17 +15,17 @@ import params
 
 #------------------------------Logger---------------------------------
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.CRITICAL)
 formatter = logging.Formatter(
 	'[%(levelname)s %(asctime)s %(module)s:%(lineno)d] %(message)s',
 	datefmt='%Y%m%d %H:%M:%S')
 
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+ch.setLevel(logging.CRITICAL)
 ch.setFormatter(formatter)
 
 fh = logging.FileHandler(filename='platform.log', mode='w')
-fh.setLevel(logging.DEBUG)
+fh.setLevel(logging.CRITICAL)
 fh.setFormatter(formatter)
 
 logger.addHandler(ch)
@@ -53,14 +53,18 @@ def analyze_decker(func):
         _lst_readings = slave.lst_readings
         _time_readings = slave.time_readings
         slave.lst_readings = []
-        if device_port.name == 'GPIO_port':
+        if 'DFM' in slave.name:
             if len(_lst_readings) == 0:
-                _time_readings.append([0])
+                _time_readings['10_time_readings'].append([0])
+                _time_readings['60_time_readings'].append([0])
             else:
-                _time_readings.append(_lst_readings)
-            if len(slave.time_readings) > 10: # aggregate lists for 10s in a list
-                _time_readings = _time_readings[-10:]
-            cond = len(_time_readings)
+                _time_readings['10_time_readings'].append(_lst_readings)
+                _time_readings['60_time_readings'].append(_lst_readings)
+            if len(_time_readings['10_time_readings']) > 10: # aggregate lists for 10s in a list
+                _time_readings['10_time_readings'] = _time_readings['10_time_readings'][-10:]
+            if len(_time_readings['60_time_readings']) > 60: # aggregate lists for 60s in a list
+                _time_readings['60_time_readings'] = _time_readings['60_time_readings'][-60:]
+            cond = len(_time_readings['10_time_readings'])
         else:    
             cond = len(_lst_readings)
         try:
@@ -73,18 +77,7 @@ def analyze_decker(func):
                     device_port.pub_values[topic] = _readings[ind]
                     ind += 1
                 ## to slave data list
-                slave.readings.append(_readings)
-                logging.info(f"{slave.name}_analyze done: record {_readings}")
-            elif (device_port.name == 'GPIO_port') and (cond == 0):
-                analyze_err[1] += 1
-                _readings = tuple([_time_readings, 0])
-                # casting
-                ind = 1
-                for topic in slave.port_topics.pub_topics:    
-                    device_port.pub_values[topic] = _readings[ind]
-                    ind += 1
-                ## to slave data list
-                slave.readings.append(_readings)
+                #slave.readings.append(_readings)
                 logging.info(f"{slave.name}_analyze done: record {_readings}")
             else:
                 logging.warning(f"{slave.name}_analyze record nothing")
@@ -203,8 +196,8 @@ def Modbus_Comm(start, device_port, slave):
                     crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
                     # check sta, func code, datalen, crc
                     if (crc[-2:] + crc[:2]) == readings[-4:]:
-                        logging.critical(readings)
-                        logging.critical(f'Read from slave_{slave.name}')
+                        #logging.critical(readings)
+                        #logging.critical(f'Read from slave_{slave.name}')
                         device_port.sub_events[topic].clear()
                     else:
                         set_err[0] += 1
@@ -278,7 +271,7 @@ def MFC_Comm(start, device_port, slave):
 
     w_data_site=0
     for topic in slave.port_topics.sub_topics:
-        logging.critical((slave.name, topic))
+        #logging.critical((slave.name, topic))
         if device_port.sub_events[topic].isSet():
             logging.debug(device_port.sub_values[topic])
             try: # try to set value
@@ -349,31 +342,29 @@ def ADAM_READ_analyze(start, device_port, slave, **kwargs):
 def DFM_data_analyze(start, device_port, slave, **kwargs):
     _time_readings = kwargs.get('_time_readings')
     _sampling_time = round(time.time()-start, 2)
-    try: 
-        _flow_lst = []
-        for i in _time_readings:
+    try:
+        _10_flow_lst = []
+        for i in _time_readings['10_time_readings']:
             if isinstance(i, list):
-                _flow_lst.extend(i)
-        _flow_rate = sum(_flow_lst) * 6 #  6 times of 10s, equal to 60s 
-        _readings = tuple([_sampling_time, round(_flow_rate,2)])
-    except:
-        _readings = tuple([_sampling_time, 0])
-    return _readings
-            
+                _10_flow_lst.extend(i)
+        if len(_time_readings['10_time_readings']) == 10:
+            _10_flow_rate = len(_10_flow_lst)/(_10_flow_lst[-1] - _10_flow_lst[0]) * 10 * 0.1
+        elif len(_time_readings['10_time_readings']) == 0:
+            _10_flow_rate = 0
+        else:
+            _10_flow_rate = None
 
-@kb_event
-@sampling_event(params.sample_time_DFM)
-@analyze_decker
-def DFM_AOG_data_analyze(start, device_port, slave, **kwargs):
-    _time_readings = kwargs.get('_time_readings')
-    _sampling_time = round(time.time()-start, 2)
-    try: 
-        _flow_lst = []
-        for i in _time_readings:
+        _60_flow_lst = []
+        for i in _time_readings['60_time_readings']:
             if isinstance(i, list):
-                _flow_lst.extend(i)
-        _flow_rate = sum(_flow_lst) * 6 #  6 times of 10s, equal to 60s 
-        _readings = tuple([_sampling_time, round(_flow_rate,2)])
+                _60_flow_lst.extend(i)
+        if len(_time_readings['60_time_readings']) == 60:
+            _60_flow_rate = len(_60_flow_lst)/(_60_flow_lst[-1] - _60_flow_lst[0]) * 60 * 0.1
+        elif len(_time_readings['60_time_readings']) == 0:
+            _60_flow_rate = 0
+        else:
+            _60_flow_rate = None        
+        _readings = tuple([_sampling_time, round(_10_flow_rate,2), round(_60_flow_rate,2)])
     except:
         _readings = tuple([_sampling_time, 0])
     return _readings

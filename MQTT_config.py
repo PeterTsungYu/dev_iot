@@ -92,7 +92,7 @@ def multi_pub(client):
                     payload = json.dumps(payload)
                     client.publish(topic=_slave.name, payload=payload, qos=0, retain=False)
                     #print(f"pub {_slave.name}:{payload} succeed from {client._client_id} >>> localhost")
-            client.publish(topic='DFM_total', payload=config.GPIO_port.pub_values['DFM_RichGas'] + config.GPIO_port.pub_values['DFM_AOG'], qos=0, retain=False)
+            # client.publish(topic='DFM_total', payload=config.GPIO_port.pub_values['DFM_RichGas'] + config.GPIO_port.pub_values['DFM_AOG'], qos=0, retain=False)
             if config.db_connection == True:
                 client.publish(topic='DB_name', payload=config.db_time, qos=0, retain=False)
             elif config.db_connection == False:

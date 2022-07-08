@@ -130,7 +130,7 @@ class Slave: # Create Slave data store
         self.name = name
         self.id = idno # id number of slave
         self.lst_readings = [] # record readings
-        self.time_readings = [] # record time
+        self.time_readings = [] if 'DFM' not in self.name else {'10_time_readings':[], '60_time_readings':[]} # record time
         self.readings = [] # for all data
         self.port_topics = port_topics
         self.kwargs = kwargs # dict of funcs
@@ -355,7 +355,7 @@ DFM_slave = Slave(
                                 sub_topics=['DFM_RichGas_1min','current','Convertion',
                                 ],
                                 pub_topics=[
-                                    'DFM_RichGas',
+                                    '10_DFM_RichGas', '60_DFM_RichGas',
                                 ],
                                 err_topics=[
                                     'DFM_collect_err', 'DFM_analyze_err', 
@@ -371,13 +371,13 @@ DFM_AOG_slave = Slave(
                                 sub_topics=['DFM_AOG_1min','Ratio'
                                 ],
                                 pub_topics=[
-                                    'DFM_AOG',
+                                    '10_DFM_AOG', '60_DFM_AOG',
                                 ],
                                 err_topics=[
                                     'DFM_AOG_collect_err', 'DFM_AOG_analyze_err'
                                 ]
                                 ),
-                    analyze_func=Modbus.DFM_AOG_data_analyze
+                    analyze_func=Modbus.DFM_data_analyze
                     )
 
 Air_MFC_slave = Slave(
@@ -533,9 +533,9 @@ GPIO_port = device_port(DFM_slave,
 
 
 PID_port = device_port(
-                    # LambdaPID_slave,
+                    LambdaPID_slave,
                     CurrentPID_slave,
-                    # CatBedPID_slave,
+                    CatBedPID_slave,
                     name='PID_port',
                     port='PID',
                     )

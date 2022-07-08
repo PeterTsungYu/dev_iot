@@ -33,9 +33,9 @@ try:
     GPIO.setup(config.channel_DFM, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     GPIO.setup(config.channel_DFM_AOG, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     def DFM_data_collect(self):
-        config.DFM_slave.lst_readings.append(0.1) # 0.1L/pulse
+        config.DFM_slave.lst_readings.append(time.time()) # 0.1L/pulse
     def DFM_AOG_data_collect(self):
-        config.DFM_AOG_slave.lst_readings.append(0.01) # 0.01L/pulse
+        config.DFM_AOG_slave.lst_readings.append(time.time()) # 0.01L/pulse
     GPIO.add_event_detect(config.channel_DFM, GPIO.RISING, callback=DFM_data_collect)
     GPIO.add_event_detect(config.channel_DFM_AOG, GPIO.RISING, callback=DFM_AOG_data_collect)
     print('GPIO ports open')
