@@ -23,6 +23,7 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
         client.subscribe("Set_bit", qos=0)
         client.subscribe("NodeRed", qos=0)
         client.subscribe("MFC_Set", qos=0)
+        client.subscribe("ADDA_Set", qos=0)
         #client.subscribe([(u,0) for i in config.lst_ports for u in i.sub_topics])
         #client.subscribe([("Header_EVA_SV", 0), ("Header_BR_SV", 0)])
 
@@ -46,6 +47,9 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
             if (msg.topic == 'Set_bit'):
                 print(f'{hostname} Receive topic: Set_bit')
                 port = config.Setup_port
+            elif (msg.topic == "ADDA_Set"):
+                print(f'{hostname} Receive topic: ADDA_Set')
+                port = config.ADDA_port
             elif (msg.topic == 'MFC_Set'):
                 print(f'{hostname} Receive topic: MFC_Set')
                 port = config.MFC_port
@@ -54,6 +58,11 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
                     if port.sub_values[key] != float(value):
                         port.sub_values[key] = float(value)
                         port.sub_events[key].set()
+                    elif type(port.sub_values[key]) != type(value):
+                        if isinstance(value, bool):
+                            if isinstance(port.sub_values[key], int):
+                                port.sub_values[key] = value
+                                port.sub_events[key].set()
         
     def on_publish(client, userdata, mid):
         print(mid)

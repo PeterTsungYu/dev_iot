@@ -151,7 +151,8 @@ class Slave: # Create Slave data store
 ADAM_TC_slave = Slave(
                     name = 'ADAM_TC',
                     idno=ADAM_TC_id,
-                    port_topics=port_Topics(sub_topics=[],
+                    port_topics=port_Topics(sub_topics=[
+                                            ],
                                             pub_topics=[
                                                 'TC7', 'TC8', 'TC9', 'TC10', # # TC7(ADAM_TC_0), TC8(ADAM_TC_1), TC9(ADAM_TC_2), TC10(ADAM_TC_3) 
                                                 'TC11', 'EVA_out', 'RAD_in', 'RAD_out' # TC11(ADAM_TC_4), EVA_out(ADAM_TC_5), RAD_in(ADAM_TC_6), RAD_out(ADAM_TC_7)
@@ -173,7 +174,8 @@ GA_slave = Slave(
                 port_topics=port_Topics(sub_topics=[],
                                         pub_topics=[
                                             'GA_CO', 'GA_CO2', 'GA_CH4',
-                                            'GA_H2', 'GA_N2', 'GA_HEAT'
+                                            'GA_H2', 'GA_N2', 'GA_HEAT',
+                                            'H2','CO2','CO','MeOH','H2O'
                                         ],
                                         err_topics=[
                                             'GA_collect_err', 'GA_analyze_err',
@@ -315,7 +317,7 @@ ADAM_READ_slave = Slave(
                         port_topics=port_Topics(
                                 sub_topics=[],
                                 pub_topics=[
-                                    'SMC_0_PV', 'SMC_1_PV', 'ADAM_READ_PV2', 'ADAM_READ_PV3', 'ADAM_READ_PV4', 'Lambda', 'ADAM_READ_PV7', 'ADAM_READ_PV8' # ADAM_READ_PV0 (SMC), ADAM_READ_PV1 (SMC), ADAM_READ_PV2, ADAM_READ_PV3, ADAM_READ_PV4(pump), ADAM_READ_PV5(Air_MFC), ADAM_READ_PV6(H2_MFC), ADAM_READ_PV7
+                                    'SMC_0_PV', 'SMC_1_PV', 'ADAM_READ_PV2', 'ADAM_READ_PV3', 'ADAM_READ_PV4', 'Lambda', 'ADAM_P_Nozzle', 'ADAM_READ_PV8' # ADAM_READ_PV0 (SMC), ADAM_READ_PV1 (SMC), ADAM_READ_PV2, ADAM_READ_PV3, ADAM_READ_PV4(pump), ADAM_READ_PV5(Air_MFC), ADAM_READ_PV6(H2_MFC), ADAM_READ_PV7
                                 ],
                                 err_topics=[
                                     'ADAM_READ_collect_err', 'ADAM_READ_analyze_err',
@@ -333,7 +335,7 @@ DFM_slave = Slave(
                 port_topics=port_Topics(
                                 sub_topics=[],
                                 pub_topics=[
-                                    'DFM_RichGas',
+                                    'DFM_RichGas','DFM_RichGas_1min','current','Convertion'
                                 ],
                                 err_topics=[
                                     'DFM_collect_err', 'DFM_analyze_err', 
@@ -349,7 +351,7 @@ DFM_AOG_slave = Slave(
                     port_topics=port_Topics(
                                 sub_topics=[],
                                 pub_topics=[
-                                    'DFM_AOG'
+                                    'DFM_AOG','DFM_AOG_1min','Ratio'
                                 ],
                                 err_topics=[
                                     'DFM_AOG_collect_err', 'DFM_AOG_analyze_err'
@@ -417,6 +419,24 @@ H2_MFC_slave = Slave(
 H2_MFC_slave.read_rtu(f'\r{H2_MFC_id}\r\r', wait_len=49)
 H2_MFC_slave.w_wait_len = 49
 
+WatchDog_slave = Slave(
+                    name='WatchDog',
+                    idno=ADDA_id, 
+                    port_topics=port_Topics(
+                                sub_topics=[
+                                    'BN_rate', 'SR_rate',
+                                ],
+                                pub_topics=[
+                                    'AD0', 'AD1', 'AD2', 'AD3', 'AD4', 'AD5', 'AD6', 'AD7',
+                                ],
+                                err_topics=[
+                                    'ADDA_collect_err', 'ADDA_set_err', 'ADDA_analyze_err'
+                                ]
+                                ),
+                    comm_func=Modbus.VOID,
+                    # analyze_func=Modbus.VOID,
+                    )
+
 print('Slaves are all set')
 
 #-----Port setting----------------------------------------------------------------
@@ -476,13 +496,19 @@ ADDA_port = device_port(ADDA_slave,
                         port='ADDA',
                         )
 
+WatchDog_port = device_port(WatchDog_slave,
+                        name='WatchDog_port',
+                        port='WatchDog',
+                        )
+
 lst_ports = [
             MFC_port,
             Scale_port, 
             RS232_port, 
             Setup_port,
             GPIO_port,
-            ADDA_port
+            ADDA_port,
+            WatchDog_port
             ]
 
 NodeRed = {}

@@ -476,7 +476,7 @@ def H2_MFC_analyze(start, device_port, slave, **kwargs):
     _readings = tuple([round(_time_readings,2)]) + _lst_readings
     return _readings
 
-def VOID():
+def VOID(start, device_port, slave):
     pass
 
 #------------------------------PID Control---------------------------------
