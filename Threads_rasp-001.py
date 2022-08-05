@@ -3,6 +3,7 @@
 import time
 from datetime import datetime
 import RPi.GPIO as GPIO
+import pigpio
 import serial
 
 # custome modules
@@ -19,6 +20,7 @@ timeit = datetime.now().strftime('%Y_%m_%d_%H_%M')
 print(f'Execution time is {timeit}')
 print('=='*30)
 start = time.time()
+PIG = pigpio.pi()
 
 #-------------------------Open ports--------------------------------------
 try:
@@ -30,14 +32,16 @@ try:
             device_port.port.reset_output_buffer() #flush output buffer
     print('serial ports open')
     
-    GPIO.setup(config.channel_DFM, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-    GPIO.setup(config.channel_DFM_AOG, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-    def DFM_data_collect(self):
-        config.DFM_slave.time_readings.append(time.time())
-    def DFM_AOG_data_collect(self):
-        config.DFM_AOG_slave.time_readings.append(time.time())
-    GPIO.add_event_detect(config.channel_DFM, GPIO.RISING, callback=DFM_data_collect)
-    GPIO.add_event_detect(config.channel_DFM_AOG, GPIO.RISING, callback=DFM_AOG_data_collect)
+    PIG.set_mode(config.channel_DFM, pigpio.INPUT)
+    PIG.set_pull_up_down(config.channel_DFM, pigpio.PUD_DOWN)
+    PIG.set_mode(config.channel_DFM_AOG, pigpio.INPUT)
+    PIG.set_pull_up_down(config.channel_DFM_AOG, pigpio.PUD_DOWN)
+    def DFM_data_collect(user_gpio, level, tick):
+        config.DFM_slave.lst_readings.append(time.time())
+    def DFM_AOG_data_collect(user_gpio, level, tick):
+        config.DFM_AOG_slave.lst_readings.append(time.time())
+    PIG.callback(user_gpio=config.channel_DFM, edge=pigpio.RISING_EDGE, func=DFM_data_collect)
+    PIG.callback(user_gpio=config.channel_DFM_AOG, edge=pigpio.RISING_EDGE, func=DFM_AOG_data_collect)
     print('GPIO ports open')
     
 except Exception as ex:

@@ -113,6 +113,14 @@ class device_port:
                         args=(start, self, slave,)
                     )
                 )
+            elif slave.kwargs.get('control_func'):
+                self.thread_funcs.append(
+                    threading.Thread(
+                        name=f'{slave.name}_control',
+                        target=slave.kwargs['control_func'],
+                        args=(self, slave,)
+                    )
+                )
 
 
 class port_Topics:
@@ -127,13 +135,13 @@ class Slave: # Create Slave data store
         self.name = name
         self.id = idno # id number of slave
         self.lst_readings = [] # record readings
-        self.time_readings = [] if 'DFM' not in self.name else {'10_time_readings':[], '60_time_readings':[]} # record time
+        self.time_readings = [] 
+        if 'DFM' in self.name: 
+            self.DFM_time_readings = {'10_time_readings':[], '60_time_readings':[]} # record time
         if 'Scale' in self.name:
             self.scale_readings = {'10_lst_readings':[], '60_lst_readings':[]}
             self.scale_time_readings = {'10_time_readings':[], '60_time_readings':[]}
-        else: # record readings for scale
-            pass
-        self.readings = [] # for all data
+        #self.readings = [] # for all data
         self.port_topics = port_topics
         self.kwargs = kwargs # dict of funcs
 
@@ -211,7 +219,7 @@ Scale_slave = Slave(
                     idno=Scale_id,
                     port_topics=port_Topics(sub_topics=[],
                                             pub_topics=[
-                                                'Scale'
+                                                '10_Scale', '60_Scale'
                                             ],
                                             err_topics=[
                                                 'Scale_collect_err', 'Scale_analyze_err',
@@ -413,7 +421,7 @@ Air_MFC_slave = Slave(
                                 ]
                                 ),
                     comm_func=Modbus.MFC_Comm,
-                    analyze_func=Modbus.Air_MFC_analyze,
+                    analyze_func=Modbus.MFC_analyze,
                     )
 Air_MFC_slave.read_rtu(f'\r{Air_MFC_id}\r\r', wait_len=49)
 Air_MFC_slave.w_wait_len = 49
@@ -433,7 +441,7 @@ H2_MFC_slave = Slave(
                                 ]
                                 ),
                     comm_func=Modbus.MFC_Comm,
-                    analyze_func=Modbus.H2_MFC_analyze,
+                    analyze_func=Modbus.MFC_analyze,
                     )
 H2_MFC_slave.read_rtu(f'\r{H2_MFC_id}\r\r', wait_len=49)
 H2_MFC_slave.w_wait_len = 49
