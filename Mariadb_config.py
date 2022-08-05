@@ -4,7 +4,8 @@
 #python packages
 import os
 import sys
-import threading
+#import threading
+import multiprocessing
 import mariadb
 from dotenv import load_dotenv
 
@@ -59,18 +60,18 @@ try:
     #print(insert_col)
 
     def multi_insert(cur):
-        while not params.kb_event.isSet():
-            if not params.ticker.wait(params.sample_time):
-                try:
-                    cur.execute(
-                        insertSchema,
-                        #tuple(i for i in config.Setup_port.sub_values.values()) + # sub value
-                        #tuple(u for i in config.lst_ports for u in list(i.pub_values.values()) + list(i.sub_values.values())) # pub value
-                        tuple(config.NodeRed.get(_k) for _k in insert_col)
-                        )
-                    print(f"Successfully added entry to database. Last Inserted ID: {cur.lastrowid}")
-                except mariadb.Error as e:
-                    print(f"Error adding entry to database: {e}")
+        while not params.kb_event.is_set():
+            params.sample_ticker.wait()
+            try:
+                cur.execute(
+                    insertSchema,
+                    #tuple(i for i in config.Setup_port.sub_values.values()) + # sub value
+                    #tuple(u for i in config.lst_ports for u in list(i.pub_values.values()) + list(i.sub_values.values())) # pub value
+                    tuple(config.NodeRed.get(_k) for _k in insert_col)
+                    )
+                print(f"Successfully added entry to database. Last Inserted ID: {cur.lastrowid}")
+            except mariadb.Error as e:
+                print(f"Error adding entry to database: {e}")
 
     #-------------------------main--------------------------------------
     try:

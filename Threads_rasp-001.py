@@ -70,11 +70,19 @@ except Exception as ex:
 
 #-------------------------Main Threadingggg-----------------------------------------
 try:
-    while not params.kb_event.isSet():
-        if not params.ticker.wait(params.sample_time):
+    while not params.kb_event.is_set():
+        if not params.main_ticker.wait(params.sample_time):
             print("=="*10 + f'Elapsed time: {round((time.time()-start),2)}' + "=="*10)
+            params.sample_ticker.set()
+            params.time_out_ticker.set()
             #for device_port in config.lst_ports: 
                 #print(device_port.thread_funcs)
+            
+            # wait for all child processes to terminate
+            for device_port in config.lst_ports: 
+                for subthread in device_port.thread_funcs:
+                    subthread.join()
+                    print('join', subthread.name)
         
 except KeyboardInterrupt: 
     print(f"Keyboard Interrupt in main thread!")

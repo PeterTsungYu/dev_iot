@@ -1,5 +1,5 @@
 #python packages
-import threading
+#import threading
 import multiprocessing
 import serial
 import RPi.GPIO as GPIO
@@ -79,7 +79,7 @@ class device_port:
             for topic in _slave.port_topics.sub_topics:
                 self.sub_topics.append(topic)
                 self.sub_values[topic] = 0
-                self.sub_events[topic] = threading.Event()
+                self.sub_events[topic] = multiprocessing.Event()
             for topic in _slave.port_topics.pub_topics:
                 self.pub_topics.append(topic)
                 self.pub_values[topic] = 0
@@ -90,14 +90,14 @@ class device_port:
     
     def serial_funcs(self, start): 
         def thread_func():
-            while not params.kb_event.isSet():
+            while not params.kb_event.is_set():
                 for slave in self.slaves:
                     if slave.kwargs.get('comm_func'):
                         # b =  time.time()
                         slave.kwargs['comm_func'](start, self, slave)
                         # print(slave.name)
                         # print( time.time() - b)
-        self.thread_funcs.append(threading.Thread(
+        self.thread_funcs.append(multiprocessing.Thread(
                                     name = f'{self.name}_comm',
                                     target=thread_func, 
                                     #args=(,)
@@ -126,7 +126,7 @@ class device_port:
 
 class port_Topics:
     def __init__(self, sub_topics, pub_topics, err_topics):
-        self.event = threading.Event()
+        self.event = multiprocessing.Event()
         self.sub_topics = sub_topics
         self.pub_topics = pub_topics
         self.err_topics = err_topics
@@ -135,6 +135,8 @@ class Slave: # Create Slave data store
     def __init__(self, name, idno, port_topics, **kwargs):
         self.name = name
         self.id = idno # id number of slave
+        self.que_lst_readings = multiprocessing.Queue()
+        self.que_time_readings = multiprocessing.Queue()
         self.lst_readings = [] # record readings
         self.time_readings = [] 
         if 'DFM' in self.name: 

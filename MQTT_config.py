@@ -2,7 +2,8 @@
 
 #python packages
 import paho.mqtt.client as mqtt
-import threading
+#import threading
+import multiprocessing
 import json
 
 #custom modules
@@ -83,27 +84,27 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
 
 
 def multi_pub(client):
-    while not params.kb_event.isSet():
+    while not params.kb_event.is_set():
         # print(time.time())
-        if not params.ticker.wait(params.sample_time):
-            for device_port in config.lst_ports:
-                #print(device_port.name)
-                if (device_port.name != 'GPIO_port') and (device_port.name != 'ADDA_port'):
-                    for _slave in device_port.slaves:
-                        payload = {}
-                        #print(_slave.name)
-                        for _topic in _slave.port_topics.pub_topics:
-                            payload[_topic] = device_port.pub_values[_topic]
-                        payload = json.dumps(payload)
-                        client.publish(topic=_slave.name, payload=payload, qos=0, retain=False)
-                        #print(f"pub {_slave.name}:{payload} succeed from {client._client_id} >>> localhost")
-            # client.publish(topic='DFM_total', payload=config.GPIO_port.pub_values['DFM_RichGas'] + config.GPIO_port.pub_values['DFM_AOG'], qos=2, retain=False)
-            client.publish(topic='DFM', payload=json.dumps({'10_DFM_RichGas':config.GPIO_port.pub_values['10_DFM_RichGas'], '60_DFM_RichGas':config.GPIO_port.pub_values['60_DFM_RichGas']}), qos=2, retain=False)
-            client.publish(topic='DFM_AOG', payload=json.dumps({'10_DFM_AOG':config.GPIO_port.pub_values['10_DFM_AOG'], '60_DFM_AOG':config.GPIO_port.pub_values['60_DFM_AOG']}), qos=2, retain=False)
-            if config.db_connection == True:
-                client.publish(topic='DB_name', payload=config.db_time, qos=0, retain=False)
-            elif config.db_connection == False:
-                client.publish(topic='DB_name', payload='', qos=0, retain=False)
+        params.sample_ticker.wait()
+        for device_port in config.lst_ports:
+            #print(device_port.name)
+            if (device_port.name != 'GPIO_port') and (device_port.name != 'ADDA_port'):
+                for _slave in device_port.slaves:
+                    payload = {}
+                    #print(_slave.name)
+                    for _topic in _slave.port_topics.pub_topics:
+                        payload[_topic] = device_port.pub_values[_topic]
+                    payload = json.dumps(payload)
+                    client.publish(topic=_slave.name, payload=payload, qos=0, retain=False)
+                    #print(f"pub {_slave.name}:{payload} succeed from {client._client_id} >>> localhost")
+        # client.publish(topic='DFM_total', payload=config.GPIO_port.pub_values['DFM_RichGas'] + config.GPIO_port.pub_values['DFM_AOG'], qos=2, retain=False)
+        client.publish(topic='DFM', payload=json.dumps({'10_DFM_RichGas':config.GPIO_port.pub_values['10_DFM_RichGas'], '60_DFM_RichGas':config.GPIO_port.pub_values['60_DFM_RichGas']}), qos=2, retain=False)
+        client.publish(topic='DFM_AOG', payload=json.dumps({'10_DFM_AOG':config.GPIO_port.pub_values['10_DFM_AOG'], '60_DFM_AOG':config.GPIO_port.pub_values['60_DFM_AOG']}), qos=2, retain=False)
+        if config.db_connection == True:
+            client.publish(topic='DB_name', payload=config.db_time, qos=0, retain=False)
+        elif config.db_connection == False:
+            client.publish(topic='DB_name', payload='', qos=0, retain=False)
 
 #-------------------------MQTT instance--------------------------------------
 client_0 = connect_mqtt(client_id='client_0' ,hostname='localhost', port=1883, keepalive=60,) 

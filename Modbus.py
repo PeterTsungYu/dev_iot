@@ -35,7 +35,7 @@ logger.addHandler(fh)
 #------------------------------Decker---------------------------------
 def kb_event(func):
     def wrapper(*arg):
-        while not params.kb_event.isSet():
+        while not params.kb_event.is_set():
             func(*arg)
     return wrapper
 
@@ -43,8 +43,8 @@ def kb_event(func):
 def sampling_event(sample_time):
     def decker(func):
         def wrapper(*arg):
-            if not params.ticker.wait(sample_time):
-                func(*arg)
+            params.sample_ticker.wait()
+            func(*arg)
         return wrapper
     return decker
 
@@ -129,7 +129,7 @@ def analyze_decker(func):
 
 #------------------------------Collect and Analyze func---------------------------------
 def Scale_data_collect(start, device_port, slave):
-    #while not params.kb_event.isSet():
+    #while not params.kb_event.is_set():
     port = device_port.port
     collect_err = device_port.err_values[f'{slave.name}_collect_err']
     try:
@@ -228,7 +228,7 @@ def Modbus_Comm(start, device_port, slave):
     w_data_site=0
     for topic in slave.port_topics.sub_topics:
         #logging.critical((slave.name, topic))
-        if device_port.sub_events[topic].isSet():
+        if device_port.sub_events[topic].is_set():
             #logging.critical(device_port.sub_values[topic])
             try: # try to set value
                 recur = False
@@ -353,7 +353,7 @@ def MFC_Comm(start, device_port, slave):
     w_data_site=0
     for topic in slave.port_topics.sub_topics:
         #logging.critical((slave.name, topic))
-        if device_port.sub_events[topic].isSet():
+        if device_port.sub_events[topic].is_set():
             #logging.debug(device_port.sub_values[topic])
             try: # try to set value
                 recur = False
@@ -590,7 +590,7 @@ def control(device_port, slave):
     _update_parameter = False
     for topic in slave.port_topics.sub_topics:
         if topic in [f'{slave.name}_Kp', f'{slave.name}_Ki', f'{slave.name}_Kd', f'{slave.name}_MVmin',  f'{slave.name}_MVmax', f'{slave.name}_mode', f'{slave.name}_beta', f'{slave.name}_tstep', f'{slave.name}_kick']:
-            if device_port.sub_events[topic].isSet():
+            if device_port.sub_events[topic].is_set():
                 _update_parameter = True
                 device_port.sub_events[topic].clear()
             

@@ -1,4 +1,5 @@
-import threading
+#import threading
+import multiprocessing
 import signal
 
 #-------------------------Global var--------------------------------------
@@ -7,11 +8,13 @@ sample_time       = 1 # for analyzing data
 sample_time_DFM   = 1
 
 # count down events
-ticker = threading.Event()
+time_out_ticker = multiprocessing.Event()
+sample_ticker = multiprocessing.Event()
+main_ticker = multiprocessing.Event()
 
 #-----------------Interrupt events------------------------------
 # Keyboard interrupt event to kill all the threads (Ctr + C)
-kb_event = threading.Event()
+kb_event = multiprocessing.Event()
 def signal_handler(signum, frame):
     kb_event.set()
 signal.signal(signal.SIGINT, signal_handler) # Keyboard interrupt to stop the program
