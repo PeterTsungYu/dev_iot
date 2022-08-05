@@ -24,6 +24,7 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
         client.subscribe("NodeRed", qos=0)
         client.subscribe("MFC_Set", qos=0)
         client.subscribe("ADDA_Set", qos=0)
+        client.subscribe("PID_Set", qos=0)
         #client.subscribe([(u,0) for i in config.lst_ports for u in i.sub_topics])
         #client.subscribe([("Header_EVA_SV", 0), ("Header_BR_SV", 0)])
 
@@ -53,6 +54,10 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
             elif (msg.topic == 'MFC_Set'):
                 print(f'{hostname} Receive topic: MFC_Set')
                 port = config.MFC_port
+            elif (msg.topic == 'PID_Set'):
+                print(f'{hostname} Receive topic: PID_Set')
+                if config.port_path_dict.get('PID_port'):
+                    port = config.PID_port
             for key, value in resp.items():
                 if port.sub_values.get(key) != None:
                     if port.sub_values[key] != float(value):

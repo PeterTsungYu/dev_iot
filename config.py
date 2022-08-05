@@ -9,6 +9,7 @@ import time
 #custom modules
 import Modbus
 import params
+import PIDsim
 
 #-----------------Database----------------------------------------------
 db_time = datetime.now().strftime('%Y_%m_%d_%H_%M')
@@ -20,6 +21,7 @@ MFC_port_path = '/dev/ttyUSB_RS485' # for monitoring MFC (rasp-001_MFC branch)
 Scale_port_path = '/dev/ttyUSB_Scale' # for monitoring Scale
 RS232_port_path = '/dev/ttyUSB_RS232' # for monitoring GA
 Setup_port_path = '/dev/ttyUSB_PC' # for controling (ADAM, TCHeader)
+PID_port = 'PID_port'
 
 ## device ID
 Header_EVA_id = '01' # ReformerTP EVA_Header @ Setup_port_path
@@ -35,6 +37,11 @@ Relay01_id    = '10' # control Relay for Lambda sensor and Glow Plug
 GA_id         = '11' # ReformerTP GA for monitoring gas conc. @ RS232_port_path
 Air_MFC_id    = 'A'
 H2_MFC_id     = 'B'
+lambdapid_id  = '12'
+currentpid_id = '13'
+catbedpid_id  = '14'
+pcbpid_id     = '15'
+pumppid_id    = '16'
 
 
 #-----GPIO port setting----------------------------------------------------------------
@@ -152,6 +159,9 @@ class Slave: # Create Slave data store
         elif len(_fields) == 1:
             if 'MFC' in self.name:
                 self.w_rtu = f'\r{self.id}S{_fields[0]}\r\r'
+                
+    def control_constructor(self):
+        self.controller = PIDsim.PID(name=f'{self.name}_controller')
     
 
 #-------------------------RTU & Slave--------------------------------------
@@ -367,7 +377,7 @@ DFM_AOG_slave = Slave(
                                 ]
                                 ),
                     comm_func=Modbus.VOID,
-                    analyze_func=Modbus.DFM_AOG_data_analyze
+                    analyze_func=Modbus.DFM_data_analyze
                     )
 
 ADDA_slave = Slave(
@@ -445,6 +455,127 @@ WatchDog_slave = Slave(
                     analyze_func=Modbus.VOID,
                     )
 
+LambdaPID_slave = Slave(
+                        name='LambdaPID',
+                        idno=lambdapid_id, 
+                        port_topics=port_Topics(
+                            sub_topics=[
+                                'LambdaPID_Kp', 'LambdaPID_Ki', 'LambdaPID_Kd', 'LambdaPID_MVmin', 'LambdaPID_MVmax',
+                                'LambdaPID_PV', 'LambdaPID_SP', 'LambdaPID_mode', 'LambdaPID_setting', 'LambdaPID_beta',
+                                'LambdaPID_tstep', 'LambdaPID_kick',
+                            ],
+                            pub_topics=[
+                                'LambdaPID_MV', 'LambdaPID_P', 'LambdaPID_I', 'LambdaPID_D'
+                            ],
+                            err_topics=[
+                                'LambdaPID_collect_err', 'LambdaPID_set_err', 'LambdaPID_analyze_err'
+                            ]
+                            ),
+                        #comm_func=Modbus.,
+                        #analyze_func=Modbus.,
+                        control_func=Modbus.control,
+                        )
+#CV_01: Lambda value; MV: Air
+## lambda_PV > lambda_SP => Air down => DirectAction=False
+LambdaPID_slave.control_constructor()
+
+CurrentPID_slave = Slave(
+                        name='CurrentPID',
+                        idno=currentpid_id, 
+                        port_topics=port_Topics(
+                            sub_topics=[
+                                'CurrentPID_Kp', 'CurrentPID_Ki', 'CurrentPID_Kd', 'CurrentPID_MVmin', 'CurrentPID_MVmax',
+                                'CurrentPID_PV', 'CurrentPID_SP', 'CurrentPID_mode', 'CurrentPID_setting', 'CurrentPID_beta',
+                                'CurrentPID_tstep', 'CurrentPID_kick',
+                            ],
+                            pub_topics=[
+                                'CurrentPID_MV', 'CurrentPID_P', 'CurrentPID_I', 'CurrentPID_D'
+                            ],
+                            err_topics=[
+                                'CurrentPID_collect_err', 'CurrentPID_set_err', 'CurrentPID_analyze_err'
+                            ]
+                            ),
+                        #comm_func=Modbus.,
+                        #analyze_func=Modbus.,
+                        control_func=Modbus.control,
+                        )
+# CV_02: SetCurrent; MV: RF_Pump flow rate
+## current_PV > current_SP => RF_Pump down => DirectAction=False
+CurrentPID_slave.control_constructor()
+
+CatBedPID_slave = Slave(
+                        name='CatBedPID',
+                        idno=catbedpid_id, 
+                        port_topics=port_Topics(
+                            sub_topics=[
+                                'CatBedPID_Kp', 'CatBedPID_Ki', 'CatBedPID_Kd', 'CatBedPID_MVmin',  'CatBedPID_MVmax', 
+                                'CatBedPID_PV', 'CatBedPID_SP', 'CatBedPID_mode', 'CatBedPID_setting', 'CatBedPID_beta',
+                                'CatBedPID_tstep', 'CatBedPID_kick'
+                            ],
+                            pub_topics=[
+                                'CatBedPID_MV', 'CatBedPID_P', 'CatBedPID_I', 'CatBedPID_D'
+                            ],
+                            err_topics=[
+                                'CatBedPID_collect_err', 'CatBedPID_set_err', 'CatBedPID_analyze_err'
+                            ]
+                            ),
+                        #comm_func=Modbus.,
+                        #analyze_func=Modbus.,
+                        control_func=Modbus.control,
+                        )
+# CV_03: CatBed TC; MV: Fuel to BR
+## CatBed_PV > CatBed_SP => BR_Fuel down => DirectAction=False
+CatBedPID_slave.control_constructor()
+
+PCBPID_slave = Slave(
+                        name='PCBPID',
+                        idno=pcbpid_id, 
+                        port_topics=port_Topics(
+                            sub_topics=[
+                                'PCBPID_Kp', 'PCBPID_Ki', 'PCBPID_Kd', 'PCBPID_MVmin',  'PCBPID_MVmax', 
+                                'PCBPID_PV', 'PCBPID_SP', 'PCBPID_mode', 'PCBPID_setting', 'PCBPID_beta',
+                                'PCBPID_tstep', 'PCBPID_kick'
+                            ],
+                            pub_topics=[
+                                'PCBPID_MV', 'PCBPID_P', 'PCBPID_I', 'PCBPID_D'
+                            ],
+                            err_topics=[
+                                'PCBPID_collect_err', 'PCBPID_set_err', 'PCBPID_analyze_err'
+                            ]
+                            ),
+                        #comm_func=Modbus.,
+                        #analyze_func=Modbus.,
+                        control_func=Modbus.control,
+                        )
+# CV_04: PCB %; MV: ratio of AOG
+## PCBP_PV > PCBP_SP => AOG down => DirectAction=False
+PCBPID_slave.control_constructor()
+
+PumpPID_slave = Slave(
+                        name='PumpPID',
+                        idno=pumppid_id, 
+                        port_topics=port_Topics(
+                            sub_topics=[
+                                'PumpPID_Kp', 'PumpPID_Ki', 'PumpPID_Kd', 'PumpPID_MVmin',  'PumpPID_MVmax', 
+                                'PumpPID_PV', 'PumpPID_SP', 'PumpPID_mode', 'PumpPID_setting', 'PumpPID_beta',
+                                'PumpPID_step', 'PumpPID_kick'
+                            ],
+                            pub_topics=[
+                                'PumpPID_MV', 'PumpPID_P', 'PumpPID_I', 'PumpPID_D'
+                            ],
+                            err_topics=[
+                                'PumpPID_collect_err', 'PumpPID_set_err', 'PumpPID_analyze_err'
+                            ]
+                            ),
+                        #comm_func=Modbus.,
+                        #analyze_func=Modbus.,
+                        control_func=Modbus.control,
+                        )
+# CV_05: scale; MV: fuel to reformer
+## PumpP_PV > PumpP_SP => RF_fuel down => DirectAction=False
+PumpPID_slave.control_constructor()
+
+
 print('Slaves are all set')
 
 #-----Port setting----------------------------------------------------------------
@@ -509,14 +640,25 @@ WatchDog_port = device_port(WatchDog_slave,
                         port='WatchDog',
                         )
 
+PID_port = device_port(
+                    # LambdaPID_slave,
+                    # CurrentPID_slave,
+                    # PumpPID_slave,
+                    # PCBPID_slave,
+                    # CatBedPID_slave,
+                    name='PID_port',
+                    port='PID',
+                    )
+
 lst_ports = [
-            # MFC_port,
-            # Scale_port, 
-            # RS232_port, 
+            MFC_port,
+            Scale_port, 
+            RS232_port, 
             Setup_port,
-            # GPIO_port,
-            # ADDA_port,
-            # WatchDog_port
+            GPIO_port,
+            ADDA_port,
+            WatchDog_port,
+            PID_port
             ]
 
 NodeRed = {}

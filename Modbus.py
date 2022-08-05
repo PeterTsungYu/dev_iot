@@ -16,17 +16,17 @@ import PIDsim
 
 #------------------------------Logger---------------------------------
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.CRITICAL)
 formatter = logging.Formatter(
 	'[%(levelname)s %(asctime)s %(module)s:%(lineno)d] %(message)s',
 	datefmt='%Y%m%d %H:%M:%S')
 
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+ch.setLevel(logging.CRITICAL)
 ch.setFormatter(formatter)
 
 fh = logging.FileHandler(filename='platform.log', mode='w')
-fh.setLevel(logging.DEBUG)
+fh.setLevel(logging.CRITICAL)
 fh.setFormatter(formatter)
 
 logger.addHandler(ch)
@@ -89,10 +89,7 @@ def analyze_decker(func):
                 _time_readings['60_time_readings'] = _time_readings['60_time_readings'][-60:]
             cond = len(_time_readings['10_time_readings'])
             # print(cond)
-        else:    
-            cond = len(_lst_readings)
-
-        if device_port.name == 'GPIO_port':
+        elif device_port.name == 'GPIO_port':
             cond = len(_time_readings)
             slave.time_readings = []
         else:    
@@ -170,6 +167,7 @@ def Modbus_Comm(start, device_port, slave):
         #logging.debug(bytes.fromhex(slave.r_rtu))
         port.write(bytes.fromhex(slave.r_rtu)) #hex to binary(byte) 
         slave.time_readings = time.time()-start
+        logging.debug(f'Modbus_Comm {slave.name}: {slave.time_readings}')
         time.sleep(params.time_out)
         #logging.debug(port.inWaiting())
         _data_len = port.inWaiting()
@@ -284,6 +282,7 @@ def MFC_Comm(start, device_port, slave):
         #logging.debug(bytes(slave.r_rtu, 'ASCII'))
         port.write(bytes(slave.r_rtu, 'ASCII')) #ASCII to byte
         slave.time_readings = time.time()-start
+        logging.debug(f'MFC_Comm {slave.name}: {slave.time_readings}')
         time.sleep(params.time_out)
         #logging.debug(port.inWaiting())
         _data_len = port.inWaiting()
@@ -430,46 +429,55 @@ def DFM_data_analyze(start, device_port, slave, **kwargs):
     except:
         _readings = tuple([_sampling_time, 0, 0])
     return _readings
-            
-
-@kb_event
-@sampling_event(params.sample_time_DFM)
-@analyze_decker
-def DFM_AOG_data_analyze(start, device_port, slave, **kwargs):
-    _time_readings = kwargs.get('_time_readings')
-    _sampling_time = round(time.time()-start, 2)
-    # _average_interval_lst = []
-    # _flow_rate_interval_lst = []
-    # calc average min flow rate by each interval 
-    try:
-        # flow rate in [liter/s]
-        # 0.01 liter / pulse
-        #print(_time_readings)
-        _flow_rate = 60 * 0.01 * (len(_time_readings) - 1) / (_time_readings[-1] - _time_readings[0])
-        #print(_flow_rate)
-        # _flow_rate_interval_lst.append(round(_flow_rate, 2)) 
-        # print(_flow_rate_interval_lst)
-        # _average_flow_rate_interval = round(sum(_flow_rate_interval_lst) / len(_flow_rate_interval_lst), 2)          
-        # print(_average_flow_rate_interval)
-        # _average_interval_lst.append(_average_flow_rate_interval)
-        # print(_average_interval_lst)
-        # _average = round(sum(_average_interval_lst) / len(_average_interval_lst), 1)
-        _readings = tuple([_sampling_time, round(_flow_rate,2)])
-        print(_readings)
-    except:
-        _readings = tuple([_sampling_time, 0])
-    return _readings
-            
 
 @kb_event
 @sampling_event(params.sample_time)
 @analyze_decker
 def Scale_data_analyze(start, device_port, slave, **kwargs):
+    _sampling_time = round(time.time()-start, 2)
     _lst_readings = kwargs.get('_lst_readings')
     _time_readings = kwargs.get('_time_readings')
-    _arr_readings = np.array([sum(i)/len(i) for i in _lst_readings])
-    _lst_readings = tuple([np.sum(_arr_readings) / len(_lst_readings)])
-    _readings = tuple([round(_time_readings,2)]) + _lst_readings
+    # print(_lst_readings)
+    # print(_time_readings)
+    _10_scale_lst = []
+    _10_scale_time = []
+    for i in range(0, len(_lst_readings['10_lst_readings'])):
+        # print(len(_lst_readings['10_lst_readings']))
+        # print(i)
+        _10_scale_time.extend(_time_readings['10_time_readings'])
+        if _time_readings['10_lst_readings'][i] != [] and len(_time_readings['10_lst_readings'][i]) > 1:
+            _10_scale_lst.extend(_lst_readings['10_lst_readings'][i])
+        else:
+            print(_10_scale_lst)
+            _10_scale_lst.append(0)
+
+    for i in _10_scale_lst: 
+        if -0.00001 < i < 0.00001:
+            _10_scale_lst.remove(i)
+            _10_scale_time.remove(i)
+    _10_scale = (_10_scale_lst[0] - _10_scale_lst[-1]) / (_10_scale_time[-1] - _10_scale_time[0]) * 1000 * 10
+
+    _60_scale_lst = []
+    _60_scale_time = []
+    
+    for i in range(0, len(_lst_readings['60_lst_readings'])):
+        if i != [] and (len(_time_readings['60_lst_readings'][i]) > 1):
+            _60_scale_lst.extend(_lst_readings['60_lst_readings'][i])
+        else:
+            _60_scale_lst.append(0)
+        _60_scale_time.extend(_time_readings['60_time_readings'])
+    for i in _60_scale_lst: 
+        if -0.00001 < i < 0.00001:
+            _60_scale_lst.remove(i)
+            _60_scale_time.remove(i)
+    _60_scale = (_60_scale_lst[0] - _60_scale_lst[-1]) / (_60_scale_time[-1] - _60_scale_time[0]) * 1000 * 60
+
+    if _10_scale <= 0:
+        _10_scale = 0
+    if _60_scale <=0:
+        _60_scale = 0
+        
+    _readings = tuple([round(_sampling_time,2), round(_10_scale, 2), round(_60_scale, 2)])
     return _readings
 
 @kb_event
@@ -549,25 +557,41 @@ def H2_MFC_analyze(start, device_port, slave, **kwargs):
 def VOID(start, device_port, slave):
     pass
 
-#------------------------------PID Control---------------------------------
-'''
-# reactor temperature setpoint
-Tsp = 390
+#------------------------------PID controller---------------------------------
+@kb_event
+def control(device_port, slave):
+    _update_parameter = False
+    for topic in slave.port_topics.sub_topics:
+        if topic in [f'{slave.name}_Kp', f'{slave.name}_Ki', f'{slave.name}_Kd', f'{slave.name}_MVmin',  f'{slave.name}_MVmax', f'{slave.name}_mode', f'{slave.name}_beta', f'{slave.name}_tstep', f'{slave.name}_kick']:
+            if device_port.sub_events[topic].isSet():
+                _update_parameter = True
+                device_port.sub_events[topic].clear()
+            
+    _sub_values = device_port.sub_values
+    _pub_values = device_port.pub_values
+    Kp = _sub_values.get(f'{slave.name}_Kp')
+    Ki = _sub_values.get(f'{slave.name}_Ki')
+    Kd = _sub_values.get(f'{slave.name}_Kd')
+    MVmin = _sub_values.get(f'{slave.name}_MVmin')
+    MVmax = _sub_values.get(f'{slave.name}_MVmax')
+    mode = _sub_values.get(f'{slave.name}_mode')
+    SP = _sub_values.get(f'{slave.name}_SP')
+    PV = _sub_values.get(f'{slave.name}_PV')
+    MV = _sub_values.get(f'{slave.name}_setting')
+    beta = _sub_values.get(f'{slave.name}_beta')
+    kick = _sub_values.get(f'{slave.name}_kick')
+    tstep = _sub_values.get(f'{slave.name}_tstep')
+    if kick is None:
+        kick = 1
+    if tstep is None:
+        tstep = 1
+    if _update_parameter:
+        slave.controller.update_paramater(Kp=Kp, Ki=Ki, Kd=Kd, MVmin=MVmin, MVmax=MVmax, mode=mode, beta=beta)
 
-# set initial conditions and cooling flow
-IC = [C0,T0,Tcf]
-
-# do simulation at fixed time steps dt
-tstart = 0
-tstop = 8
-tstep = 0.05
-
-# configure controller. Creates a PID object.
-reactorPID = PID(Kp=8,Ki=30,Kd=5,MVrange=(0,300),DirectAction=True)
-
-c,T,Tc = IC                                          # reactor initial conditions
-qc = 150                                             # initial condition of the MV
-for t in np.arange(tstart,tstop,tstep):              # simulate from tstart to tstop
-    qc = reactorPID.update(t,Tsp,T,qc)               # update manipulated variable
-    c,T,Tc = odeint(deriv,[c,T,Tc],[t,t+dt])[-1]     # start at t, find state at t + dt
-'''
+    try:
+        updates = slave.controller.update(tstep, SP, PV, MV, kick)
+        for idx, topic in enumerate(slave.port_topics.pub_topics):    
+            device_port.pub_values[topic] = updates[idx]
+    except Exception as e:
+        logging.error(f'{e}')
+    time.sleep(tstep)
