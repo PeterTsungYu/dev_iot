@@ -86,7 +86,7 @@ finally:
         elif device_port.port == 'GPIO':
             GPIO.cleanup()
         Modbus.logger.info(f'Close {device_port.name}, err are {device_port.err_values}')
-        Modbus.logger.info(f'correct rates : {[f"{k}:{round((v[1]-v[0])/(v[1] + 0.00000000000000001)*100,2)}%" for k,v in device_port.err_values.items()]}')
+        Modbus.logger.info(f'correct rates : {[f"{k}:{round((v[1] - v[0] + v[2])/(v[1] + 0.00000000000000001)*100,2)}%" for k,v in device_port.err_values.items()]}')
     Modbus.logger.info(f"Program duration: {time.time() - start}")
     Mariadb_config.conn.close()
     print("close connection to MariaDB")

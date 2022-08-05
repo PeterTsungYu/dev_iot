@@ -54,6 +54,44 @@ def analyze_decker(func):
         _lst_readings = slave.lst_readings
         _time_readings = slave.time_readings
         slave.lst_readings = []
+        if 'Scale' in slave.name:
+            _scale_lst = slave.scale_readings
+            _scale_time = slave.scale_time_readings
+            if len(_scale_lst) == 0:
+                _scale_lst['10_lst_readings'].append([])
+                _scale_lst['60_lst_readings'].append([])
+                _scale_time['10_time_readings'].append([])
+                _scale_time['60_time_readings'].append([])
+            else:
+                _scale_lst['10_lst_readings'].append(_lst_readings)
+                _scale_lst['60_lst_readings'].append(_lst_readings)
+                _scale_time['10_time_readings'].append(_time_readings)
+                _scale_time['60_time_readings'].append(_time_readings)
+            if len(_scale_lst['10_lst_readings']) > 10: # aggregate lists for 10s in a list
+                _scale_lst['10_lst_readings'] = _scale_lst['10_lst_readings'][-10:]
+                _scale_time['10_time_readings'] = _scale_time['10_time_readings'][-10:]
+            if len(_scale_lst['60_lst_readings']) > 60: # aggregate lists for 60s in a list
+                _scale_lst['60_lst_readings'] = _scale_lst['60_lst_readings'][-60:]
+                _scale_time['60_time_readings'] = _scale_time['60_time_readings'][-60:]
+            _lst_readings = _scale_lst
+            _time_readings = _scale_time
+            cond = len(_lst_readings['10_lst_readings'])
+        elif 'DFM' in slave.name:
+            if len(_lst_readings) == 0:
+                _time_readings['10_time_readings'].append([])
+                _time_readings['60_time_readings'].append([])
+            else:
+                _time_readings['10_time_readings'].append(_lst_readings)
+                _time_readings['60_time_readings'].append(_lst_readings)
+            if len(_time_readings['10_time_readings']) > 10: # aggregate lists for 10s in a list
+                _time_readings['10_time_readings'] = _time_readings['10_time_readings'][-10:]
+            if len(_time_readings['60_time_readings']) > 60: # aggregate lists for 60s in a list
+                _time_readings['60_time_readings'] = _time_readings['60_time_readings'][-60:]
+            cond = len(_time_readings['10_time_readings'])
+            # print(cond)
+        else:    
+            cond = len(_lst_readings)
+
         if device_port.name == 'GPIO_port':
             cond = len(_time_readings)
             slave.time_readings = []
@@ -126,6 +164,7 @@ def Modbus_Comm(start, device_port, slave):
     re_collect = device_port.recur_count.get(f'{slave.name}_collect_err')
     re_set = device_port.recur_count.get(f'{slave.name}_set_err')
     try: # try to collect
+        recur = False
         collect_err[1] += 1
         #logging.debug(slave.r_rtu)
         #logging.debug(bytes.fromhex(slave.r_rtu))
@@ -143,39 +182,50 @@ def Modbus_Comm(start, device_port, slave):
             else:    
                 re = hex(int(slave.id))[2:].zfill(2) + '03' + hex(slave.r_wait_len-5)[2:].zfill(2)
                 #logging.debug(readings.index(re))
-                if readings.index(re) >= 0:
+                if re in readings:
                     readings = readings[readings.index(re):(readings.index(re)+slave.r_wait_len*2)]
-                logging.debug(readings)
-                crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
-                #logging.debug(crc)
-                # check sta, func code, datalen, crc
-                if (crc[-2:] + crc[:2]) == readings[-4:]:
-                    slave.lst_readings.append(readings)
-                    logging.info(f'Read from slave_{slave.name}')
+                    logging.debug(readings)
+                    crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
+                    #logging.debug(crc)
+                    # check sta, func code, datalen, crc
+                    if (crc[-2:] + crc[:2]) == readings[-4:]:
+                        slave.lst_readings.append(readings)
+                        logging.info(f'Read from slave_{slave.name}')
+                    else:
+                        recur = True
+                        collect_err[0] += 1
+                        err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: crc validation failed"
+                        logging.error(err_msg)
                 else:
+                    recur = True
                     collect_err[0] += 1
-                    err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: crc validation failed"
+                    err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: Modbus protocol failed"
                     logging.error(err_msg)
-        elif _data_len == 0:
-            # recursive part if the rtu was transferred but crushed in between the lines
-            collect_err[2] += 1
-            err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: wrong rtu code led to null receiving"
-            logging.error(err_msg)
-            if re_collect[0] < 3:
-                re_collect[0] += 1
-                logging.debug(re_collect)
-                Modbus_Comm(start, device_port, slave)
         else: # if data len is less than the wait data
-            collect_err[0] += 1
-            err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: data len_{_data_len} is less than the wait data"
-            logging.error(err_msg)
+            if _data_len == 0:
+                recur = True
+                collect_err[0] += 1
+                err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: wrong rtu code led to null receiving"
+                logging.error(err_msg)
+            elif _data_len < slave.r_wait_len:
+                recur = True
+                collect_err[0] += 1
+                err_msg = f"{port.read(_data_len).hex()} {slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: data len_{_data_len} is less than the wait data"
+                logging.error(err_msg)
     except Exception as e:
         collect_err[0] += 1
         err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: " + str(e)
         logging.error(err_msg)
     finally:
+        # recursive part if the rtu was transferred but crushed in between the lines
+        if (recur == True) and (re_collect[0] < 3):
+            re_collect[0] += 1
+            collect_err[2] += 1
+            logging.debug(f're_collect: {re_collect}')
+            Modbus_Comm(start, device_port, slave)
+        re_collect[0] = 0
         port.reset_input_buffer()
-        logging.info(f"{slave.name}_collect_err: {round((collect_err[1] - collect_err[0])/(collect_err[1]+0.00000000000000001)*100, 2)}%")
+        logging.info(f"{slave.name}_collect_err: {round((collect_err[1] - collect_err[0] + collect_err[2])/(collect_err[1]+0.00000000000000001)*100, 2)}%")
 
     w_data_site=0
     for topic in slave.port_topics.sub_topics:
@@ -228,6 +278,7 @@ def MFC_Comm(start, device_port, slave):
     set_err = device_port.err_values.get(f'{slave.name}_set_err')
     re_collect = device_port.recur_count.get(f'{slave.name}_collect_err')
     try: # try to collect
+        recur = False
         collect_err[1] += 1
         #logging.debug(slave.r_rtu)
         #logging.debug(bytes(slave.r_rtu, 'ASCII'))
@@ -242,35 +293,41 @@ def MFC_Comm(start, device_port, slave):
             # validate received data
             re = slave.id
             #logging.debug(readings.index(re))
-            if readings.index(re) >= 0:
+            if re in readings:
                 readings = readings[readings.index(re):(readings.index(re)+slave.r_wait_len)]
                 logging.debug(f'collect: {readings}')
                 slave.lst_readings.append(readings)
                 logging.info(f'Read from slave_{slave.name}')
             else:
+                recur = True
                 collect_err[0] += 1
                 err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: validation failed"
-                logging.error(err_msg)
-        elif _data_len == 0:
-            # recursive part if the rtu was transferred but crushed in between the lines
-            collect_err[2] += 1
-            err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: wrong rtu code led to null receiving"
-            logging.error(err_msg)
-            if re_collect[0] < 3:
-                re_collect[0] += 1
-                logging.debug(re_collect)
-                MFC_Comm(start, device_port, slave)
+                logging.error(err_msg)    
         else: # if data len is less than the wait data
-            collect_err[0] += 1
-            err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: data len_{_data_len} is less than the wait data"
-            logging.error(err_msg)
+            if _data_len == 0:
+                recur = True
+                collect_err[0] += 1
+                err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: wrong rtu code led to null receiving"
+                logging.error(err_msg)
+            elif _data_len < slave.r_wait_len:
+                recur = True
+                collect_err[0] += 1
+                err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: data len_{_data_len} is less than the wait data"
+                logging.error(err_msg)
     except Exception as e:
         collect_err[0] += 1
         err_msg = f"{slave.name}_collect_err_{collect_err} at {round((time.time()-start),2)}s: " + str(e)
         logging.error(err_msg)
     finally:
+        # recursive part if the rtu was transferred but crushed in between the lines
+        if (recur == True) and (re_collect[0] < 3):
+            re_collect[0] += 1
+            collect_err[2] += 1
+            logging.debug(f're_collect: {re_collect}')
+            MFC_Comm(start, device_port, slave)
+        re_collect[0] = 0
         port.reset_input_buffer()
-        logging.info(f"{slave.name}_collect_err: {round((collect_err[1] - collect_err[0])/(collect_err[1]+0.00000000000000001)*100, 2)}%")
+        logging.info(f"{slave.name}_collect_err: {round((collect_err[1] - collect_err[0] + collect_err[2])/(collect_err[1]+0.00000000000000001)*100, 2)}%")
 
     w_data_site=0
     for topic in slave.port_topics.sub_topics:
@@ -345,20 +402,33 @@ def ADAM_READ_analyze(start, device_port, slave, **kwargs):
 def DFM_data_analyze(start, device_port, slave, **kwargs):
     _time_readings = kwargs.get('_time_readings')
     _sampling_time = round(time.time()-start, 2)
-    # _flow_rate_interval_lst = []
-    # _average_interval_lst = []
-    # calc average min flow rate by each interval
-    try: 
-        # flow rate in [liter/s]
-        # 0.1 liter / pulse
-        _flow_rate = 60 * 0.1 * (len(_time_readings) - 1) / (_time_readings[-1] - _time_readings[0])
-        # _flow_rate_interval_lst.append(round(_flow_rate, 2)) 
-        # _average_flow_rate_interval = round(sum(_flow_rate_interval_lst) / len(_flow_rate_interval_lst), 2)         
-        # _average_interval_lst.append(_average_flow_rate_interval)
-        # _average = round(sum(_average_interval_lst) / len(_average_interval_lst), 1)
-        _readings = tuple([_sampling_time, round(_flow_rate, 2)])
+    _10_flow_lst = []
+    try:
+        for i in range(len(_time_readings['10_time_readings'])):
+            if i != [] and (len(_time_readings['10_time_readings'][i]) > 1):
+                _10_flow_lst.append((len(_time_readings['10_time_readings'][i]) - 1) / (_time_readings['10_time_readings'][i][-1] - _time_readings['10_time_readings'][i][0]))
+            else:
+                _10_flow_lst.append(0)
+        _10_flow_rate = sum(_10_flow_lst) / len(_10_flow_lst)
+        if slave.name == 'DFM':
+            _10_flow_rate = _10_flow_rate * 10 * 0.1
+        elif slave.name == 'DFM_AOG':
+            _10_flow_rate = _10_flow_rate * 10 * 0.01
+
+        _60_flow_lst = []
+        for i in range(len(_time_readings['60_time_readings'])):
+            if i != [] and (len(_time_readings['60_time_readings'][i]) > 1):
+                _60_flow_lst.append((len(_time_readings['60_time_readings'][i]) - 1) / (_time_readings['60_time_readings'][i][-1] - _time_readings['60_time_readings'][i][0]))
+            else:
+                _60_flow_lst.append(0)
+        _60_flow_rate = sum(_60_flow_lst) / len(_60_flow_lst)
+        if slave.name == 'DFM':
+            _60_flow_rate = _60_flow_rate * 60 * 0.1
+        elif slave.name == 'DFM_AOG':
+            _60_flow_rate = _60_flow_rate * 60 * 0.01
+        _readings = tuple([_sampling_time, round(_10_flow_rate,2), round(_60_flow_rate,2)])
     except:
-        _readings = tuple([_sampling_time, 0])
+        _readings = tuple([_sampling_time, 0, 0])
     return _readings
             
 

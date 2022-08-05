@@ -4,6 +4,7 @@ import serial
 import RPi.GPIO as GPIO
 from crccheck.crc import Crc16Modbus
 from datetime import datetime
+import time
 
 #custom modules
 import Modbus
@@ -76,15 +77,18 @@ class device_port:
                 self.pub_values[topic] = 0
             for topic in _slave.port_topics.err_topics:
                 self.err_topics.append(topic)
-                self.err_values[topic] = [0,0,0] #[err, click_throu, recur]
-                self.recur_count[topic] = [0]
+                self.err_values[topic] = [0,0,0] #[err, click_throu, total_recur]
+                self.recur_count[topic] = [0] #[one_call_recur]
     
     def serial_funcs(self, start): 
         def thread_func():
             while not params.kb_event.isSet():
                 for slave in self.slaves:
                     if slave.kwargs.get('comm_func'):
+                        # b =  time.time()
                         slave.kwargs['comm_func'](start, self, slave)
+                        # print(slave.name)
+                        # print( time.time() - b)
         self.thread_funcs.append(threading.Thread(
                                     name = f'{self.name}_comm',
                                     target=thread_func, 
@@ -116,7 +120,12 @@ class Slave: # Create Slave data store
         self.name = name
         self.id = idno # id number of slave
         self.lst_readings = [] # record readings
-        self.time_readings = [] # record time
+        self.time_readings = [] if 'DFM' not in self.name else {'10_time_readings':[], '60_time_readings':[]} # record time
+        if 'Scale' in self.name:
+            self.scale_readings = {'10_lst_readings':[], '60_lst_readings':[]}
+            self.scale_time_readings = {'10_time_readings':[], '60_time_readings':[]}
+        else: # record readings for scale
+            pass
         self.readings = [] # for all data
         self.port_topics = port_topics
         self.kwargs = kwargs # dict of funcs
@@ -333,9 +342,9 @@ DFM_slave = Slave(
                 name='DFM',
                 idno=DFM_id,
                 port_topics=port_Topics(
-                                sub_topics=[],
+                                sub_topics=['DFM_RichGas_1min','current','Convertion'],
                                 pub_topics=[
-                                    'DFM_RichGas','DFM_RichGas_1min','current','Convertion'
+                                    '10_DFM_RichGas', '60_DFM_RichGas',
                                 ],
                                 err_topics=[
                                     'DFM_collect_err', 'DFM_analyze_err', 
@@ -349,9 +358,9 @@ DFM_AOG_slave = Slave(
                     name='DFM_AOG',
                     idno=DFM_AOG_id, 
                     port_topics=port_Topics(
-                                sub_topics=[],
+                                sub_topics=['DFM_AOG_1min','Ratio'],
                                 pub_topics=[
-                                    'DFM_AOG','DFM_AOG_1min','Ratio'
+                                    '10_DFM_AOG', '60_DFM_AOG',
                                 ],
                                 err_topics=[
                                     'DFM_AOG_collect_err', 'DFM_AOG_analyze_err'
@@ -376,7 +385,7 @@ ADDA_slave = Slave(
                                 ]
                                 ),
                     comm_func=Modbus.VOID,
-                    # analyze_func=Modbus.VOID,
+                    analyze_func=Modbus.VOID,
                     )
 
 Air_MFC_slave = Slave(
@@ -427,14 +436,13 @@ WatchDog_slave = Slave(
                                     'BN_rate', 'SR_rate',
                                 ],
                                 pub_topics=[
-                                    'AD0', 'AD1', 'AD2', 'AD3', 'AD4', 'AD5', 'AD6', 'AD7',
                                 ],
                                 err_topics=[
-                                    'ADDA_collect_err', 'ADDA_set_err', 'ADDA_analyze_err'
+                                    'WatchDog_collect_err', 'WatchDog_set_err', 'WatchDog_analyze_err'
                                 ]
                                 ),
                     comm_func=Modbus.VOID,
-                    # analyze_func=Modbus.VOID,
+                    analyze_func=Modbus.VOID,
                     )
 
 print('Slaves are all set')
@@ -468,12 +476,12 @@ RS232_port = device_port(GA_slave,
                                             stopbits=1, 
                                             parity='N'),
                         )
-
+# somehow the headers are affecting ADAMs
 Setup_port = device_port(
-                        Header_BR_slave,
-                        Header_BR_SET_slave,
-                        Header_EVA_slave,
-                        Header_EVA_SET_slave,
+                        # Header_BR_slave,
+                        # Header_BR_SET_slave,
+                        # Header_EVA_slave,
+                        # Header_EVA_SET_slave,
                         ADAM_TC_slave,
                         ADAM_READ_slave,
                         ADAM_SET_slave,
@@ -502,13 +510,13 @@ WatchDog_port = device_port(WatchDog_slave,
                         )
 
 lst_ports = [
-            MFC_port,
-            Scale_port, 
-            RS232_port, 
+            # MFC_port,
+            # Scale_port, 
+            # RS232_port, 
             Setup_port,
-            GPIO_port,
-            ADDA_port,
-            WatchDog_port
+            # GPIO_port,
+            # ADDA_port,
+            # WatchDog_port
             ]
 
 NodeRed = {}
