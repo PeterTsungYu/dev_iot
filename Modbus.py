@@ -16,17 +16,17 @@ import PIDsim
 
 #------------------------------Logger---------------------------------
 logger = logging.getLogger()
-logger.setLevel(logging.CRITICAL)
+logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter(
 	'[%(levelname)s %(asctime)s %(module)s:%(lineno)d] %(message)s',
 	datefmt='%Y%m%d %H:%M:%S')
 
 ch = logging.StreamHandler()
-ch.setLevel(logging.CRITICAL)
+ch.setLevel(logging.DEBUG)
 ch.setFormatter(formatter)
 
 fh = logging.FileHandler(filename='platform.log', mode='w')
-fh.setLevel(logging.CRITICAL)
+fh.setLevel(logging.DEBUG)
 fh.setFormatter(formatter)
 
 logger.addHandler(ch)
@@ -231,6 +231,7 @@ def Modbus_Comm(start, device_port, slave):
         if device_port.sub_events[topic].isSet():
             #logging.critical(device_port.sub_values[topic])
             try: # try to set value
+                recur = False
                 set_err[1] += 1
                 slave.write_rtu(f"{w_data_site:0>4}", device_port.sub_values[topic])
                 port.write(bytes.fromhex(slave.w_rtu)) #hex to binary(byte) 
@@ -241,30 +242,50 @@ def Modbus_Comm(start, device_port, slave):
                     #logging.critical(readings)
                     re = hex(int(slave.id))[2:].zfill(2) + '06' + f"{w_data_site:0>4}"
                     #logging.critical(re)
-                    if readings.index(re):
+                    if re in readings:
                         readings = readings[readings.index(re):(readings.index(re)+slave.w_wait_len*2)]
-                    #logging.critical(readings)
-                    crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
-                    # check sta, func code, datalen, crc
-                    if (crc[-2:] + crc[:2]) == readings[-4:]:
-                        logging.critical(readings)
-                        logging.critical(f'Read from slave_{slave.name}')
-                        device_port.sub_events[topic].clear()
+                        #logging.critical(readings)
+                        crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
+                        # check sta, func code, datalen, crc
+                        if (crc[-2:] + crc[:2]) == readings[-4:]:
+                            logging.critical(readings)
+                            logging.critical(f'Read from slave_{slave.name}')
+                            device_port.sub_events[topic].clear()
+                        else:
+                            recur = True
+                            set_err[0] += 1
+                            err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: crc validation failed"
+                            logging.error(err_msg)
                     else:
+                        recur = True
                         set_err[0] += 1
-                        err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: crc validation failed"
+                        err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: Modbus protocol failed"
                         logging.error(err_msg)
                 else: # if data len is less than the wait data
-                    set_err[0] += 1
-                    err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: data len_{_data_len} is less than the wait data"
-                    logging.error(err_msg)
+                    if _data_len == 0:
+                        recur = True
+                        set_err[0] += 1
+                        err_msg = f"{slave.name}_set_err_{collect_err} at {round((time.time()-start),2)}s: wrong rtu code led to null receiving"
+                        logging.error(err_msg)
+                    elif _data_len < slave.w_wait_len:
+                        recur = True
+                        set_err[0] += 1
+                        err_msg = f"{port.read(_data_len).hex()} {slave.name}_set_err_{collect_err} at {round((time.time()-start),2)}s: data len_{_data_len} is less than the wait data"
+                        logging.error(err_msg)
             except Exception as e:
                 set_err[0] += 1
                 err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: " + str(e)
                 logging.error(err_msg)
             finally:
-                logging.info(f"{slave.name}_set_err: {round((set_err[1] - set_err[0])/(set_err[1]+0.00000000000000001)*100, 2)}%")
+                # recursive part if the rtu was transferred but crushed in between the lines
+                if (recur == True) and (re_set[0] < 3):
+                    re_set[0] += 1
+                    set_err[2] += 1
+                    logging.debug(f're_set: {re_set}')
+                    Modbus_Comm(start, device_port, slave)
+                re_set[0] = 0
                 port.reset_input_buffer()
+                logging.info(f"{slave.name}_set_err: {round((set_err[1] - set_err[0])/(set_err[1]+0.00000000000000001)*100, 2)}%")
                 w_data_site += 1
         else:
             w_data_site += 1
@@ -275,6 +296,7 @@ def MFC_Comm(start, device_port, slave):
     collect_err = device_port.err_values.get(f'{slave.name}_collect_err')
     set_err = device_port.err_values.get(f'{slave.name}_set_err')
     re_collect = device_port.recur_count.get(f'{slave.name}_collect_err')
+    re_set = device_port.recur_count.get(f'{slave.name}_set_err')
     try: # try to collect
         recur = False
         collect_err[1] += 1
@@ -334,6 +356,7 @@ def MFC_Comm(start, device_port, slave):
         if device_port.sub_events[topic].isSet():
             #logging.debug(device_port.sub_values[topic])
             try: # try to set value
+                recur = False
                 set_err[1] += 1
                 slave.write_rtu(device_port.sub_values[topic])
                 #logging.debug(slave.w_rtu)
@@ -345,26 +368,41 @@ def MFC_Comm(start, device_port, slave):
                     readings = str(port.read(_data_len)) # after reading, the buffer will be clean
                     re = slave.id
                     #logging.critical(re)
-                    if readings.index(re)  >= 0:
+                    if re in readings:
                         readings = readings[readings.index(re):(readings.index(re)+slave.w_wait_len)]
                         logging.debug(f'write: {readings}')
                         logging.info(f'Read from slave_{slave.name}')
                         device_port.sub_events[topic].clear()
                     else:
+                        recur = True
                         set_err[0] += 1
                         err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: validation failed"
                         logging.error(err_msg)
                 else: # if data len is less than the wait data
-                    set_err[0] += 1
-                    err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: data len_{_data_len} is less than the wait data"
-                    logging.error(err_msg)
+                    if _data_len == 0:
+                        recur = True
+                        set_err[0] += 1
+                        err_msg = f"{slave.name}_set_err_{collect_err} at {round((time.time()-start),2)}s: wrong rtu code led to null receiving"
+                        logging.error(err_msg)
+                    elif _data_len < slave.w_wait_len:
+                        recur = True
+                        set_err[0] += 1
+                        err_msg = f"{port.read(_data_len).hex()} {slave.name}_set_err_{collect_err} at {round((time.time()-start),2)}s: data len_{_data_len} is less than the wait data"
+                        logging.error(err_msg)
             except Exception as e:
                 set_err[0] += 1
                 err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: " + str(e)
                 logging.error(err_msg)
             finally:
-                logging.info(f"{slave.name}_set_err: {round((set_err[1] - set_err[0])/(set_err[1]+0.00000000000000001)*100, 2)}%")
+                # recursive part if the rtu was transferred but crushed in between the lines
+                if (recur == True) and (re_set[0] < 3):
+                    re_set[0] += 1
+                    set_err[2] += 1
+                    logging.debug(f're_set: {re_set}')
+                    Modbus_Comm(start, device_port, slave)
+                re_set[0] = 0
                 port.reset_input_buffer()
+                logging.info(f"{slave.name}_set_err: {round((set_err[1] - set_err[0])/(set_err[1]+0.00000000000000001)*100, 2)}%")
                 w_data_site += 1
         else:
             w_data_site += 1

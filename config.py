@@ -1,5 +1,6 @@
 #python packages
 import threading
+import multiprocessing
 import serial
 import RPi.GPIO as GPIO
 from crccheck.crc import Crc16Modbus
