@@ -46,7 +46,7 @@ try:
     print('GPIO ports open')
     
 except Exception as ex:
-    print ("open serial port error: " + str(ex))
+    print("open serial port error: " + str(ex))
     for device_port in config.lst_ports:
         if type(device_port.port) is serial.serialposix.Serial: 
             device_port.port.close()
@@ -62,7 +62,7 @@ try:
     params.sample_ticker.set()
     
 except Exception as ex:
-    print ("Threading funcs error: " + str(ex))
+    print("Threading funcs error: " + str(ex))
     for device_port in config.lst_ports:
         if type(device_port.port) is serial.serialposix.Serial:
             device_port.port.close()
@@ -90,7 +90,7 @@ try:
                 func.join()
 
         params.sample_ticker.set()
-        print(f'calc sample time: {time.time()-t}')
+        #print(f'calc sample time: {time.time()-t}')
         
 except KeyboardInterrupt: 
     print(f"Keyboard Interrupt in main thread!")

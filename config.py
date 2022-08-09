@@ -101,7 +101,7 @@ class device_port:
                     if slave.kwargs.get('comm_func'):
                         slave.kwargs['comm_func'](start, self, slave)
                         # print(slave.name)
-                print(time.time() - b)
+                #print(time.time() - b)
         self.comm_funcs.append(multiprocessing.Process(
                                     name = f'{self.name}_comm',
                                     target=thread_func, 
@@ -668,10 +668,10 @@ PID_port = device_port(
 
 lst_ports = [
             MFC_port,
-            # Scale_port, 
-            # RS232_port, 
+            Scale_port, 
+            RS232_port, 
             Setup_port,
-            # GPIO_port,
+            GPIO_port,
             # ADDA_port,
             # WatchDog_port,
             # PID_port

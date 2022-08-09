@@ -569,7 +569,7 @@ def MFC_analyze(start, device_port, slave, **kwargs):
     return _readings
 
 def VOID(start, device_port, slave):
-    pass
+    time.sleep(params.time_out)
 
 #------------------------------PID controller---------------------------------
 def control(device_port, slave):
