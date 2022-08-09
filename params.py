@@ -9,6 +9,9 @@ sample_time       = 1 # for analyzing data
 # count down events
 sample_ticker = multiprocessing.Event()
 
+# shared memory 
+manager = multiprocessing.Manager()
+
 #-----------------Interrupt events------------------------------
 # Keyboard interrupt event to kill all the threads (Ctr + C)
 kb_event = multiprocessing.Event()

@@ -12,7 +12,6 @@ import logging
 
 #custom modules
 import params
-import PIDsim
 
 #------------------------------Logger---------------------------------
 logger = logging.getLogger()
@@ -570,18 +569,18 @@ def control(device_port, slave):
             
     _sub_values = device_port.sub_values
     _pub_values = device_port.pub_values
-    Kp = _sub_values.get(f'{slave.name}_Kp')
-    Ki = _sub_values.get(f'{slave.name}_Ki')
-    Kd = _sub_values.get(f'{slave.name}_Kd')
-    MVmin = _sub_values.get(f'{slave.name}_MVmin')
-    MVmax = _sub_values.get(f'{slave.name}_MVmax')
-    mode = _sub_values.get(f'{slave.name}_mode')
-    SP = _sub_values.get(f'{slave.name}_SP')
-    PV = _sub_values.get(f'{slave.name}_PV')
-    MV = _sub_values.get(f'{slave.name}_setting')
-    beta = _sub_values.get(f'{slave.name}_beta')
-    kick = _sub_values.get(f'{slave.name}_kick')
-    tstep = _sub_values.get(f'{slave.name}_tstep')
+    Kp = _sub_values.get(f'{slave.name}_Kp').value
+    Ki = _sub_values.get(f'{slave.name}_Ki').value
+    Kd = _sub_values.get(f'{slave.name}_Kd').value
+    MVmin = _sub_values.get(f'{slave.name}_MVmin').value
+    MVmax = _sub_values.get(f'{slave.name}_MVmax').value
+    mode = _sub_values.get(f'{slave.name}_mode').value
+    SP = _sub_values.get(f'{slave.name}_SP').value
+    PV = _sub_values.get(f'{slave.name}_PV').value
+    MV = _sub_values.get(f'{slave.name}_setting').value
+    beta = _sub_values.get(f'{slave.name}_beta').value
+    kick = _sub_values.get(f'{slave.name}_kick').value
+    tstep = _sub_values.get(f'{slave.name}_tstep').value
     if kick is None:
         kick = 1
     if tstep is None:

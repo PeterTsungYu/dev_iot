@@ -54,8 +54,6 @@ channel_DFM_AOG = 23
 GPIO.setmode(GPIO.BCM)
 
 #-----Cls----------------------------------------------------------------
-manager = multiprocessing.Manager()
-
 def tohex(value):
     value = int(value)
     hex_value = hex(value)[2:]
@@ -147,10 +145,10 @@ class Slave: # Create Slave data store
         self.lst_readings = multiprocessing.Queue()
         self.time_readings = multiprocessing.Queue()
         if 'DFM' in self.name: 
-            self.DFM_time_readings = {'10_time_readings':manager.list(), '60_time_readings':manager.list()} # record time
+            self.DFM_time_readings = {'10_time_readings':params.manager.list(), '60_time_readings':params.manager.list()} # record time
         if 'Scale' in self.name:
-            self.scale_readings = {'10_lst_readings':manager.list(), '60_lst_readings':manager.list()}
-            self.scale_time_readings = {'10_time_readings':manager.list(), '60_time_readings':manager.list()}
+            self.scale_readings = {'10_lst_readings':params.manager.list(), '60_lst_readings':params.manager.list()}
+            self.scale_time_readings = {'10_time_readings':params.manager.list(), '60_time_readings':params.manager.list()}
         #self.readings = [] # for all data
         self.port_topics = port_topics
         self.kwargs = kwargs # dict of funcs
