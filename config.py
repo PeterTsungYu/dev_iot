@@ -32,7 +32,7 @@ DFM_AOG_id    = '08'
 ADDA_id       = '09'
 Relay01_id    = '10' # control Relay for Lambda sensor and Glow Plug
 GA_id         = '11' # ReformerTP GA for monitoring gas conc. @ RS232_port_path
-BRPump_id     = '12'
+BRPump_id     = '100'
 
 #-----GPIO port setting----------------------------------------------------------------
 '''
@@ -561,7 +561,7 @@ ADDA_port = device_port(ADDA_slave,
 
 miniModbus_port = device_port(
                         BRPump_slave,
-                        name='RS485_port',
+                        name='miniModbus_port',
                         port=serial.Serial(port=MiniModbus_port_path,
                                             baudrate=9600, 
                                             bytesize=8, 
@@ -576,7 +576,7 @@ lst_ports = [
             # RS232_port, 
             # Setup_port,
             GPIO_port,
-            #ADDA_port,
+            ADDA_port,
             #miniModbus_port
             ]
 

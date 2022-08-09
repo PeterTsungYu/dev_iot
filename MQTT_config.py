@@ -65,11 +65,18 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
             port = config.miniModbus_port
         for key, value in resp.items():
                 if port.sub_values.get(key) != None:
-                    if port.sub_values[key] != value:
+                    if (port.sub_values[key] != value):
                         port.sub_values[key] = value
                         print(key, port.sub_values[key])
                         port.sub_events[key].set()
                         print(port.sub_events[key].isSet())
+                    # elif type(port.sub_values[key]) != type(value):
+                    #     if isinstance(value, bool):
+                    #         if isinstance(port.sub_values[key], int):
+                    #             port.sub_values[key] = value
+                    #             print(key, port.sub_values[key])
+                    #             port.sub_events[key].set()
+                    #             print(port.sub_events[key].isSet())
 
     def on_publish(client, userdata, mid):
         print(mid)

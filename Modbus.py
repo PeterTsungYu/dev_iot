@@ -136,6 +136,7 @@ def Scale_data_collect(start, device_port, slave):
         logging.info(f"{slave.name}_collect_err: {round((collect_err[1] - collect_err[0])/(collect_err[1]+0.00000000000000001)*100, 2)}%")
 
 def miniModbus_comm(start, device_port, slave):
+    # print(device_port.name, slave.name)
     port = device_port.port
     collect_err = device_port.err_values.get(f'{slave.name}_collect_err')
     set_err = device_port.err_values.get(f'{slave.name}_set_err')
@@ -148,9 +149,11 @@ def miniModbus_comm(start, device_port, slave):
     # 4022 unit 2 for ml/min
     # 4023 clockwise/anticlockwise 1/0
     # instrument.write_register(4026, 0, 0, 6, False)
-
+    
     slave.time_readings = time.time()-start
     instrument = device_port.instrument
+    XXX = minimalmodbus.Instrument(port.port, int(slave.id))
+    XXX.read_register(4126, 3)
     if instrument.read_register(4126, 3) == 0:
         # append 0 to readings when instrument closed
         readings = 0
@@ -163,6 +166,7 @@ def miniModbus_comm(start, device_port, slave):
         slave.lst_readings.append(round(readings, 4))
         time.sleep(params.time_out)
 
+        pass
     for topic in slave.port_topics.sub_topics:
         logging.critical((slave.name, topic))
         logging.critical(device_port.sub_events[topic].isSet())
@@ -178,7 +182,8 @@ def miniModbus_comm(start, device_port, slave):
                     time.sleep(params.time_out)
                 else:
                     instrument.write_register(4022, 2, 0, 6, False)
-                    instrument.write_register(4023, 0, 0, 6, False)    
+                    instrument.write_register(4023, 0, 0, 6, False) 
+                    # instrument.read_register(4015)   
                     instrument.write_float(4015 ,float(device_port.sub_values[topic]) , 2, 0)
                     instrument.write_register(4126, 1, 0, 6, False)
                     logging.info(f'Read {readings} from slave_{slave.name}')
@@ -208,24 +213,16 @@ def PWM_comm(start, device_port, slave):
         if device_port.sub_events[topic].isSet():
             #logging.critical(device_port.sub_values[topic])
             try: # try to set value
-                print('here')
-                print(slave, topic)
-                if 'open_SV' in topic:
-                    if device_port.sub_values[topic]:
-                        duty = device_port.sub_values[f'{slave.name}_duty_SV']
-                        f = device_port.sub_values[f'{slave.name}_f_SV']
-                        slave.GPIO_instance.start(duty) # start at initial duty
-                        slave.GPIO_instance.ChangeFrequency(f) # start at initial frequency
-                        print(f"open at duty:{duty}, f: {f}")
-                    else:
-                        slave.GPIO_instance.stop()
-                        print('close')
-                elif 'f_SV' in topic:
-                    slave.GPIO_instance.ChangeFrequency(device_port.sub_values[topic]) 
-                    print(f'change f: {device_port.sub_values[topic]}')
-                elif 'duty_SV' in topic:
-                    slave.GPIO_instance.ChangeDutyCycle(device_port.sub_values[topic]) 
-                    print(f'change duty: {device_port.sub_values[topic]}')
+                open_SV = device_port.sub_values[f'{slave.name}_open_SV']
+                duty = device_port.sub_values[f'{slave.name}_duty_SV']
+                f = device_port.sub_values[f'{slave.name}_f_SV']
+                if open_SV:
+                    slave.GPIO_instance.start(duty) # start at initial duty
+                    slave.GPIO_instance.ChangeFrequency(f) # start at initial frequency
+                    print(f"open at duty:{duty}, f: {f}")
+                else:
+                    slave.GPIO_instance.stop()
+                    print('close')
                 device_port.sub_events[topic].clear()
                 print('clear flag')
             except Exception as e:
@@ -248,7 +245,7 @@ def PIG_PWM_comm(start, device_port, slave):
         if device_port.sub_events[topic].isSet():
             #logging.critical(device_port.sub_values[topic])
             try: # try to set value
-                print(topic)
+                # print(topic)
                 open_SV = device_port.sub_values[f'{slave.name}_open_SV']
                 duty = device_port.sub_values[f'{slave.name}_duty_SV']
                 f = device_port.sub_values[f'{slave.name}_f_SV']
