@@ -568,7 +568,6 @@ def control(device_port, slave):
                 device_port.sub_events[topic].clear()
             
     _sub_values = device_port.sub_values
-    _pub_values = device_port.pub_values
     Kp = _sub_values.get(f'{slave.name}_Kp').value
     Ki = _sub_values.get(f'{slave.name}_Ki').value
     Kd = _sub_values.get(f'{slave.name}_Kd').value
@@ -590,7 +589,7 @@ def control(device_port, slave):
     try:
         updates = slave.controller.update(tstep, SP, PV, MV, kick)
         for idx, topic in enumerate(slave.port_topics.pub_topics):    
-            device_port.pub_values[topic] = updates[idx]
+            device_port.pub_values[topic].value = updates[idx]
     except Exception as e:
         logging.error(f'{e}')
     time.sleep(tstep)

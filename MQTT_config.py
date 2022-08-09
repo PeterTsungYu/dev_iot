@@ -63,12 +63,13 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
                     if port.sub_values[key].value != float(value):
                         port.sub_values[key].value = float(value)
                         port.sub_events[key].set()
+                    '''
                     elif type(port.sub_values[key].value) != type(value):
                         if isinstance(value, bool):
                             if isinstance(port.sub_values[key].value, float):
                                 port.sub_values[key].value = value
                                 port.sub_events[key].set()
-        
+                    '''
     def on_publish(client, userdata, mid):
         print(mid)
 
