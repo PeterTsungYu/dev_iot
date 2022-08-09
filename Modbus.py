@@ -298,15 +298,21 @@ def MFC_Comm(start, device_port, slave):
         _data_len = port.inWaiting()
         if _data_len >= slave.r_wait_len: 
             readings = str(port.read(_data_len)) # after reading, the buffer will be clean
-            #logging.debug(readings)
+            logging.debug(readings)
             # validate received data
-            re = slave.id
+            re_id = slave.id
             #logging.debug(readings.index(re))
-            if re in readings:
-                readings = readings[readings.index(re):(readings.index(re)+slave.r_wait_len)]
-                logging.debug(f'collect: {readings}')
-                slave.lst_readings.put(readings)
-                logging.info(f'Read from slave_{slave.name}')
+            if re_id in readings:
+                readings = readings[readings.index(re_id):(readings.index(re_id)+slave.r_wait_len)]
+                if re.findall('\d+.\d+',readings):
+                    logging.debug(f'collect: {readings}')
+                    slave.lst_readings.put(readings)
+                    logging.info(f'Read from slave_{slave.name}')
+                else:
+                    recur = True
+                    collect_err[0] += 1
+                    err_msg = f"{slave.name}_collect_err_{collect_err[:]} at {round((time.time()-start),2)}s: validation failed (slave_id conflicted with gas name in resp)"
+                    logging.error(err_msg)        
             else:
                 recur = True
                 collect_err[0] += 1
@@ -354,13 +360,19 @@ def MFC_Comm(start, device_port, slave):
                 #logging.debug(_data_len)
                 if _data_len >= slave.w_wait_len:
                     readings = str(port.read(_data_len)) # after reading, the buffer will be clean
-                    re = slave.id
+                    re_id = slave.id
                     #logging.critical(re)
-                    if re in readings:
-                        readings = readings[readings.index(re):(readings.index(re)+slave.w_wait_len)]
-                        logging.debug(f'write: {readings}')
-                        logging.info(f'Read from slave_{slave.name}')
-                        device_port.sub_events[topic].clear()
+                    if re_id in readings:
+                        readings = readings[readings.index(re_id):(readings.index(re_id)+slave.w_wait_len)]
+                        if re.findall('\d+.\d+',readings):
+                            logging.debug(f'write: {readings}')
+                            logging.info(f'Read from slave_{slave.name}')
+                            device_port.sub_events[topic].clear()
+                        else:
+                            recur = True
+                            set_err[0] += 1
+                            err_msg = f"{slave.name}_set_err_{set_err[:]} at {round((time.time()-start),2)}s: validation failed (slave_id conflicted with gas name in resp)"
+                            logging.error(err_msg)    
                     else:
                         recur = True
                         set_err[0] += 1
@@ -551,6 +563,7 @@ def MFC_analyze(start, device_port, slave, **kwargs):
     _lst_readings = kwargs.get('_lst_readings')
     _time_readings = kwargs.get('_time_readings')[-1]
     _arr_readings = np.array([[float(i) for i in re.findall('\d+.\d+',readings)] for readings in _lst_readings], dtype=object)
+    print(_arr_readings)
     _lst_readings = tuple(np.sum(_arr_readings, 0) / len(_lst_readings))
     _readings = tuple([round(_time_readings,2)]) + _lst_readings
     return _readings
