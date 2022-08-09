@@ -1,6 +1,7 @@
 #python packages
 #import threading
 import multiprocessing
+import functools
 import serial
 import RPi.GPIO as GPIO
 from crccheck.crc import Crc16Modbus
@@ -53,6 +54,8 @@ channel_DFM_AOG = 23
 GPIO.setmode(GPIO.BCM)
 
 #-----Cls----------------------------------------------------------------
+manager = multiprocessing.Manager()
+
 def tohex(value):
     value = int(value)
     hex_value = hex(value)[2:]
@@ -73,31 +76,35 @@ class device_port:
         self.pub_values = {}
         self.err_values = {}
         self.recur_count = {}
-        self.thread_funcs = []
+        self.comm_funcs = []
+        self.analyze_funcs = []
+        self.control_funcs = []
+
 
         for _slave in slaves:
             for topic in _slave.port_topics.sub_topics:
                 self.sub_topics.append(topic)
-                self.sub_values[topic] = 0
+                self.sub_values[topic] = multiprocessing.Value('d', 0.0)
                 self.sub_events[topic] = multiprocessing.Event()
             for topic in _slave.port_topics.pub_topics:
                 self.pub_topics.append(topic)
-                self.pub_values[topic] = 0
+                self.pub_values[topic] = multiprocessing.Value('d', 0.0)
             for topic in _slave.port_topics.err_topics:
                 self.err_topics.append(topic)
-                self.err_values[topic] = [0,0,0] #[err, click_throu, total_recur]
-                self.recur_count[topic] = [0] #[one_call_recur]
+                self.err_values[topic] = multiprocessing.Array('i', 3) #[err, click_throu, total_recur]
+                self.recur_count[topic] = multiprocessing.Array('i', 1) #[one_call_recur]
     
     def serial_funcs(self, start): 
         def thread_func():
             while not params.kb_event.is_set():
+                b =  time.time()
                 for slave in self.slaves:
+                    params.sample_ticker.wait()
                     if slave.kwargs.get('comm_func'):
-                        # b =  time.time()
                         slave.kwargs['comm_func'](start, self, slave)
                         # print(slave.name)
-                        # print( time.time() - b)
-        self.thread_funcs.append(multiprocessing.Thread(
+                print(time.time() - b)
+        self.comm_funcs.append(multiprocessing.Process(
                                     name = f'{self.name}_comm',
                                     target=thread_func, 
                                     #args=(,)
@@ -105,18 +112,20 @@ class device_port:
                                 )
 
     def parallel_funcs(self, start): 
+        self.analyze_funcs = []
+        self.control_funcs = []
         for slave in self.slaves:
             if slave.kwargs.get('analyze_func'):
-                self.thread_funcs.append(
-                    threading.Thread(
+                self.analyze_funcs.append(
+                    multiprocessing.Process(
                         name=f'{slave.name}_analyze',
                         target=slave.kwargs['analyze_func'],
                         args=(start, self, slave,)
                     )
                 )
             elif slave.kwargs.get('control_func'):
-                self.thread_funcs.append(
-                    threading.Thread(
+                self.control_funcs.append(
+                    multiprocessing.Process(
                         name=f'{slave.name}_control',
                         target=slave.kwargs['control_func'],
                         args=(self, slave,)
@@ -135,15 +144,13 @@ class Slave: # Create Slave data store
     def __init__(self, name, idno, port_topics, **kwargs):
         self.name = name
         self.id = idno # id number of slave
-        self.que_lst_readings = multiprocessing.Queue()
-        self.que_time_readings = multiprocessing.Queue()
-        self.lst_readings = [] # record readings
-        self.time_readings = [] 
+        self.lst_readings = multiprocessing.Queue()
+        self.time_readings = multiprocessing.Queue()
         if 'DFM' in self.name: 
-            self.DFM_time_readings = {'10_time_readings':[], '60_time_readings':[]} # record time
+            self.DFM_time_readings = {'10_time_readings':manager.list(), '60_time_readings':manager.list()} # record time
         if 'Scale' in self.name:
-            self.scale_readings = {'10_lst_readings':[], '60_lst_readings':[]}
-            self.scale_time_readings = {'10_time_readings':[], '60_time_readings':[]}
+            self.scale_readings = {'10_lst_readings':manager.list(), '60_lst_readings':manager.list()}
+            self.scale_time_readings = {'10_time_readings':manager.list(), '60_time_readings':manager.list()}
         #self.readings = [] # for all data
         self.port_topics = port_topics
         self.kwargs = kwargs # dict of funcs
@@ -663,13 +670,13 @@ PID_port = device_port(
 
 lst_ports = [
             MFC_port,
-            Scale_port, 
-            RS232_port, 
+            # Scale_port, 
+            # RS232_port, 
             Setup_port,
-            GPIO_port,
-            ADDA_port,
-            WatchDog_port,
-            PID_port
+            # GPIO_port,
+            # ADDA_port,
+            # WatchDog_port,
+            # PID_port
             ]
 
 NodeRed = {}

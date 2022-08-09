@@ -4,10 +4,10 @@
 #python packages
 import os
 import sys
-#import threading
 import multiprocessing
 import mariadb
 from dotenv import load_dotenv
+import time
 
 #custom modules
 import params
@@ -61,7 +61,7 @@ try:
 
     def multi_insert(cur):
         while not params.kb_event.is_set():
-            params.sample_ticker.wait()
+            time.sleep(params.sample_time)
             try:
                 cur.execute(
                     insertSchema,
@@ -75,7 +75,8 @@ try:
 
     #-------------------------main--------------------------------------
     try:
-        multi_insert = threading.Thread(
+        multi_insert = multiprocessing.Process(
+            name='multi_insert_db',
             target=multi_insert,
             args=(cur,),
             )

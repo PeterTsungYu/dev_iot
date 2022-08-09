@@ -5,6 +5,7 @@ from datetime import datetime
 import RPi.GPIO as GPIO
 import pigpio
 import serial
+import multiprocessing
 
 # custome modules
 import params
@@ -37,9 +38,9 @@ try:
     PIG.set_mode(config.channel_DFM_AOG, pigpio.INPUT)
     PIG.set_pull_up_down(config.channel_DFM_AOG, pigpio.PUD_DOWN)
     def DFM_data_collect(user_gpio, level, tick):
-        config.DFM_slave.lst_readings.append(time.time())
+        config.DFM_slave.lst_readings.put(time.time())
     def DFM_AOG_data_collect(user_gpio, level, tick):
-        config.DFM_AOG_slave.lst_readings.append(time.time())
+        config.DFM_AOG_slave.lst_readings.put(time.time())
     PIG.callback(user_gpio=config.channel_DFM, edge=pigpio.RISING_EDGE, func=DFM_data_collect)
     PIG.callback(user_gpio=config.channel_DFM_AOG, edge=pigpio.RISING_EDGE, func=DFM_AOG_data_collect)
     print('GPIO ports open')
@@ -55,12 +56,11 @@ except Exception as ex:
 try:
     for device_port in config.lst_ports: 
         device_port.serial_funcs(start)
-        device_port.parallel_funcs(start) 
-        print(device_port.thread_funcs)
-        for subthread in device_port.thread_funcs:
-            subthread.start()
-            print('start', subthread.name)
-           
+        for process in device_port.comm_funcs:
+            process.start()
+            print('start', process.name)
+    params.sample_ticker.set()
+    
 except Exception as ex:
     print ("Threading funcs error: " + str(ex))
     for device_port in config.lst_ports:
@@ -71,18 +71,26 @@ except Exception as ex:
 #-------------------------Main Threadingggg-----------------------------------------
 try:
     while not params.kb_event.is_set():
-        if not params.main_ticker.wait(params.sample_time):
-            print("=="*10 + f'Elapsed time: {round((time.time()-start),2)}' + "=="*10)
-            params.sample_ticker.set()
-            params.time_out_ticker.set()
-            #for device_port in config.lst_ports: 
-                #print(device_port.thread_funcs)
-            
-            # wait for all child processes to terminate
-            for device_port in config.lst_ports: 
-                for subthread in device_port.thread_funcs:
-                    subthread.join()
-                    print('join', subthread.name)
+        print("=="*10 + f'Elapsed time: {round((time.time()-start),2)}' + "=="*10)
+        time.sleep(params.sample_time)
+        t = time.time()
+        params.sample_ticker.clear()
+        
+        for device_port in config.lst_ports: 
+            device_port.parallel_funcs(start) 
+            for func in device_port.analyze_funcs:
+                func.start()
+            for func in device_port.control_funcs:
+                func.start()
+    
+        for device_port in config.lst_ports: 
+            for func in device_port.analyze_funcs:
+                func.join()
+            for func in device_port.control_funcs:
+                func.join()
+
+        params.sample_ticker.set()
+        print(f'calc sample time: {time.time()-t}')
         
 except KeyboardInterrupt: 
     print(f"Keyboard Interrupt in main thread!")
@@ -92,12 +100,15 @@ except Exception as ex:
     print("=="*30)
 finally:
     print("=="*30)
+    print(multiprocessing.active_children())
+    for process in multiprocessing.active_children():
+        process.join()
     for device_port in config.lst_ports: 
         if type(device_port.port) is serial.serialposix.Serial:
             device_port.port.close()
         elif device_port.port == 'GPIO':
             GPIO.cleanup()
-        Modbus.logger.info(f'Close {device_port.name}, err are {device_port.err_values}')
+        Modbus.logger.info(f'Close {device_port.name}, err are {[f"{k}:{v[:]}" for k,v in device_port.err_values.items()]}')
         Modbus.logger.info(f'correct rates : {[f"{k}:{round((v[1] - v[0] + v[2])/(v[1] + 0.00000000000000001)*100,2)}%" for k,v in device_port.err_values.items()]}')
     Modbus.logger.info(f"Program duration: {time.time() - start}")
     Mariadb_config.conn.close()

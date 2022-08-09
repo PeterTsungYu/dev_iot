@@ -5,12 +5,9 @@ import signal
 #-------------------------Global var--------------------------------------
 time_out          = 0.1 # for collecting data
 sample_time       = 1 # for analyzing data
-sample_time_DFM   = 1
 
 # count down events
-time_out_ticker = multiprocessing.Event()
 sample_ticker = multiprocessing.Event()
-main_ticker = multiprocessing.Event()
 
 #-----------------Interrupt events------------------------------
 # Keyboard interrupt event to kill all the threads (Ctr + C)
