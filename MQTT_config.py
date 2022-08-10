@@ -35,14 +35,13 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
         # print(resp)
         if (msg.topic == 'NodeRed'):
             print(f'{hostname} Receive topic: NodeRed')
-            _resp = {}
             for key, value in resp.items():
                 if type(value) == dict:
                     for k, v in resp[key].items():
-                        _resp[k] = v
+                        config.NodeRed[k] = v
                 else:
-                    _resp[key] = value
-            config.NodeRed = _resp
+                    config.NodeRed[key] = value
+            
             #print(config.NodeRed)
         else:
             if (msg.topic == 'Set_bit'):
@@ -88,7 +87,7 @@ def multi_pub():
     client_mqtt.loop_start()
     while not params.kb_event.is_set():
         # print(time.time())
-        time.sleep(1)
+        time.sleep(params.sample_time)
         for device_port in config.lst_ports:
             #print(device_port.name)
             if (device_port.name != 'GPIO_port') and (device_port.name != 'ADDA_port'):
@@ -101,7 +100,7 @@ def multi_pub():
                     payload = json.dumps(payload)
                     #print(f'pub_{payload}')
                     client_mqtt.publish(topic=_slave.name, payload=payload, qos=0, retain=False)
-                    print(f"pub {_slave.name}:{payload} succeed from {client_mqtt._client_id} >>> localhost")
+                    #rint(f"pub {_slave.name}:{payload} succeed from {client_mqtt._client_id} >>> localhost")
         # client.publish(topic='DFM_total', payload=config.GPIO_port.pub_values['DFM_RichGas'] + config.GPIO_port.pub_values['DFM_AOG'], qos=2, retain=False)
         client_mqtt.publish(topic='DFM', payload=json.dumps({'10_DFM_RichGas':config.GPIO_port.pub_values['10_DFM_RichGas'].value, '60_DFM_RichGas':config.GPIO_port.pub_values['60_DFM_RichGas'].value}), qos=2, retain=False)
         client_mqtt.publish(topic='DFM_AOG', payload=json.dumps({'10_DFM_AOG':config.GPIO_port.pub_values['10_DFM_AOG'].value, '60_DFM_AOG':config.GPIO_port.pub_values['60_DFM_AOG'].value}), qos=2, retain=False)

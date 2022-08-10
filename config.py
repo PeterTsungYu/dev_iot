@@ -681,6 +681,6 @@ lst_ports = [
             # PID_port
             ]
 
-NodeRed = {}
+NodeRed = params.manager.dict()
 
 print('Ports are all set')

@@ -66,6 +66,7 @@ try:
     params.sample_ticker.set()
     
     MQTT_config.multi_pub_process.start()
+    Mariadb_config.multi_insert_process.start()
 
 except Exception as ex:
     print("Threading funcs error: " + str(ex))
@@ -114,9 +115,6 @@ finally:
         Modbus.logger.info(f'Close {device_port.name}, err are {[f"{k}:{v[:]}" for k,v in device_port.err_values.items()]}')
         Modbus.logger.info(f'correct rates : {[f"{k}:{round((v[1] - v[0] + v[2])/(v[1] + 0.00000000000000001)*100,2)}%" for k,v in device_port.err_values.items()]}')
     Modbus.logger.info(f"Program duration: {time.time() - start}")
-    Mariadb_config.conn.close()
-    print("close connection to MariaDB")
-    
     print('kill main thread')
     exit()
 # %%
