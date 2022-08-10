@@ -675,7 +675,7 @@ lst_ports = [
             Scale_port, 
             RS232_port, 
             Setup_port,
-            GPIO_port,
+            # GPIO_port,
             # ADDA_port,
             # WatchDog_port,
             # PID_port

@@ -4,7 +4,7 @@ import signal
 
 #-------------------------Global var--------------------------------------
 time_out          = 0.1 # for collecting data
-sample_time       = 0.5 # for analyzing data
+sample_time       = 1 # for analyzing data
 
 # count down events
 sample_ticker = multiprocessing.Event()

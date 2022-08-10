@@ -65,6 +65,8 @@ try:
             print('start', process.name)
     params.sample_ticker.set()
     
+    MQTT_config.multi_pub_process.start()
+
 except Exception as ex:
     print("Threading funcs error: " + str(ex))
     for device_port in config.lst_ports:
@@ -114,9 +116,7 @@ finally:
     Modbus.logger.info(f"Program duration: {time.time() - start}")
     Mariadb_config.conn.close()
     print("close connection to MariaDB")
-    MQTT_config.client_0.loop_stop()
-    MQTT_config.client_0.disconnect()
-    print("close connection to MQTT broker")
+    
     print('kill main thread')
     exit()
 # %%

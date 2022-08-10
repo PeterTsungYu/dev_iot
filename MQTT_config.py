@@ -83,7 +83,9 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
     return client
 
 
-def multi_pub(client):
+def multi_pub():
+    client_mqtt = connect_mqtt(client_id='client_mqtt' ,hostname='localhost', port=1883, keepalive=60,) 
+    client_mqtt.loop_start()
     while not params.kb_event.is_set():
         # print(time.time())
         time.sleep(1)
@@ -95,24 +97,27 @@ def multi_pub(client):
                     #print(_slave.name)
                     for _topic in _slave.port_topics.pub_topics:
                         payload[_topic] = device_port.pub_values[_topic].value
+                        #print(type(payload[_topic]), payload[_topic])
                     payload = json.dumps(payload)
-                    client.publish(topic=_slave.name, payload=payload, qos=0, retain=False)
-                    #print(f"pub {_slave.name}:{payload} succeed from {client._client_id} >>> localhost")
+                    #print(f'pub_{payload}')
+                    client_mqtt.publish(topic=_slave.name, payload=payload, qos=0, retain=False)
+                    print(f"pub {_slave.name}:{payload} succeed from {client_mqtt._client_id} >>> localhost")
         # client.publish(topic='DFM_total', payload=config.GPIO_port.pub_values['DFM_RichGas'] + config.GPIO_port.pub_values['DFM_AOG'], qos=2, retain=False)
-        client.publish(topic='DFM', payload=json.dumps({'10_DFM_RichGas':config.GPIO_port.pub_values['10_DFM_RichGas'].value, '60_DFM_RichGas':config.GPIO_port.pub_values['60_DFM_RichGas'].value}), qos=2, retain=False)
-        client.publish(topic='DFM_AOG', payload=json.dumps({'10_DFM_AOG':config.GPIO_port.pub_values['10_DFM_AOG'].value, '60_DFM_AOG':config.GPIO_port.pub_values['60_DFM_AOG'].value}), qos=2, retain=False)
+        client_mqtt.publish(topic='DFM', payload=json.dumps({'10_DFM_RichGas':config.GPIO_port.pub_values['10_DFM_RichGas'].value, '60_DFM_RichGas':config.GPIO_port.pub_values['60_DFM_RichGas'].value}), qos=2, retain=False)
+        client_mqtt.publish(topic='DFM_AOG', payload=json.dumps({'10_DFM_AOG':config.GPIO_port.pub_values['10_DFM_AOG'].value, '60_DFM_AOG':config.GPIO_port.pub_values['60_DFM_AOG'].value}), qos=2, retain=False)
         if config.db_connection == True:
-            client.publish(topic='DB_name', payload=config.db_time, qos=0, retain=False)
+            client_mqtt.publish(topic='DB_name', payload=config.db_time, qos=0, retain=False)
         elif config.db_connection == False:
-            client.publish(topic='DB_name', payload='', qos=0, retain=False)
+            client_mqtt.publish(topic='DB_name', payload='', qos=0, retain=False)
+    client_mqtt.loop_stop()
+    client_mqtt.disconnect()
+    print("close connection to MQTT broker")
 
 #-------------------------MQTT instance--------------------------------------
-client_0 = connect_mqtt(client_id='client_0' ,hostname='localhost', port=1883, keepalive=60,) 
-client_0.loop_start()
 
-multi_pub = multiprocessing.Process(
+multi_pub_process = multiprocessing.Process(
     name='multi_pub_mqtt',
     target=multi_pub,
-    args=(client_0,),
+    args=(),
     )
-multi_pub.start()
+#multi_pub.start()

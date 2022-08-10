@@ -91,8 +91,8 @@ def analyze_decker(func):
                 # casting
                 ind = 1
                 for topic in slave.port_topics.pub_topics:    
-                    device_port.pub_values[topic] = _readings[ind]
-                    #logging.debug(device_port.pub_values)
+                    device_port.pub_values[topic].value = _readings[ind]
+                    #logging.debug(f'{topic} {device_port.pub_values[topic].value}')
                     ind += 1
                 ## to slave data list
                 #slave.readings.append(_readings)
@@ -103,7 +103,8 @@ def analyze_decker(func):
                 # casting
                 ind = 1
                 for topic in slave.port_topics.pub_topics:    
-                    device_port.pub_values[topic] = _readings[ind]
+                    device_port.pub_values[topic].value = _readings[ind]
+                    #logging.debug(f'{topic} {device_port.pub_values[topic].value}')
                     ind += 1
                 ## to slave data list
                 #slave.readings.append(_readings)
