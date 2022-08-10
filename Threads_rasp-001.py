@@ -55,8 +55,12 @@ except Exception as ex:
 #-------------------------Sub-Threadingggg-----------------------------------------
 try:
     for device_port in config.lst_ports: 
-        device_port.serial_funcs(start)
-        for process in device_port.comm_funcs:
+        device_port.comm_funcs(start)
+        for process in device_port.lst_comm_funcs:
+            process.start()
+            print('start', process.name)
+        device_port.control_funcs(start)
+        for process in device_port.lst_control_funcs:
             process.start()
             print('start', process.name)
     params.sample_ticker.set()
@@ -77,16 +81,12 @@ try:
         params.sample_ticker.clear()
         
         for device_port in config.lst_ports: 
-            device_port.parallel_funcs(start) 
-            for func in device_port.analyze_funcs:
-                func.start()
-            for func in device_port.control_funcs:
+            device_port.analyze_funcs(start) 
+            for func in device_port.lst_analyze_funcs:
                 func.start()
     
         for device_port in config.lst_ports: 
-            for func in device_port.analyze_funcs:
-                func.join()
-            for func in device_port.control_funcs:
+            for func in device_port.lst_analyze_funcs:
                 func.join()
 
         params.sample_ticker.set()
@@ -100,14 +100,15 @@ except Exception as ex:
     print("=="*30)
 finally:
     print("=="*30)
-    print(multiprocessing.active_children())
     for process in multiprocessing.active_children():
         process.join()
+        print(f'Join process: {process.name}')
     for device_port in config.lst_ports: 
         if type(device_port.port) is serial.serialposix.Serial:
             device_port.port.close()
         elif device_port.port == 'GPIO':
-            GPIO.cleanup()
+            #GPIO.cleanup()
+            PIG.stop()
         Modbus.logger.info(f'Close {device_port.name}, err are {[f"{k}:{v[:]}" for k,v in device_port.err_values.items()]}')
         Modbus.logger.info(f'correct rates : {[f"{k}:{round((v[1] - v[0] + v[2])/(v[1] + 0.00000000000000001)*100,2)}%" for k,v in device_port.err_values.items()]}')
     Modbus.logger.info(f"Program duration: {time.time() - start}")

@@ -74,9 +74,9 @@ class device_port:
         self.pub_values = {}
         self.err_values = {}
         self.recur_count = {}
-        self.comm_funcs = []
-        self.analyze_funcs = []
-        self.control_funcs = []
+        self.lst_comm_funcs = []
+        self.lst_analyze_funcs = []
+        self.lst_control_funcs = []
 
 
         for _slave in slaves:
@@ -92,7 +92,8 @@ class device_port:
                 self.err_values[topic] = multiprocessing.Array('i', 3) #[err, click_throu, total_recur]
                 self.recur_count[topic] = multiprocessing.Array('i', 1) #[one_call_recur]
     
-    def serial_funcs(self, start): 
+    def comm_funcs(self, start): 
+        self.lst_comm_funcs = []
         def thread_func():
             while not params.kb_event.is_set():
                 b =  time.time()
@@ -102,27 +103,30 @@ class device_port:
                         slave.kwargs['comm_func'](start, self, slave)
                         # print(slave.name)
                 #print(time.time() - b)
-        self.comm_funcs.append(multiprocessing.Process(
+        self.lst_comm_funcs.append(multiprocessing.Process(
                                     name = f'{self.name}_comm',
                                     target=thread_func, 
                                     #args=(,)
                                     )
                                 )
 
-    def parallel_funcs(self, start): 
-        self.analyze_funcs = []
-        self.control_funcs = []
+    def analyze_funcs(self, start): 
+        self.lst_analyze_funcs = []
         for slave in self.slaves:
             if slave.kwargs.get('analyze_func'):
-                self.analyze_funcs.append(
+                self.lst_analyze_funcs.append(
                     multiprocessing.Process(
                         name=f'{slave.name}_analyze',
                         target=slave.kwargs['analyze_func'],
                         args=(start, self, slave,)
                     )
                 )
-            elif slave.kwargs.get('control_func'):
-                self.control_funcs.append(
+    
+    def control_funcs(self, start): 
+        self.lst_control_funcs = []
+        for slave in self.slaves:
+            if slave.kwargs.get('control_func'):
+                self.lst_control_funcs.append(
                     multiprocessing.Process(
                         name=f'{slave.name}_control',
                         target=slave.kwargs['control_func'],

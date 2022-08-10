@@ -297,7 +297,7 @@ class PID:
         self.tstep = tstep
         self.PV = PV
         self.MV = MV # MV tracking
-        if self.mode == False:
+        if self.mode == 0:
             # Setpoint tracking
             self.SP_stepping = PV
 
