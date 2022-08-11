@@ -56,14 +56,8 @@ except Exception as ex:
 try:
     for device_port in config.lst_ports: 
         device_port.comm_funcs(start)
-        for process in device_port.lst_comm_funcs:
-            process.start()
-            print('start', process.name)
+        device_port.analyze_funcs(start)
         device_port.control_funcs(start)
-        for process in device_port.lst_control_funcs:
-            process.start()
-            print('start', process.name)
-    params.sample_ticker.set()
     
     MQTT_config.multi_pub_process.start()
     Mariadb_config.multi_insert_process.start()
@@ -80,20 +74,6 @@ try:
     while not params.kb_event.is_set():
         print("=="*10 + f'Elapsed time: {round((time.time()-start),2)}' + "=="*10)
         time.sleep(params.sample_time)
-        t = time.time()
-        params.sample_ticker.clear()
-        
-        for device_port in config.lst_ports: 
-            device_port.analyze_funcs(start) 
-            for func in device_port.lst_analyze_funcs:
-                func.start()
-    
-        for device_port in config.lst_ports: 
-            for func in device_port.lst_analyze_funcs:
-                func.join()
-
-        params.sample_ticker.set()
-        #print(f'calc sample time: {time.time()-t}')
         
 except KeyboardInterrupt: 
     print(f"Keyboard Interrupt in main thread!")
@@ -112,9 +92,11 @@ finally:
         elif device_port.port == 'GPIO':
             #GPIO.cleanup()
             PIG.stop()
-        Modbus.logger.info(f'Close {device_port.name}, err are {[f"{k}:{v[:]}" for k,v in device_port.err_values.items()]}')
-        Modbus.logger.info(f'correct rates : {[f"{k}:{round((v[1] - v[0] + v[2])/(v[1] + 0.00000000000000001)*100,2)}%" for k,v in device_port.err_values.items()]}')
-    Modbus.logger.info(f"Program duration: {time.time() - start}")
+            
+        Modbus.logger.critical(f'Close {device_port.name}, err are {[f"{k}:{v[:]}" for k,v in device_port.err_values.items()]}')
+        Modbus.logger.critical(f'correct rates : {[f"{k}:{round(v[2]/(v[1] + 0.00000000000000001)*100,2)}%" for k,v in device_port.err_values.items()]}')
+        Modbus.logger.critical(f'Close {device_port.name}, recur are {[f"{k}:{v[:]}" for k,v in device_port.recur_count.items()]}')
+    Modbus.logger.critical(f"Program duration: {time.time() - start}")
     print('kill main thread')
     exit()
 # %%

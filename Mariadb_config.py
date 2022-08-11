@@ -80,7 +80,7 @@ def multi_insert():
     cur = conn.cursor()
     
     while not params.kb_event.is_set():
-        time.sleep(params.sample_time)
+        time.sleep(params.comm_time)
         try:
             #print(f'Insert config.NodeRed: {config.NodeRed}')
             cur.execute(

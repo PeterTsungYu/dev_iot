@@ -15,17 +15,17 @@ import params
 
 #------------------------------Logger---------------------------------
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.CRITICAL)
 formatter = logging.Formatter(
 	'[%(levelname)s %(asctime)s %(module)s:%(lineno)d] %(message)s',
 	datefmt='%Y%m%d %H:%M:%S')
 
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+ch.setLevel(logging.CRITICAL)
 ch.setFormatter(formatter)
 
 fh = logging.FileHandler(filename='platform.log', mode='w')
-fh.setLevel(logging.DEBUG)
+fh.setLevel(logging.CRITICAL)
 fh.setFormatter(formatter)
 
 logger.addHandler(ch)
@@ -117,7 +117,7 @@ def analyze_decker(func):
             analyze_err[0] += 1
             logging.error(f"{slave.name}_analyze_err_{analyze_err[:]} at {round((time.time()-start),2)}s: " + str(e))
         finally:
-            logging.info(f"{slave.name}_analyze_err: {round(analyze_err[2]/(analyze_err[1] + 0.00000000000000001)*100, 2)}%")
+            logging.critical(f"{slave.name}_analyze_err: {round(analyze_err[2]/(analyze_err[1] + 0.00000000000000001)*100, 2)}%, analyze_err_{analyze_err[:]}")
     return wrapper
 
 #------------------------------Collect and Analyze func---------------------------------
@@ -145,10 +145,10 @@ def Scale_data_collect(start, device_port, slave):
         err_msg = f"{slave.name}_collect_err_{collect_err[:]} at {round((time.time()-start),2)}s: " + str(e)
         logging.error(err_msg)
     finally:
-        logging.info(f"{slave.name}_collect_err: {round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2)}%")
-        if (collect_err[1] >= params.exempt_try) and (round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
-            if slave.name not in device_port.broken_slave_names:
-                device_port.broken_slave_names.append(slave.name)
+        logging.critical(f"{slave.name}_collect_err: {round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2)}%, collect_err_{collect_err[:]}")
+        # if (collect_err[1] >= params.exempt_try) and (round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
+        #     if slave.name not in device_port.broken_slave_names:
+        #         device_port.broken_slave_names.append(slave.name)
 
 
 def Modbus_Comm(start, device_port, slave):    
@@ -215,15 +215,16 @@ def Modbus_Comm(start, device_port, slave):
         # recursive part if the rtu was transferred but crushed in between the lines
         if (recur == True) and (re_collect[0] < params.recur_try):
             re_collect[0] += 1
+            re_collect[1] += 1
             logging.debug(f're_collect: {re_collect[:]}')
             logging.debug(f'collect_err: {collect_err[:]}')
             Modbus_Comm(start, device_port, slave)
         re_collect[0] = 0
         port.reset_input_buffer()
-        logging.info(f"{slave.name}_collect_err: {round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2)}%")
-        if (collect_err[1] >= params.exempt_try) and (round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
-            if slave.name not in device_port.broken_slave_names:
-                device_port.broken_slave_names.append(slave.name)
+        logging.critical(f"{slave.name}_collect_err: {round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2)}%, recollect_cover: {round(re_collect[1]/(collect_err[0]+0.00000000000000001)*100, 2)}%")
+        # if (collect_err[1] >= params.exempt_try) and (round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
+        #     if slave.name not in device_port.broken_slave_names:
+        #         device_port.broken_slave_names.append(slave.name)
 
     w_data_site=0
     for topic in slave.port_topics.sub_topics:
@@ -281,15 +282,16 @@ def Modbus_Comm(start, device_port, slave):
                 # recursive part if the rtu was transferred but crushed in between the lines
                 if (recur == True) and (re_set[0] < params.recur_try):
                     re_set[0] += 1
+                    re_set[1] += 1
                     logging.debug(f're_set: {re_set[:]}')
                     Modbus_Comm(start, device_port, slave)
                 re_set[0] = 0
                 port.reset_input_buffer()
-                logging.info(f"{slave.name}_set_err: {round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2)}%")
+                logging.critical(f"{slave.name}_set_err: {round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2)}%, reset_cover: {round(re_set[1]/(collect_err[0]+0.00000000000000001)*100, 2)}%")
                 w_data_site += 1
-                if (set_err[1] >= params.exempt_try) and (round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
-                    if slave.name not in device_port.broken_slave_names:
-                        device_port.broken_slave_names.append(slave.name)
+                # if (set_err[1] >= params.exempt_try) and (round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
+                #     if slave.name not in device_port.broken_slave_names:
+                #         device_port.broken_slave_names.append(slave.name)
         else:
             w_data_site += 1
         
@@ -352,14 +354,15 @@ def MFC_Comm(start, device_port, slave):
         # recursive part if the rtu was transferred but crushed in between the lines
         if (recur == True) and (re_collect[0] < params.recur_try):
             re_collect[0] += 1
+            re_collect[1] += 1
             logging.debug(f're_collect: {re_collect[:]}')
             MFC_Comm(start, device_port, slave)
         re_collect[0] = 0
         port.reset_input_buffer()
-        logging.info(f"{slave.name}_collect_err: {round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2)}%")
-        if (collect_err[1] >= params.exempt_try) and (round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
-            if slave.name not in device_port.broken_slave_names:
-                device_port.broken_slave_names.append(slave.name)
+        logging.critical(f"{slave.name}_collect_err: {round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2)}%, recollect_cover: {round(re_collect[1]/(collect_err[0]+0.00000000000000001)*100, 2)}%")
+        # if (collect_err[1] >= params.exempt_try) and (round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
+        #     if slave.name not in device_port.broken_slave_names:
+        #         device_port.broken_slave_names.append(slave.name)
 
     w_data_site=0
     for topic in slave.port_topics.sub_topics:
@@ -419,11 +422,11 @@ def MFC_Comm(start, device_port, slave):
                     Modbus_Comm(start, device_port, slave)
                 re_set[0] = 0
                 port.reset_input_buffer()
-                logging.info(f"{slave.name}_set_err: {round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2)}%")
+                logging.critical(f"{slave.name}_set_err: {round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2)}%, reset_cover: {round(re_set[1]/(collect_err[0]+0.00000000000000001)*100, 2)}%")
                 w_data_site += 1
-                if (set_err[1] >= params.exempt_try) and (round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
-                    if slave.name not in device_port.broken_slave_names:
-                        device_port.broken_slave_names.append(slave.name)
+                # if (set_err[1] >= params.exempt_try) and (round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
+                #     if slave.name not in device_port.broken_slave_names:
+                #         device_port.broken_slave_names.append(slave.name)
         else:
             w_data_site += 1
 
@@ -482,7 +485,7 @@ def DFM_data_analyze(start, device_port, slave, **kwargs):
         _readings = tuple([_sampling_time, round(_10_flow_rate,2), round(_60_flow_rate,2)])
     except:
         _readings = tuple([_sampling_time, 0, 0])
-        print(_readings)
+        #print(_readings)
     return _readings
 
 
@@ -537,7 +540,7 @@ def Scale_data_analyze(start, device_port, slave, **kwargs):
 def GA_data_analyze(start, device_port, slave, **kwargs):
     _lst_readings = kwargs.get('_lst_readings')
     _time_readings = kwargs.get('_time_readings')[-1]
-    print(_lst_readings)
+    #print(_lst_readings)
     _arr_readings = np.array(
         [[int(readings[i:i+4],16)/100 if (int(readings[i:i+4],16)/100) <= 99.99 else 0 for i in range(8,20,4)] # CO, CO2, CH4
         + [int(readings[24:28],16)/100] # H2
@@ -545,9 +548,9 @@ def GA_data_analyze(start, device_port, slave, **kwargs):
         + [(lambda i: ((i[0]*256+i[1]+i[2])*256+i[3])/100)([int(readings[i:i+2],16) for i in range(-20,-12,2)])] # Heat
         for readings in _lst_readings]
         )
-    print(_arr_readings)
+    #print(_arr_readings)
     _lst_readings = tuple(np.round(np.sum(_arr_readings, axis=0) / len(_lst_readings), 1))
-    print(_lst_readings)
+    #print(_lst_readings)
     _readings = tuple([round(_time_readings,2)]) + _lst_readings
     return _readings
             
@@ -583,7 +586,7 @@ def MFC_analyze(start, device_port, slave, **kwargs):
     _lst_readings = kwargs.get('_lst_readings')
     _time_readings = kwargs.get('_time_readings')[-1]
     _arr_readings = np.array([[float(i) for i in re.findall('\d+.\d+',readings)] for readings in _lst_readings], dtype=object)
-    print(_arr_readings)
+    #print(_arr_readings)
     _lst_readings = tuple(np.sum(_arr_readings, 0) / len(_lst_readings))
     _readings = tuple([round(_time_readings,2)]) + _lst_readings
     return _readings

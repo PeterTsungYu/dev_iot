@@ -74,10 +74,8 @@ class device_port:
         self.pub_values = {}
         self.err_values = {}
         self.recur_count = {}
-        self.lst_comm_funcs = []
-        self.lst_analyze_funcs = []
-        self.lst_control_funcs = []
-        self.broken_slave_names = params.manager.list()
+        self.sample_ticker = multiprocessing.Event()
+        # self.broken_slave_names = params.manager.list()
 
 
         for _slave in slaves:
@@ -91,52 +89,64 @@ class device_port:
             for topic in _slave.port_topics.err_topics:
                 self.err_topics.append(topic)
                 self.err_values[topic] = multiprocessing.Array('i', 3) #[err, click_throu, correct]
-                self.recur_count[topic] = multiprocessing.Array('i', 1) #[one_call_recur]
+                self.recur_count[topic] = multiprocessing.Array('i', 2) #[one_call_recur, total_recur]
     
     def comm_funcs(self, start): 
-        self.lst_comm_funcs = []
-        def thread_func():
+        self.sample_ticker.set()
+        def comm_process():
             while not params.kb_event.is_set():
                 #b =  time.time()
                 for slave in self.slaves:
-                    if slave.name not in self.broken_slave_names:
-                        params.sample_ticker.wait()
-                        if slave.kwargs.get('comm_func'):
-                            slave.kwargs['comm_func'](start, self, slave)
-                            # print(slave.name)
+                    # if slave.name not in self.broken_slave_names:
+                    self.sample_ticker.wait()
+                    if slave.kwargs.get('comm_func'):
+                        slave.kwargs['comm_func'](start, self, slave)
+                        # print(slave.name)
                 #print(time.time() - b)
-        self.lst_comm_funcs.append(multiprocessing.Process(
-                                    name = f'{self.name}_comm',
-                                    target=thread_func, 
-                                    #args=(,)
-                                    )
-                                )
+        multiprocessing.Process(
+            name = f'{self.name}_comm',
+            target=comm_process, 
+            #args=(,)
+            ).start()
 
     def analyze_funcs(self, start): 
-        self.lst_analyze_funcs = []
-        for slave in self.slaves:
-            if slave.name not in self.broken_slave_names:
-                if slave.kwargs.get('analyze_func'):
-                    self.lst_analyze_funcs.append(
-                        multiprocessing.Process(
-                            name=f'{slave.name}_analyze',
-                            target=slave.kwargs['analyze_func'],
-                            args=(start, self, slave,)
+        def analyze_process():
+            while not params.kb_event.is_set():
+                lst_analyze_funcs = []
+                for slave in self.slaves:
+                    # if slave.name not in self.broken_slave_names:
+                    if slave.kwargs.get('analyze_func'):
+                        lst_analyze_funcs.append(
+                            multiprocessing.Process(
+                                name=f'{slave.name}_analyze',
+                                target=slave.kwargs['analyze_func'],
+                                args=(start, self, slave,)
+                            )
                         )
-                    )
+                time.sleep(params.sample_time)
+                self.sample_ticker.clear()
+                # t = time.time()
+                for process in lst_analyze_funcs:
+                    process.start()
+                for process in lst_analyze_funcs:
+                    process.join()
+                self.sample_ticker.set()
+        multiprocessing.Process(
+            name = f'{self.name}_analyze',
+            target=analyze_process, 
+            #args=(,)
+            ).start()
     
     def control_funcs(self, start): 
-        self.lst_control_funcs = []
+        #lst_control_funcs = []
         for slave in self.slaves:
-            if slave.name not in self.broken_slave_names:
-                if slave.kwargs.get('control_func'):
-                    self.lst_control_funcs.append(
-                        multiprocessing.Process(
-                            name=f'{slave.name}_control',
-                            target=slave.kwargs['control_func'],
-                            args=(self, slave,)
-                        )
-                    )
+            # if slave.name not in self.broken_slave_names:
+            if slave.kwargs.get('control_func'):
+                multiprocessing.Process(
+                    name=f'{slave.name}_control',
+                    target=slave.kwargs['control_func'],
+                    args=(self, slave,)
+                ).start()
 
 
 class port_Topics:
@@ -384,7 +394,7 @@ DFM_slave = Slave(
                                     'DFM_collect_err', 'DFM_analyze_err', 
                                 ]
                                 ),
-                comm_func=Modbus.VOID,
+                # comm_func=Modbus.VOID,
                 analyze_func=Modbus.DFM_data_analyze
                 )
 
@@ -400,7 +410,7 @@ DFM_AOG_slave = Slave(
                                     'DFM_AOG_collect_err', 'DFM_AOG_analyze_err'
                                 ]
                                 ),
-                    comm_func=Modbus.VOID,
+                    # comm_func=Modbus.VOID,
                     analyze_func=Modbus.DFM_data_analyze
                     )
 
@@ -418,8 +428,8 @@ ADDA_slave = Slave(
                                     'ADDA_collect_err', 'ADDA_set_err', 'ADDA_analyze_err'
                                 ]
                                 ),
-                    comm_func=Modbus.VOID,
-                    analyze_func=Modbus.VOID,
+                    # comm_func=Modbus.VOID,
+                    # analyze_func=Modbus.VOID,
                     )
 
 Air_MFC_slave = Slave(
@@ -475,8 +485,8 @@ WatchDog_slave = Slave(
                                     'WatchDog_collect_err', 'WatchDog_set_err', 'WatchDog_analyze_err'
                                 ]
                                 ),
-                    comm_func=Modbus.VOID,
-                    analyze_func=Modbus.VOID,
+                    # comm_func=Modbus.VOID,
+                    # analyze_func=Modbus.VOID,
                     )
 
 LambdaPID_slave = Slave(
@@ -675,10 +685,10 @@ PID_port = device_port(
                     )
 
 lst_ports = [
-            # MFC_port,
+            MFC_port,
             # Scale_port, 
-            RS232_port, 
-            # Setup_port,
+            # RS232_port, 
+            Setup_port,
             # GPIO_port,
             # ADDA_port,
             # WatchDog_port,

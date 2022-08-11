@@ -5,8 +5,9 @@ import signal
 #-------------------------Global var--------------------------------------
 time_out          = 0.1 # for collecting data
 sample_time       = 0.5 # for analyzing data
+comm_time         = 1
 recur_try         = 2
-exempt_try        = 3000
+exempt_try        = 30
 exempt_threshold  = 10
 
 # count down events

@@ -33,42 +33,45 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
         #print(msg.topic+ ": " + str(msg.payload) + f">>> {client_id}")
         resp = json.loads(msg.payload.decode('utf-8'))
         # print(resp)
-        if (msg.topic == 'NodeRed'):
-            print(f'{hostname} Receive topic: NodeRed')
-            for key, value in resp.items():
-                if type(value) == dict:
-                    for k, v in resp[key].items():
-                        config.NodeRed[k] = v
-                else:
-                    config.NodeRed[key] = value
-            
-            #print(config.NodeRed)
-        else:
-            if (msg.topic == 'Set_bit'):
-                print(f'{hostname} Receive topic: Set_bit')
-                port = config.Setup_port
-            elif (msg.topic == "ADDA_Set"):
-                print(f'{hostname} Receive topic: ADDA_Set')
-                port = config.ADDA_port
-            elif (msg.topic == 'MFC_Set'):
-                print(f'{hostname} Receive topic: MFC_Set')
-                port = config.MFC_port
-            elif (msg.topic == 'PID_Set'):
-                print(f'{hostname} Receive topic: PID_Set')
-                # print(msg.payload)
-                port = config.PID_port
-            for key, value in resp.items():
-                if port.sub_values.get(key) != None:
-                    if port.sub_values[key].value != float(value):
-                        port.sub_values[key].value = float(value)
-                        port.sub_events[key].set()
-                    '''
-                    elif type(port.sub_values[key].value) != type(value):
-                        if isinstance(value, bool):
-                            if isinstance(port.sub_values[key].value, float):
-                                port.sub_values[key].value = value
-                                port.sub_events[key].set()
-                    '''
+        try:
+            if (msg.topic == 'NodeRed'):
+                print(f'{hostname} Receive topic: NodeRed')
+                for key, value in resp.items():
+                    if type(value) == dict:
+                        for k, v in resp[key].items():
+                            config.NodeRed[k] = v
+                    else:
+                        config.NodeRed[key] = value
+                
+                #print(config.NodeRed)
+            else:
+                if (msg.topic == 'Set_bit'):
+                    print(f'{hostname} Receive topic: Set_bit')
+                    port = config.Setup_port
+                elif (msg.topic == "ADDA_Set"):
+                    print(f'{hostname} Receive topic: ADDA_Set')
+                    port = config.ADDA_port
+                elif (msg.topic == 'MFC_Set'):
+                    print(f'{hostname} Receive topic: MFC_Set')
+                    port = config.MFC_port
+                elif (msg.topic == 'PID_Set'):
+                    print(f'{hostname} Receive topic: PID_Set')
+                    # print(msg.payload)
+                    port = config.PID_port
+                for key, value in resp.items():
+                    if port.sub_values.get(key) != None:
+                        if port.sub_values[key].value != float(value):
+                            port.sub_values[key].value = float(value)
+                            port.sub_events[key].set()
+                        '''
+                        elif type(port.sub_values[key].value) != type(value):
+                            if isinstance(value, bool):
+                                if isinstance(port.sub_values[key].value, float):
+                                    port.sub_values[key].value = value
+                                    port.sub_events[key].set()
+                        '''
+        except Exception as e:
+            print(f"Error mqtt on_message: {e}")
     def on_publish(client, userdata, mid):
         print(mid)
 
@@ -87,7 +90,7 @@ def multi_pub():
     client_mqtt.loop_start()
     while not params.kb_event.is_set():
         # print(time.time())
-        time.sleep(params.sample_time)
+        time.sleep(params.comm_time)
         for device_port in config.lst_ports:
             #print(device_port.name)
             if (device_port.name != 'GPIO_port') and (device_port.name != 'ADDA_port'):
