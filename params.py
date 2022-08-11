@@ -4,7 +4,10 @@ import signal
 
 #-------------------------Global var--------------------------------------
 time_out          = 0.1 # for collecting data
-sample_time       = 1 # for analyzing data
+sample_time       = 0.5 # for analyzing data
+recur_try         = 2
+exempt_try        = 3000
+exempt_threshold  = 10
 
 # count down events
 sample_ticker = multiprocessing.Event()

@@ -85,8 +85,8 @@ def analyze_decker(func):
         else:    
             cond = len(_lst_readings)
         try:
+            analyze_err[1] += 1
             if cond > 0:
-                analyze_err[1] += 1
                 _readings = func(start, device_port, slave, _lst_readings=_lst_readings, _time_readings=_time_readings)
                 # casting
                 ind = 1
@@ -96,9 +96,9 @@ def analyze_decker(func):
                     ind += 1
                 ## to slave data list
                 #slave.readings.append(_readings)
+                analyze_err[2] += 1
                 logging.info(f"{slave.name}_analyze done: record {_readings}")
             elif (device_port.name == 'GPIO_port') and (cond == 0):
-                analyze_err[1] += 1
                 _readings = tuple([_time_readings, 0])
                 # casting
                 ind = 1
@@ -108,14 +108,16 @@ def analyze_decker(func):
                     ind += 1
                 ## to slave data list
                 #slave.readings.append(_readings)
+                analyze_err[2] += 1
                 logging.info(f"{slave.name}_analyze done: record {_readings}")
             else:
+                analyze_err[0] += 1
                 logging.warning(f"{slave.name}_analyze record nothing")
         except Exception as e:
             analyze_err[0] += 1
             logging.error(f"{slave.name}_analyze_err_{analyze_err[:]} at {round((time.time()-start),2)}s: " + str(e))
         finally:
-            logging.info(f"{slave.name}_analyze_err: {round((analyze_err[1] - analyze_err[0])/(analyze_err[1] + 0.00000000000000001)*100, 2)}%")
+            logging.info(f"{slave.name}_analyze_err: {round(analyze_err[2]/(analyze_err[1] + 0.00000000000000001)*100, 2)}%")
     return wrapper
 
 #------------------------------Collect and Analyze func---------------------------------
@@ -144,6 +146,9 @@ def Scale_data_collect(start, device_port, slave):
         logging.error(err_msg)
     finally:
         logging.info(f"{slave.name}_collect_err: {round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2)}%")
+        if (collect_err[1] >= params.exempt_try) and (round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
+            if slave.name not in device_port.broken_slave_names:
+                device_port.broken_slave_names.append(slave.name)
 
 
 def Modbus_Comm(start, device_port, slave):    
@@ -208,7 +213,7 @@ def Modbus_Comm(start, device_port, slave):
         logging.error(err_msg)
     finally:
         # recursive part if the rtu was transferred but crushed in between the lines
-        if (recur == True) and (re_collect[0] < 2):
+        if (recur == True) and (re_collect[0] < params.recur_try):
             re_collect[0] += 1
             logging.debug(f're_collect: {re_collect[:]}')
             logging.debug(f'collect_err: {collect_err[:]}')
@@ -216,7 +221,9 @@ def Modbus_Comm(start, device_port, slave):
         re_collect[0] = 0
         port.reset_input_buffer()
         logging.info(f"{slave.name}_collect_err: {round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2)}%")
-
+        if (collect_err[1] >= params.exempt_try) and (round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
+            if slave.name not in device_port.broken_slave_names:
+                device_port.broken_slave_names.append(slave.name)
 
     w_data_site=0
     for topic in slave.port_topics.sub_topics:
@@ -272,7 +279,7 @@ def Modbus_Comm(start, device_port, slave):
                 logging.error(err_msg)
             finally:
                 # recursive part if the rtu was transferred but crushed in between the lines
-                if (recur == True) and (re_set[0] < 2):
+                if (recur == True) and (re_set[0] < params.recur_try):
                     re_set[0] += 1
                     logging.debug(f're_set: {re_set[:]}')
                     Modbus_Comm(start, device_port, slave)
@@ -280,6 +287,9 @@ def Modbus_Comm(start, device_port, slave):
                 port.reset_input_buffer()
                 logging.info(f"{slave.name}_set_err: {round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2)}%")
                 w_data_site += 1
+                if (set_err[1] >= params.exempt_try) and (round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
+                    if slave.name not in device_port.broken_slave_names:
+                        device_port.broken_slave_names.append(slave.name)
         else:
             w_data_site += 1
         
@@ -340,13 +350,16 @@ def MFC_Comm(start, device_port, slave):
         logging.error(err_msg)
     finally:
         # recursive part if the rtu was transferred but crushed in between the lines
-        if (recur == True) and (re_collect[0] < 2):
+        if (recur == True) and (re_collect[0] < params.recur_try):
             re_collect[0] += 1
             logging.debug(f're_collect: {re_collect[:]}')
             MFC_Comm(start, device_port, slave)
         re_collect[0] = 0
         port.reset_input_buffer()
         logging.info(f"{slave.name}_collect_err: {round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2)}%")
+        if (collect_err[1] >= params.exempt_try) and (round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
+            if slave.name not in device_port.broken_slave_names:
+                device_port.broken_slave_names.append(slave.name)
 
     w_data_site=0
     for topic in slave.port_topics.sub_topics:
@@ -400,7 +413,7 @@ def MFC_Comm(start, device_port, slave):
                 logging.error(err_msg)
             finally:
                 # recursive part if the rtu was transferred but crushed in between the lines
-                if (recur == True) and (re_set[0] < 2):
+                if (recur == True) and (re_set[0] < params.recur_try):
                     re_set[0] += 1
                     logging.debug(f're_set: {re_set[:]}')
                     Modbus_Comm(start, device_port, slave)
@@ -408,6 +421,9 @@ def MFC_Comm(start, device_port, slave):
                 port.reset_input_buffer()
                 logging.info(f"{slave.name}_set_err: {round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2)}%")
                 w_data_site += 1
+                if (set_err[1] >= params.exempt_try) and (round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
+                    if slave.name not in device_port.broken_slave_names:
+                        device_port.broken_slave_names.append(slave.name)
         else:
             w_data_site += 1
 
