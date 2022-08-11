@@ -82,7 +82,7 @@ def multi_insert():
     while not params.kb_event.is_set():
         time.sleep(params.sample_time)
         try:
-            print(f'Insert config.NodeRed: {config.NodeRed}')
+            #print(f'Insert config.NodeRed: {config.NodeRed}')
             cur.execute(
                 insertSchema,
                 #tuple(i for i in config.Setup_port.sub_values.values()) + # sub value

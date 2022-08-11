@@ -77,6 +77,7 @@ class device_port:
         self.lst_comm_funcs = []
         self.lst_analyze_funcs = []
         self.lst_control_funcs = []
+        self.broken_slave_names = params.manager.list()
 
 
         for _slave in slaves:
@@ -89,19 +90,20 @@ class device_port:
                 self.pub_values[topic] = multiprocessing.Value('d', 0.0)
             for topic in _slave.port_topics.err_topics:
                 self.err_topics.append(topic)
-                self.err_values[topic] = multiprocessing.Array('i', 3) #[err, click_throu, total_recur]
+                self.err_values[topic] = multiprocessing.Array('i', 3) #[err, click_throu, correct]
                 self.recur_count[topic] = multiprocessing.Array('i', 1) #[one_call_recur]
     
     def comm_funcs(self, start): 
         self.lst_comm_funcs = []
         def thread_func():
             while not params.kb_event.is_set():
-                b =  time.time()
+                #b =  time.time()
                 for slave in self.slaves:
-                    params.sample_ticker.wait()
-                    if slave.kwargs.get('comm_func'):
-                        slave.kwargs['comm_func'](start, self, slave)
-                        # print(slave.name)
+                    if slave.name not in self.broken_slave_names:
+                        params.sample_ticker.wait()
+                        if slave.kwargs.get('comm_func'):
+                            slave.kwargs['comm_func'](start, self, slave)
+                            # print(slave.name)
                 #print(time.time() - b)
         self.lst_comm_funcs.append(multiprocessing.Process(
                                     name = f'{self.name}_comm',
@@ -113,26 +115,28 @@ class device_port:
     def analyze_funcs(self, start): 
         self.lst_analyze_funcs = []
         for slave in self.slaves:
-            if slave.kwargs.get('analyze_func'):
-                self.lst_analyze_funcs.append(
-                    multiprocessing.Process(
-                        name=f'{slave.name}_analyze',
-                        target=slave.kwargs['analyze_func'],
-                        args=(start, self, slave,)
+            if slave.name not in self.broken_slave_names:
+                if slave.kwargs.get('analyze_func'):
+                    self.lst_analyze_funcs.append(
+                        multiprocessing.Process(
+                            name=f'{slave.name}_analyze',
+                            target=slave.kwargs['analyze_func'],
+                            args=(start, self, slave,)
+                        )
                     )
-                )
     
     def control_funcs(self, start): 
         self.lst_control_funcs = []
         for slave in self.slaves:
-            if slave.kwargs.get('control_func'):
-                self.lst_control_funcs.append(
-                    multiprocessing.Process(
-                        name=f'{slave.name}_control',
-                        target=slave.kwargs['control_func'],
-                        args=(self, slave,)
+            if slave.name not in self.broken_slave_names:
+                if slave.kwargs.get('control_func'):
+                    self.lst_control_funcs.append(
+                        multiprocessing.Process(
+                            name=f'{slave.name}_control',
+                            target=slave.kwargs['control_func'],
+                            args=(self, slave,)
+                        )
                     )
-                )
 
 
 class port_Topics:
@@ -671,10 +675,10 @@ PID_port = device_port(
                     )
 
 lst_ports = [
-            MFC_port,
-            Scale_port, 
+            # MFC_port,
+            # Scale_port, 
             RS232_port, 
-            Setup_port,
+            # Setup_port,
             # GPIO_port,
             # ADDA_port,
             # WatchDog_port,

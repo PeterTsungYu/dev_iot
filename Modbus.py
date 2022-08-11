@@ -131,6 +131,7 @@ def Scale_data_collect(start, device_port, slave):
             readings = port.read(port.inWaiting()).decode('utf-8')
             readings = [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ \-][ .\d]{7}', readings)]
             slave.lst_readings.put(readings)
+            collect_err[2] += 1
             logging.info(f'Read {readings} from slave_{slave.name}')
             port.reset_input_buffer() # reset the buffer after each reading process
         else: # if data len is no data
@@ -142,7 +143,7 @@ def Scale_data_collect(start, device_port, slave):
         err_msg = f"{slave.name}_collect_err_{collect_err[:]} at {round((time.time()-start),2)}s: " + str(e)
         logging.error(err_msg)
     finally:
-        logging.info(f"{slave.name}_collect_err: {round((collect_err[1] - collect_err[0])/(collect_err[1]+0.00000000000000001)*100, 2)}%")
+        logging.info(f"{slave.name}_collect_err: {round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2)}%")
 
 
 def Modbus_Comm(start, device_port, slave):    
@@ -178,6 +179,7 @@ def Modbus_Comm(start, device_port, slave):
                     # check sta, func code, datalen, crc
                     if (crc[-2:] + crc[:2]) == readings[-4:]:
                         slave.lst_readings.put(readings)
+                        collect_err[2] += 1
                         logging.info(f'Read from slave_{slave.name}')
                     else:
                         recur = True
@@ -206,14 +208,15 @@ def Modbus_Comm(start, device_port, slave):
         logging.error(err_msg)
     finally:
         # recursive part if the rtu was transferred but crushed in between the lines
-        if (recur == True) and (re_collect[0] < 3):
+        if (recur == True) and (re_collect[0] < 2):
             re_collect[0] += 1
-            collect_err[2] += 1
             logging.debug(f're_collect: {re_collect[:]}')
+            logging.debug(f'collect_err: {collect_err[:]}')
             Modbus_Comm(start, device_port, slave)
         re_collect[0] = 0
         port.reset_input_buffer()
-        logging.info(f"{slave.name}_collect_err: {round((collect_err[1] - collect_err[0] + collect_err[2])/(collect_err[1]+0.00000000000000001)*100, 2)}%")
+        logging.info(f"{slave.name}_collect_err: {round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2)}%")
+
 
     w_data_site=0
     for topic in slave.port_topics.sub_topics:
@@ -238,9 +241,10 @@ def Modbus_Comm(start, device_port, slave):
                         crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
                         # check sta, func code, datalen, crc
                         if (crc[-2:] + crc[:2]) == readings[-4:]:
-                            logging.critical(readings)
-                            logging.critical(f'Read from slave_{slave.name}')
+                            set_err[2] += 1
                             device_port.sub_events[topic].clear()
+                            logging.debug(f'write: {readings}')
+                            logging.info(f'Read from slave_{slave.name}')
                         else:
                             recur = True
                             set_err[0] += 1
@@ -268,14 +272,13 @@ def Modbus_Comm(start, device_port, slave):
                 logging.error(err_msg)
             finally:
                 # recursive part if the rtu was transferred but crushed in between the lines
-                if (recur == True) and (re_set[0] < 3):
+                if (recur == True) and (re_set[0] < 2):
                     re_set[0] += 1
-                    set_err[2] += 1
                     logging.debug(f're_set: {re_set[:]}')
                     Modbus_Comm(start, device_port, slave)
                 re_set[0] = 0
                 port.reset_input_buffer()
-                logging.info(f"{slave.name}_set_err: {round((set_err[1] - set_err[0])/(set_err[1]+0.00000000000000001)*100, 2)}%")
+                logging.info(f"{slave.name}_set_err: {round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2)}%")
                 w_data_site += 1
         else:
             w_data_site += 1
@@ -308,6 +311,7 @@ def MFC_Comm(start, device_port, slave):
                 if re.findall('\d+.\d+',readings):
                     logging.debug(f'collect: {readings}')
                     slave.lst_readings.put(readings)
+                    collect_err[2] += 1
                     logging.info(f'Read from slave_{slave.name}')
                 else:
                     recur = True
@@ -336,14 +340,13 @@ def MFC_Comm(start, device_port, slave):
         logging.error(err_msg)
     finally:
         # recursive part if the rtu was transferred but crushed in between the lines
-        if (recur == True) and (re_collect[0] < 3):
+        if (recur == True) and (re_collect[0] < 2):
             re_collect[0] += 1
-            collect_err[2] += 1
             logging.debug(f're_collect: {re_collect[:]}')
             MFC_Comm(start, device_port, slave)
         re_collect[0] = 0
         port.reset_input_buffer()
-        logging.info(f"{slave.name}_collect_err: {round((collect_err[1] - collect_err[0] + collect_err[2])/(collect_err[1]+0.00000000000000001)*100, 2)}%")
+        logging.info(f"{slave.name}_collect_err: {round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2)}%")
 
     w_data_site=0
     for topic in slave.port_topics.sub_topics:
@@ -366,9 +369,10 @@ def MFC_Comm(start, device_port, slave):
                     if re_id in readings:
                         readings = readings[readings.index(re_id):(readings.index(re_id)+slave.w_wait_len)]
                         if re.findall('\d+.\d+',readings):
+                            set_err[2] += 1
+                            device_port.sub_events[topic].clear()
                             logging.debug(f'write: {readings}')
                             logging.info(f'Read from slave_{slave.name}')
-                            device_port.sub_events[topic].clear()
                         else:
                             recur = True
                             set_err[0] += 1
@@ -396,14 +400,13 @@ def MFC_Comm(start, device_port, slave):
                 logging.error(err_msg)
             finally:
                 # recursive part if the rtu was transferred but crushed in between the lines
-                if (recur == True) and (re_set[0] < 3):
+                if (recur == True) and (re_set[0] < 2):
                     re_set[0] += 1
-                    set_err[2] += 1
                     logging.debug(f're_set: {re_set[:]}')
                     Modbus_Comm(start, device_port, slave)
                 re_set[0] = 0
                 port.reset_input_buffer()
-                logging.info(f"{slave.name}_set_err: {round((set_err[1] - set_err[0])/(set_err[1]+0.00000000000000001)*100, 2)}%")
+                logging.info(f"{slave.name}_set_err: {round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2)}%")
                 w_data_site += 1
         else:
             w_data_site += 1
