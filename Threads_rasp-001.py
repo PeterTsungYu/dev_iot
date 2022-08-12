@@ -16,11 +16,6 @@ import Modbus
 
 print('Import: succeed')
 
-#-------------------------Start line-----------------------------------------
-timeit = datetime.now().strftime('%Y_%m_%d_%H_%M')
-print(f'Execution time is {timeit}')
-print('=='*30)
-start = time.time()
 PIG = pigpio.pi()
 
 #-------------------------Open ports--------------------------------------
@@ -53,6 +48,11 @@ except Exception as ex:
     exit() 
 
 #-------------------------Sub-Threadingggg-----------------------------------------
+#-------------------------Start line-----------------------------------------
+timeit = datetime.now().strftime('%Y_%m_%d_%H_%M')
+print(f'Execution time is {timeit}')
+print('=='*30)
+start = time.time()
 try:
     for device_port in config.lst_ports: 
         device_port.comm_funcs(start)

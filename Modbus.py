@@ -47,6 +47,7 @@ def sampling_event():
         return wrapper
     return decker
 
+
 def analyze_decker(func):
     def wrapper(start, device_port, slave):
         analyze_err = device_port.err_values[f'{slave.name}_analyze_err']

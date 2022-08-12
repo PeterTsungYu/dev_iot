@@ -7,6 +7,8 @@ import RPi.GPIO as GPIO
 from crccheck.crc import Crc16Modbus
 from datetime import datetime
 import time
+import paho.mqtt.client as mqtt
+import json
 
 #custom modules
 import Modbus
@@ -60,6 +62,41 @@ def tohex(value):
     add_zeros = 4 - len(hex_value)
     hex_value = add_zeros * '0' + hex_value
     return hex_value
+
+def pub_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
+    def on_connect(client, userdata, flags, rc):
+        if rc == 0:
+            print(f"{client_id} Connected to MQTT!")
+        else:
+            print(f"{client_id} Failed to connect, return code %d\n", rc)
+    def on_publish(client, userdata, mid):
+        print(mid)
+
+    client = mqtt.Client(client_id=client_id, clean_session=True)
+    # client.username_pw_set(username, password)
+    client.on_connect = on_connect
+    #client.on_publish = on_publish
+    #client.on_disconnect = on_disconnect
+    client.connect_async(hostname, port, keepalive)
+    client.loop_start()
+    return client
+
+def multi_pub(device_port, slave):
+    while not params.kb_event.is_set():
+        # print(time.time())
+        time.sleep(params.comm_time)
+        payload = {}
+        #print(_slave.name)
+        for _topic in slave.port_topics.pub_topics:
+            payload[_topic] = device_port.pub_values[_topic].value
+            #print(type(payload[_topic]), payload[_topic])
+        payload = json.dumps(payload)
+        #print(f'pub_{payload}')
+        slave.mqtt_client.publish(topic=slave.name, payload=payload, qos=0, retain=False)
+        #rint(f"pub {_slave.name}:{payload} succeed from {client_mqtt._client_id} >>> localhost")
+    slave.mqtt_client.loop_stop()
+    slave.mqtt_client.disconnect()
+    print("close connection to MQTT broker")
 
 class device_port:
     def __init__(self, *slaves, name, port):
@@ -148,6 +185,13 @@ class device_port:
                     args=(self, slave,)
                 ).start()
 
+    def port_multi_pub(self,):
+        for slave in self.slaves:
+            multiprocessing.Process(
+                name = f'{self.name}_multi_pub',
+                target=multi_pub, 
+                args=(self, slave)
+                ).start()
 
 class port_Topics:
     def __init__(self, sub_topics, pub_topics, err_topics):
@@ -170,6 +214,7 @@ class Slave: # Create Slave data store
         #self.readings = [] # for all data
         self.port_topics = port_topics
         self.kwargs = kwargs # dict of funcs
+        self.mqtt_client = pub_mqtt(self.name, hostname='localhost', port=1883, keepalive=60,)
 
     def read_rtu(self, *_fields, wait_len):
         self.r_wait_len = wait_len
@@ -662,8 +707,8 @@ PID_port = device_port(
 
 lst_ports = [
             MFC_port,
-            # Scale_port, 
-            # RS232_port, 
+            Scale_port, 
+            RS232_port, 
             Setup_port,
             GPIO_port,
             WatchDog_port,
