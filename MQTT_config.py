@@ -11,7 +11,25 @@ import params
 import config
 
 #-------------------------MQTT func--------------------------------------
-def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
+def pub_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
+    def on_connect(client, userdata, flags, rc):
+        if rc == 0:
+            print(f"Connected to MQTT!")
+        else:
+            print(f"Failed to connect, return code %d\n", rc)
+    def on_publish(client, userdata, mid):
+        print(mid)
+
+    client = mqtt.Client(client_id=client_id, clean_session=True)
+    # client.username_pw_set(username, password)
+    client.on_connect = on_connect
+    #client.on_publish = on_publish
+    #client.on_disconnect = on_disconnect
+    client.connect_async(hostname, port, keepalive)
+    return client
+
+
+def sub_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
     def on_connect(client, userdata, flags, rc):
         if rc == 0:
             print(f"Connected to MQTT!")
@@ -32,7 +50,7 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
     def on_message(client, userdata, msg):
         #print(msg.topic+ ": " + str(msg.payload) + f">>> {client_id}")
         resp = json.loads(msg.payload.decode('utf-8'))
-        # print(resp)
+        #print(resp)
         try:
             if (msg.topic == 'NodeRed'):
                 print(f'{hostname} Receive topic: NodeRed')
@@ -50,7 +68,7 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
                     port = config.Setup_port
                 elif (msg.topic == "ADDA_Set"):
                     print(f'{hostname} Receive topic: ADDA_Set')
-                    port = config.ADDA_port
+                    port = config.WatchDog_port
                 elif (msg.topic == 'MFC_Set'):
                     print(f'{hostname} Receive topic: MFC_Set')
                     port = config.MFC_port
@@ -81,12 +99,13 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
     #client.subscribe([(u,0) for i in config.lst_ports for u in i.sub_topics])
     #client.on_publish = on_publish
     client.on_message = on_message
+    #client.on_disconnect = on_disconnect
     client.connect_async(hostname, port, keepalive)
     return client
 
 
 def multi_pub():
-    client_mqtt = connect_mqtt(client_id='client_mqtt' ,hostname='localhost', port=1883, keepalive=60,) 
+    client_mqtt = sub_mqtt(client_id='client_mqtt' ,hostname='localhost', port=1883, keepalive=60,) 
     client_mqtt.loop_start()
     while not params.kb_event.is_set():
         # print(time.time())
@@ -115,11 +134,25 @@ def multi_pub():
     client_mqtt.disconnect()
     print("close connection to MQTT broker")
 
+
+def multi_sub():
+    client_mqtt = sub_mqtt(client_id='client_mqtt' ,hostname='localhost', port=1883, keepalive=60,) 
+    client_mqtt.loop_start()
+    while not params.kb_event.is_set():
+        # print(time.time())
+        time.sleep(params.comm_time)
+        if config.db_connection == True:
+            client_mqtt.publish(topic='DB_name', payload=config.db_time, qos=0, retain=False)
+        elif config.db_connection == False:
+            client_mqtt.publish(topic='DB_name', payload='', qos=0, retain=False)
+    client_mqtt.loop_stop()
+    client_mqtt.disconnect()
+    print("close connection to MQTT broker")
 #-------------------------MQTT instance--------------------------------------
 
-multi_pub_process = multiprocessing.Process(
-    name='multi_pub_mqtt',
-    target=multi_pub,
+multi_sub_process = multiprocessing.Process(
+    name='multi_sub_mqtt',
+    target=multi_sub,
     args=(),
     )
 #multi_pub.start()

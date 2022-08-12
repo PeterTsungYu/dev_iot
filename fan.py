@@ -17,11 +17,10 @@ try:
     temp = get_temp()
     if temp >= upper_temp:
         GPIO.output(channel, GPIO.LOW)
-    # elif temp < lower_temp:
-    #     GPIO.output(channel, GPIO.HIGH)
-    # time.sleep(10)
+    elif temp < lower_temp:
+        GPIO.output(channel, GPIO.HIGH)
+    time.sleep(10)
 except Exception as e:
     print(e)
 finally:
-    # GPIO.cleanup()
-    pass
+    GPIO.cleanup()

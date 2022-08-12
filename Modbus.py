@@ -122,7 +122,6 @@ def analyze_decker(func):
 
 #------------------------------Collect and Analyze func---------------------------------
 def Scale_data_collect(start, device_port, slave):
-    #while not params.kb_event.is_set():
     port = device_port.port
     collect_err = device_port.err_values[f'{slave.name}_collect_err']
     try:

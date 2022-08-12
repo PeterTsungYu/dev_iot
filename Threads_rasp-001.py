@@ -59,7 +59,7 @@ try:
         device_port.analyze_funcs(start)
         device_port.control_funcs(start)
     
-    MQTT_config.multi_pub_process.start()
+    MQTT_config.multi_sub_process.start()
     Mariadb_config.multi_insert_process.start()
 
 except Exception as ex:
@@ -73,8 +73,8 @@ except Exception as ex:
 try:
     while not params.kb_event.is_set():
         print("=="*10 + f'Elapsed time: {round((time.time()-start),2)}' + "=="*10)
-        time.sleep(params.sample_time)
-        
+        time.sleep(params.comm_time)  
+    print('Terminate...')
 except KeyboardInterrupt: 
     print(f"Keyboard Interrupt in main thread!")
     print("=="*30)
