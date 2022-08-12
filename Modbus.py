@@ -47,6 +47,7 @@ def sampling_event():
         return wrapper
     return decker
 
+
 def analyze_decker(func):
     def wrapper(start, device_port, slave):
         analyze_err = device_port.err_values[f'{slave.name}_analyze_err']
@@ -82,7 +83,7 @@ def analyze_decker(func):
             _time_readings = _size_time
             cond = len(_lst_readings['short_lst_readings'])
         elif 'DFM' in slave.name:
-            _DFM_time = slave.DFM_time_readings
+            _DFM_time = slave.size_time_readings
             _DFM_time['short_time_readings'].append(_lst_readings)
             _DFM_time['long_time_readings'].append(_lst_readings)
             if len(_DFM_time['short_time_readings']) > 10: # aggregate lists for 10s in a list
@@ -561,19 +562,21 @@ def Scale_data_analyze(start, device_port, slave, **kwargs):
 @analyze_decker
 def GA_data_analyze(start, device_port, slave, **kwargs):
     _lst_readings = kwargs.get('_lst_readings')
-    _time_readings = kwargs.get('_time_readings')[-1]
+    _time_readings = kwargs.get('_time_readings')
     #print(_lst_readings)
-    _arr_readings = np.array(
-        [[int(readings[i:i+4],16)/100 if (int(readings[i:i+4],16)/100) <= 99.99 else 0 for i in range(8,20,4)] # CO, CO2, CH4
-        + [int(readings[24:28],16)/100] # H2
-        + [int(readings[-12:-8],16)/100] # N2
-        + [(lambda i: ((i[0]*256+i[1]+i[2])*256+i[3])/100)([int(readings[i:i+2],16) for i in range(-20,-12,2)])] # Heat
-        for readings in _lst_readings]
-        )
-    #print(_arr_readings)
-    _lst_readings = tuple(np.round(np.sum(_arr_readings, axis=0) / len(_lst_readings), 1))
-    #print(_lst_readings)
-    _readings = tuple([round(_time_readings,2)]) + _lst_readings
+    if _lst_readings and _time_readings:
+        _arr_readings = np.array(
+            [[int(readings[i:i+4],16)/100 if (int(readings[i:i+4],16)/100) <= 99.99 else 0 for i in range(8,20,4)] # CO, CO2, CH4
+            + [int(readings[24:28],16)/100] # H2
+            + [int(readings[-12:-8],16)/100] # N2
+            + [(lambda i: ((i[0]*256+i[1]+i[2])*256+i[3])/100)([int(readings[i:i+2],16) for i in range(-20,-12,2)])] # Heat
+            for readings in _lst_readings]
+            )
+        #print(_arr_readings)
+        _lst_readings = tuple(np.round(np.sum(_arr_readings, axis=0) / len(_lst_readings), 1))
+    else:
+        _lst_readings = tuple([0]*6)
+    _readings = tuple([round(_time_readings[-1],2)]) + _lst_readings
     return _readings
             
 

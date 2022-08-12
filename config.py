@@ -74,7 +74,8 @@ class device_port:
         self.pub_values = {}
         self.err_values = {}
         self.recur_count = {}
-        self.sample_ticker = multiprocessing.Event()
+        self.comm_ticker = multiprocessing.Event()
+        self.analyze_ticker = multiprocessing.Event()
         # self.broken_slave_names = params.manager.list()
 
 
@@ -92,13 +93,13 @@ class device_port:
                 self.recur_count[topic] = multiprocessing.Array('i', 2) #[one_call_recur, total_recur]
     
     def comm_funcs(self, start): 
-        self.sample_ticker.set()
+        self.comm_ticker.set()
         def comm_process():
             while not params.kb_event.is_set():
                 #b =  time.time()
                 for slave in self.slaves:
                     # if slave.name not in self.broken_slave_names:
-                    self.sample_ticker.wait()
+                    self.comm_ticker.wait()
                     if slave.kwargs.get('comm_func'):
                         slave.kwargs['comm_func'](start, self, slave)
                         # print(slave.name)
@@ -124,13 +125,15 @@ class device_port:
                             )
                         )
                 time.sleep(params.sample_time)
-                self.sample_ticker.clear()
+                self.comm_ticker.clear()
+                self.analyze_ticker.set()
                 # t = time.time()
                 for process in lst_analyze_funcs:
                     process.start()
                 for process in lst_analyze_funcs:
                     process.join()
-                self.sample_ticker.set()
+                self.analyze_ticker.clear()
+                self.comm_ticker.set()
         multiprocessing.Process(
             name = f'{self.name}_analyze',
             target=analyze_process, 
@@ -162,8 +165,9 @@ class Slave: # Create Slave data store
         self.id = idno # id number of slave
         self.lst_readings = multiprocessing.Queue()
         self.time_readings = multiprocessing.Queue()
-        self.size_lst_readings = {'short_lst_readings':params.manager.list(), 'long_lst_readings':params.manager.list()}
-        self.size_time_readings = {'short_time_readings':params.manager.list(), 'long_time_readings':params.manager.list()}
+        if self.name in ['ADAM_TC', 'Scale', 'DFM', 'DFM_AOG']:
+            self.size_lst_readings = {'short_lst_readings':params.manager.list(), 'long_lst_readings':params.manager.list()}
+            self.size_time_readings = {'short_time_readings':params.manager.list(), 'long_time_readings':params.manager.list()}
         
         #self.readings = [] # for all data
         self.port_topics = port_topics
@@ -625,11 +629,11 @@ RS232_port = device_port(GA_slave,
 Setup_port = device_port(
                         # Header_BR_slave,
                         # Header_BR_SET_slave,
-                        # Header_EVA_slave,
-                        # Header_EVA_SET_slave,
+                        Header_EVA_slave,
+                        Header_EVA_SET_slave,
                         ADAM_TC_slave,
-                        # ADAM_READ_slave,
-                        # ADAM_SET_slave,
+                        ADAM_READ_slave,
+                        ADAM_SET_slave,
                         name='Setup_port',
                         port=serial.Serial(port=Setup_port_path,
                                             baudrate=9600, 
@@ -660,7 +664,7 @@ PID_port = device_port(
                     )
 
 lst_ports = [
-            # MFC_port,
+            MFC_port,
             # Scale_port, 
             # RS232_port, 
             Setup_port,

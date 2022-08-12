@@ -10,9 +10,6 @@ recur_try         = 2
 exempt_try        = 30
 exempt_threshold  = 10
 
-# count down events
-sample_ticker = multiprocessing.Event()
-
 # shared memory 
 manager = multiprocessing.Manager()
 
