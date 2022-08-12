@@ -34,7 +34,7 @@ ADAM_TC_id    = '05' # ReformerTP ADAM_4018+ for monitoring temp @ RS485_port_pa
 Scale_id      = '06'
 DFM_id        = '07'
 DFM_AOG_id    = '08'
-ADDA_id       = '09'
+WatchDog_id       = '09'
 Relay01_id    = '10' # control Relay for Lambda sensor and Glow Plug
 GA_id         = '11' # ReformerTP GA for monitoring gas conc. @ RS232_port_path
 Air_MFC_id    = 'A'
@@ -162,11 +162,9 @@ class Slave: # Create Slave data store
         self.id = idno # id number of slave
         self.lst_readings = multiprocessing.Queue()
         self.time_readings = multiprocessing.Queue()
-        if 'DFM' in self.name: 
-            self.DFM_time_readings = {'10_time_readings':params.manager.list(), '60_time_readings':params.manager.list()} # record time
-        if 'Scale' in self.name:
-            self.scale_readings = {'10_lst_readings':params.manager.list(), '60_lst_readings':params.manager.list()}
-            self.scale_time_readings = {'10_time_readings':params.manager.list(), '60_time_readings':params.manager.list()}
+        self.size_lst_readings = {'short_lst_readings':params.manager.list(), 'long_lst_readings':params.manager.list()}
+        self.size_time_readings = {'short_time_readings':params.manager.list(), 'long_time_readings':params.manager.list()}
+        
         #self.readings = [] # for all data
         self.port_topics = port_topics
         self.kwargs = kwargs # dict of funcs
@@ -207,8 +205,9 @@ ADAM_TC_slave = Slave(
                     port_topics=port_Topics(sub_topics=[
                                             ],
                                             pub_topics=[
-                                                'TC7', 'TC8', 'TC9', 'TC10', # # TC7(ADAM_TC_0), TC8(ADAM_TC_1), TC9(ADAM_TC_2), TC10(ADAM_TC_3) 
-                                                'TC11', 'EVA_out', 'RAD_in', 'RAD_out' # TC11(ADAM_TC_4), EVA_out(ADAM_TC_5), RAD_in(ADAM_TC_6), RAD_out(ADAM_TC_7)
+                                                'TC7', 'TC8', 'TC9', 'TC10', 
+                                                'TC11', 'EVA_out', 'RAD_in', 'RAD_out',
+                                                'BN_rate', 'SR_rate',
                                             ],
                                             err_topics=[
                                                 'ADAM_TC_collect_err', 'ADAM_TC_analyze_err',
@@ -414,24 +413,6 @@ DFM_AOG_slave = Slave(
                     analyze_func=Modbus.DFM_data_analyze
                     )
 
-ADDA_slave = Slave(
-                    name='ADDA',
-                    idno=ADDA_id, 
-                    port_topics=port_Topics(
-                                sub_topics=[
-                                    'Pump_SET_SV', 'DAC1',
-                                ],
-                                pub_topics=[
-                                    'AD0', 'AD1', 'AD2', 'AD3', 'AD4', 'AD5', 'AD6', 'AD7',
-                                ],
-                                err_topics=[
-                                    'ADDA_collect_err', 'ADDA_set_err', 'ADDA_analyze_err'
-                                ]
-                                ),
-                    # comm_func=Modbus.VOID,
-                    # analyze_func=Modbus.VOID,
-                    )
-
 Air_MFC_slave = Slave(
                     name='Air_MFC',
                     idno=Air_MFC_id, 
@@ -474,15 +455,14 @@ H2_MFC_slave.w_wait_len = 49
 
 WatchDog_slave = Slave(
                     name='WatchDog',
-                    idno=ADDA_id, 
+                    idno=WatchDog_id, 
                     port_topics=port_Topics(
                                 sub_topics=[
-                                    'BN_rate', 'SR_rate',
+                                    'Pump_SET_SV'
                                 ],
                                 pub_topics=[
                                 ],
                                 err_topics=[
-                                    'WatchDog_collect_err', 'WatchDog_set_err', 'WatchDog_analyze_err'
                                 ]
                                 ),
                     # comm_func=Modbus.VOID,
@@ -648,8 +628,8 @@ Setup_port = device_port(
                         # Header_EVA_slave,
                         # Header_EVA_SET_slave,
                         ADAM_TC_slave,
-                        ADAM_READ_slave,
-                        ADAM_SET_slave,
+                        # ADAM_READ_slave,
+                        # ADAM_SET_slave,
                         name='Setup_port',
                         port=serial.Serial(port=Setup_port_path,
                                             baudrate=9600, 
@@ -662,11 +642,6 @@ GPIO_port = device_port(DFM_slave,
                         DFM_AOG_slave,
                         name='GPIO_port',
                         port='GPIO',
-                        )
-
-ADDA_port = device_port(ADDA_slave,
-                        name='ADDA_port',
-                        port='ADDA',
                         )
 
 WatchDog_port = device_port(WatchDog_slave,
@@ -685,12 +660,11 @@ PID_port = device_port(
                     )
 
 lst_ports = [
-            MFC_port,
+            # MFC_port,
             # Scale_port, 
             # RS232_port, 
             Setup_port,
             # GPIO_port,
-            # ADDA_port,
             # WatchDog_port,
             # PID_port
             ]

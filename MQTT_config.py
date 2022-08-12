@@ -50,7 +50,7 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
                     port = config.Setup_port
                 elif (msg.topic == "ADDA_Set"):
                     print(f'{hostname} Receive topic: ADDA_Set')
-                    port = config.ADDA_port
+                    port = config.WatchDog_port
                 elif (msg.topic == 'MFC_Set'):
                     print(f'{hostname} Receive topic: MFC_Set')
                     port = config.MFC_port
@@ -93,7 +93,7 @@ def multi_pub():
         time.sleep(params.comm_time)
         for device_port in config.lst_ports:
             #print(device_port.name)
-            if (device_port.name != 'GPIO_port') and (device_port.name != 'ADDA_port'):
+            if (device_port.name != 'GPIO_port'):
                 for _slave in device_port.slaves:
                     payload = {}
                     #print(_slave.name)
@@ -105,8 +105,8 @@ def multi_pub():
                     client_mqtt.publish(topic=_slave.name, payload=payload, qos=0, retain=False)
                     #rint(f"pub {_slave.name}:{payload} succeed from {client_mqtt._client_id} >>> localhost")
         # client.publish(topic='DFM_total', payload=config.GPIO_port.pub_values['DFM_RichGas'] + config.GPIO_port.pub_values['DFM_AOG'], qos=2, retain=False)
-        client_mqtt.publish(topic='DFM', payload=json.dumps({'10_DFM_RichGas':config.GPIO_port.pub_values['10_DFM_RichGas'].value, '60_DFM_RichGas':config.GPIO_port.pub_values['60_DFM_RichGas'].value}), qos=2, retain=False)
-        client_mqtt.publish(topic='DFM_AOG', payload=json.dumps({'10_DFM_AOG':config.GPIO_port.pub_values['10_DFM_AOG'].value, '60_DFM_AOG':config.GPIO_port.pub_values['60_DFM_AOG'].value}), qos=2, retain=False)
+        # client_mqtt.publish(topic='DFM', payload=json.dumps({'10_DFM_RichGas':config.GPIO_port.pub_values['10_DFM_RichGas'].value, '60_DFM_RichGas':config.GPIO_port.pub_values['60_DFM_RichGas'].value}), qos=2, retain=False)
+        # client_mqtt.publish(topic='DFM_AOG', payload=json.dumps({'10_DFM_AOG':config.GPIO_port.pub_values['10_DFM_AOG'].value, '60_DFM_AOG':config.GPIO_port.pub_values['60_DFM_AOG'].value}), qos=2, retain=False)
         if config.db_connection == True:
             client_mqtt.publish(topic='DB_name', payload=config.db_time, qos=0, retain=False)
         elif config.db_connection == False:

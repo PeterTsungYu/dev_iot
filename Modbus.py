@@ -15,17 +15,17 @@ import params
 
 #------------------------------Logger---------------------------------
 logger = logging.getLogger()
-logger.setLevel(logging.CRITICAL)
+logger.setLevel(logging.ERROR)
 formatter = logging.Formatter(
 	'[%(levelname)s %(asctime)s %(module)s:%(lineno)d] %(message)s',
 	datefmt='%Y%m%d %H:%M:%S')
 
 ch = logging.StreamHandler()
-ch.setLevel(logging.CRITICAL)
+ch.setLevel(logging.ERROR)
 ch.setFormatter(formatter)
 
 fh = logging.FileHandler(filename='platform.log', mode='w')
-fh.setLevel(logging.CRITICAL)
+fh.setLevel(logging.ERROR)
 fh.setFormatter(formatter)
 
 logger.addHandler(ch)
@@ -54,33 +54,44 @@ def analyze_decker(func):
         slave.time_readings.put(None)
         _lst_readings = list(iter(slave.lst_readings.get, None))
         _time_readings = list(iter(slave.time_readings.get, None))
-        if 'Scale' in slave.name:
-            _scale_lst = slave.scale_readings
-            _scale_time = slave.scale_time_readings
-            _scale_lst['10_lst_readings'].append(_lst_readings)
-            _scale_lst['60_lst_readings'].append(_lst_readings)
-            _scale_time['10_time_readings'].append(_time_readings)
-            _scale_time['60_time_readings'].append(_time_readings)
-            if len(_scale_lst['10_lst_readings']) > 10: # aggregate lists for 10s in a list
-                _scale_lst['10_lst_readings'] = _scale_lst['10_lst_readings'][-10:]
-                _scale_time['10_time_readings'] = _scale_time['10_time_readings'][-10:]
-            if len(_scale_lst['60_lst_readings']) > 60: # aggregate lists for 60s in a list
-                _scale_lst['60_lst_readings'] = _scale_lst['60_lst_readings'][-60:]
-                _scale_time['60_time_readings'] = _scale_time['60_time_readings'][-60:]
-            _lst_readings = _scale_lst
-            _time_readings = _scale_time
-            cond = len(_lst_readings['10_lst_readings'])
+        if slave.name in ['Scale']:
+            _size_lst = slave.size_lst_readings
+            _size_time = slave.size_time_readings
+            _size_lst['short_lst_readings'].append(_lst_readings)
+            _size_lst['long_lst_readings'].append(_lst_readings)
+            _size_time['short_time_readings'].append(_time_readings)
+            _size_time['long_time_readings'].append(_time_readings)
+            if len(_size_lst['short_lst_readings']) > 10: # aggregate lists for 10s in a list
+                _size_lst['short_lst_readings'] = params.manager.list(_size_lst['short_lst_readings'][-10:])
+                _size_time['short_time_readings'] = params.manager.list(_size_time['short_time_readings'][-10:])
+            if len(_size_lst['long_lst_readings']) > 60: # aggregate lists for 60s in a list
+                _size_lst['long_lst_readings'] = params.manager.list(_size_lst['long_lst_readings'][-60:])
+                _size_time['long_time_readings'] = params.manager.list(_size_time['long_time_readings'][-60:])
+            _lst_readings = _size_lst
+            _time_readings = _size_time
+            cond = len(_lst_readings['short_lst_readings'])
+        elif slave.name in ['ADAM_TC']:
+            _size_lst = slave.size_lst_readings
+            _size_time = slave.size_time_readings
+            _size_lst['short_lst_readings'].append(_lst_readings)
+            _size_time['short_time_readings'].append(_time_readings)
+            if len(_size_lst['short_lst_readings']) > 5: # aggregate lists for 10s in a list
+                _size_lst['short_lst_readings'] = params.manager.list(_size_lst['short_lst_readings'][-10:])
+                _size_time['short_time_readings'] = params.manager.list(_size_time['short_time_readings'][-10:])
+            _lst_readings = _size_lst
+            _time_readings = _size_time
+            cond = len(_lst_readings['short_lst_readings'])
         elif 'DFM' in slave.name:
             _DFM_time = slave.DFM_time_readings
-            _DFM_time['10_time_readings'].append(_lst_readings)
-            _DFM_time['60_time_readings'].append(_lst_readings)
-            if len(_DFM_time['10_time_readings']) > 10: # aggregate lists for 10s in a list
-                _DFM_time['10_time_readings'] = _DFM_time['10_time_readings'][-10:]
-            if len(_DFM_time['60_time_readings']) > 60: # aggregate lists for 60s in a list
-                _DFM_time['60_time_readings'] = _DFM_time['60_time_readings'][-60:]
+            _DFM_time['short_time_readings'].append(_lst_readings)
+            _DFM_time['long_time_readings'].append(_lst_readings)
+            if len(_DFM_time['short_time_readings']) > 10: # aggregate lists for 10s in a list
+                _DFM_time['short_time_readings'] = params.manager.list(_DFM_time['short_time_readings'][-10:])
+            if len(_DFM_time['long_time_readings']) > 60: # aggregate lists for 60s in a list
+                _DFM_time['long_time_readings'] = params.manager.list(_DFM_time['long_time_readings'][-60:])
             _lst_readings = []
             _time_readings = _DFM_time
-            cond = len(_DFM_time['10_time_readings'])
+            cond = len(_DFM_time['short_time_readings'])
             # print(cond)
         else:    
             cond = len(_lst_readings)
@@ -115,7 +126,7 @@ def analyze_decker(func):
                 logging.warning(f"{slave.name}_analyze record nothing")
         except Exception as e:
             analyze_err[0] += 1
-            logging.error(f"{slave.name}_analyze_err_{analyze_err[:]} at {round((time.time()-start),2)}s: " + str(e))
+            logging.critical(f"{slave.name}_analyze_err_{analyze_err[:]} at {round((time.time()-start),2)}s: " + str(e))
         finally:
             logging.critical(f"{slave.name}_analyze_err: {round(analyze_err[2]/(analyze_err[1] + 0.00000000000000001)*100, 2)}%, analyze_err_{analyze_err[:]}")
     return wrapper
@@ -433,11 +444,22 @@ def MFC_Comm(start, device_port, slave):
 
 @analyze_decker
 def ADAM_TC_analyze(start, device_port, slave, **kwargs):
-    _lst_readings = kwargs.get('_lst_readings')
-    _time_readings = kwargs.get('_time_readings')[-1]
-    arr_readings = np.array([[int(reading[i-4:i],16) for i in range(10,len(reading)-2,4)] for reading in _lst_readings])
-    _lst_readings = tuple(np.round(1370/65535*(np.sum(arr_readings, axis=0) / len(_lst_readings)), 1))
-    _readings = tuple([round(_time_readings,2)]) + _lst_readings
+    _lst_readings = kwargs.get('_lst_readings')['short_lst_readings']
+    _time_readings = kwargs.get('_time_readings')['short_time_readings']
+    arr_readings = np.array([[int(reading[i-4:i],16) for i in range(10,len(reading)-2,4)] for reading in _lst_readings[-1]])
+    _last_avg = tuple(np.round(1370/65535*(np.sum(arr_readings, axis=0) / len(_lst_readings[-1])), 1))
+    _last_avg = tuple([round(_time_readings[-1][-1],2)]) + _last_avg
+    
+    if _lst_readings[0] and _lst_readings[0] and _lst_readings[-1] and _lst_readings[-1]: 
+        _5_lst_first = np.array([1370/65535*int(_lst_readings[0][0][i-4:i],16) for i in range(10,len(_lst_readings[0][0])-2,4)])
+        _5_time_first = _time_readings[0][0]
+        _5_lst_last = np.array([1370/65535*int(_lst_readings[-1][-1][i-4:i],16) for i in range(10,len(_lst_readings[-1][-1])-2,4)])
+        _5_time_last = _time_readings[-1][-1]
+        _5_rates = tuple(np.round((_5_lst_last - _5_lst_first) / (_5_time_last - _5_time_first))) # BR_rate, SR_rate
+    else:
+        _5_rates = tuple([0]*8)
+    _readings = _last_avg + _5_rates[0:2]
+
     return _readings
 
 
@@ -460,9 +482,9 @@ def DFM_data_analyze(start, device_port, slave, **kwargs):
     _sampling_time = round(time.time()-start, 2)
     _10_flow_lst = []
     try:
-        for i in range(len(_time_readings['10_time_readings'])):
-            if i != [] and (len(_time_readings['10_time_readings'][i]) > 1):
-                _10_flow_lst.append((len(_time_readings['10_time_readings'][i]) - 1) / (_time_readings['10_time_readings'][i][-1] - _time_readings['10_time_readings'][i][0]))
+        for i in range(len(_time_readings['short_time_readings'])):
+            if i != [] and (len(_time_readings['short_time_readings'][i]) > 1):
+                _10_flow_lst.append((len(_time_readings['short_time_readings'][i]) - 1) / (_time_readings['short_time_readings'][i][-1] - _time_readings['short_time_readings'][i][0]))
             else:
                 _10_flow_lst.append(0)
         _10_flow_rate = sum(_10_flow_lst) / len(_10_flow_lst)
@@ -472,9 +494,9 @@ def DFM_data_analyze(start, device_port, slave, **kwargs):
             _10_flow_rate = _10_flow_rate * 10 * 0.01
 
         _60_flow_lst = []
-        for i in range(len(_time_readings['60_time_readings'])):
-            if i != [] and (len(_time_readings['60_time_readings'][i]) > 1):
-                _60_flow_lst.append((len(_time_readings['60_time_readings'][i]) - 1) / (_time_readings['60_time_readings'][i][-1] - _time_readings['60_time_readings'][i][0]))
+        for i in range(len(_time_readings['long_time_readings'])):
+            if i != [] and (len(_time_readings['long_time_readings'][i]) > 1):
+                _60_flow_lst.append((len(_time_readings['long_time_readings'][i]) - 1) / (_time_readings['long_time_readings'][i][-1] - _time_readings['long_time_readings'][i][0]))
             else:
                 _60_flow_lst.append(0)
         _60_flow_rate = sum(_60_flow_lst) / len(_60_flow_lst)
@@ -496,14 +518,14 @@ def Scale_data_analyze(start, device_port, slave, **kwargs):
     _time_readings = kwargs.get('_time_readings')
     _10_scale_lst = []
     _10_scale_time = []
-    for i in range(0, len(_lst_readings['10_lst_readings'])):
-        _10_scale_time.extend(_time_readings['10_time_readings'])
-        for j in range(0, len(_lst_readings['10_lst_readings'][i])):
-            _10_scale_lst.extend(_lst_readings['10_lst_readings'][i][j])
+    for i in range(0, len(_lst_readings['short_lst_readings'])):
+        for j in range(0, len(_lst_readings['short_lst_readings'][i])):
+            _10_scale_lst.extend(_lst_readings['short_lst_readings'][i][j])
         if _10_scale_lst != []:
             pass
         else:
             _10_scale_lst.extend([0,0])
+    _10_scale_time.extend(_time_readings['short_time_readings'])
     for i in _10_scale_lst: 
         if -0.00001 < i < 0.00001:
             _10_scale_lst.remove(i)
@@ -513,14 +535,14 @@ def Scale_data_analyze(start, device_port, slave, **kwargs):
     _60_scale_lst = []
     _60_scale_time = []
     
-    for i in range(0, len(_lst_readings['60_lst_readings'])):
-        _60_scale_time.extend(_time_readings['60_time_readings'])
-        for j in range(0, len(_lst_readings['60_lst_readings'][i])):
-            _60_scale_lst.extend(_lst_readings['60_lst_readings'][i][j])
+    for i in range(0, len(_lst_readings['long_lst_readings'])):
+        for j in range(0, len(_lst_readings['long_lst_readings'][i])):
+            _60_scale_lst.extend(_lst_readings['long_lst_readings'][i][j])
         if _60_scale_lst != []:
             pass
         else:
             _60_scale_lst.extend([0,0])
+    _60_scale_time.extend(_time_readings['long_time_readings'])
     for i in _60_scale_lst: 
         if -0.00001 < i < 0.00001:
             _60_scale_lst.remove(i)
