@@ -2,13 +2,13 @@
 
 #python packages
 import paho.mqtt.client as mqtt
-import threading
+import multiprocessing
 import json
+import time
 
 #custom modules
 import params
 import config
-import time
 
 #-------------------------MQTT func--------------------------------------
 def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
@@ -33,42 +33,45 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
         #print(msg.topic+ ": " + str(msg.payload) + f">>> {client_id}")
         resp = json.loads(msg.payload.decode('utf-8'))
         # print(resp)
-        if (msg.topic == 'NodeRed'):
-            print(f'{hostname} Receive topic: NodeRed')
-            _resp = {}
-            for key, value in resp.items():
-                if type(value) == dict:
-                    for k, v in resp[key].items():
-                        _resp[k] = v
-                else:
-                    _resp[key] = value
-            config.NodeRed = _resp
-            #print(config.NodeRed)
-        else:
-            if (msg.topic == 'Set_bit'):
-                print(f'{hostname} Receive topic: Set_bit')
-                port = config.Setup_port
-            elif (msg.topic == "ADDA_Set"):
-                print(f'{hostname} Receive topic: ADDA_Set')
-                port = config.ADDA_port
-            elif (msg.topic == 'MFC_Set'):
-                print(f'{hostname} Receive topic: MFC_Set')
-                port = config.MFC_port
-            elif (msg.topic == 'PID_Set'):
-                print(f'{hostname} Receive topic: PID_Set')
-                # print(msg.payload)
-                port = config.PID_port
-            for key, value in resp.items():
-                if port.sub_values.get(key) != None:
-                    if port.sub_values[key] != float(value):
-                        port.sub_values[key] = float(value)
-                        port.sub_events[key].set()
-                    elif type(port.sub_values[key]) != type(value):
-                        if isinstance(value, bool):
-                            if isinstance(port.sub_values[key], int):
-                                port.sub_values[key] = value
-                                port.sub_events[key].set()
-        
+        try:
+            if (msg.topic == 'NodeRed'):
+                print(f'{hostname} Receive topic: NodeRed')
+                for key, value in resp.items():
+                    if type(value) == dict:
+                        for k, v in resp[key].items():
+                            config.NodeRed[k] = v
+                    else:
+                        config.NodeRed[key] = value
+                
+                #print(config.NodeRed)
+            else:
+                if (msg.topic == 'Set_bit'):
+                    print(f'{hostname} Receive topic: Set_bit')
+                    port = config.Setup_port
+                elif (msg.topic == "ADDA_Set"):
+                    print(f'{hostname} Receive topic: ADDA_Set')
+                    port = config.ADDA_port
+                elif (msg.topic == 'MFC_Set'):
+                    print(f'{hostname} Receive topic: MFC_Set')
+                    port = config.MFC_port
+                elif (msg.topic == 'PID_Set'):
+                    print(f'{hostname} Receive topic: PID_Set')
+                    # print(msg.payload)
+                    port = config.PID_port
+                for key, value in resp.items():
+                    if port.sub_values.get(key) != None:
+                        if port.sub_values[key].value != float(value):
+                            port.sub_values[key].value = float(value)
+                            port.sub_events[key].set()
+                        '''
+                        elif type(port.sub_values[key].value) != type(value):
+                            if isinstance(value, bool):
+                                if isinstance(port.sub_values[key].value, float):
+                                    port.sub_values[key].value = value
+                                    port.sub_events[key].set()
+                        '''
+        except Exception as e:
+            print(f"Error mqtt on_message: {e}")
     def on_publish(client, userdata, mid):
         print(mid)
 
@@ -82,35 +85,41 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
     return client
 
 
-def multi_pub(client):
-    while not params.kb_event.isSet():
+def multi_pub():
+    client_mqtt = connect_mqtt(client_id='client_mqtt' ,hostname='localhost', port=1883, keepalive=60,) 
+    client_mqtt.loop_start()
+    while not params.kb_event.is_set():
         # print(time.time())
-        if not params.ticker.wait(params.sample_time):
-            for device_port in config.lst_ports:
-                #print(device_port.name)
-                if (device_port.name != 'GPIO_port') and (device_port.name != 'ADDA_port'):
-                    for _slave in device_port.slaves:
-                        payload = {}
-                        #print(_slave.name)
-                        for _topic in _slave.port_topics.pub_topics:
-                            payload[_topic] = device_port.pub_values[_topic]
-                        payload = json.dumps(payload)
-                        client.publish(topic=_slave.name, payload=payload, qos=0, retain=False)
-                        #print(f"pub {_slave.name}:{payload} succeed from {client._client_id} >>> localhost")
-            # client.publish(topic='DFM_total', payload=config.GPIO_port.pub_values['DFM_RichGas'] + config.GPIO_port.pub_values['DFM_AOG'], qos=2, retain=False)
-            client.publish(topic='DFM', payload=json.dumps({'10_DFM_RichGas':config.GPIO_port.pub_values['10_DFM_RichGas'], '60_DFM_RichGas':config.GPIO_port.pub_values['60_DFM_RichGas']}), qos=2, retain=False)
-            client.publish(topic='DFM_AOG', payload=json.dumps({'10_DFM_AOG':config.GPIO_port.pub_values['10_DFM_AOG'], '60_DFM_AOG':config.GPIO_port.pub_values['60_DFM_AOG']}), qos=2, retain=False)
-            if config.db_connection == True:
-                client.publish(topic='DB_name', payload=config.db_time, qos=0, retain=False)
-            elif config.db_connection == False:
-                client.publish(topic='DB_name', payload='', qos=0, retain=False)
+        time.sleep(params.comm_time)
+        for device_port in config.lst_ports:
+            #print(device_port.name)
+            if (device_port.name != 'GPIO_port') and (device_port.name != 'ADDA_port'):
+                for _slave in device_port.slaves:
+                    payload = {}
+                    #print(_slave.name)
+                    for _topic in _slave.port_topics.pub_topics:
+                        payload[_topic] = device_port.pub_values[_topic].value
+                        #print(type(payload[_topic]), payload[_topic])
+                    payload = json.dumps(payload)
+                    #print(f'pub_{payload}')
+                    client_mqtt.publish(topic=_slave.name, payload=payload, qos=0, retain=False)
+                    #rint(f"pub {_slave.name}:{payload} succeed from {client_mqtt._client_id} >>> localhost")
+        # client.publish(topic='DFM_total', payload=config.GPIO_port.pub_values['DFM_RichGas'] + config.GPIO_port.pub_values['DFM_AOG'], qos=2, retain=False)
+        client_mqtt.publish(topic='DFM', payload=json.dumps({'10_DFM_RichGas':config.GPIO_port.pub_values['10_DFM_RichGas'].value, '60_DFM_RichGas':config.GPIO_port.pub_values['60_DFM_RichGas'].value}), qos=2, retain=False)
+        client_mqtt.publish(topic='DFM_AOG', payload=json.dumps({'10_DFM_AOG':config.GPIO_port.pub_values['10_DFM_AOG'].value, '60_DFM_AOG':config.GPIO_port.pub_values['60_DFM_AOG'].value}), qos=2, retain=False)
+        if config.db_connection == True:
+            client_mqtt.publish(topic='DB_name', payload=config.db_time, qos=0, retain=False)
+        elif config.db_connection == False:
+            client_mqtt.publish(topic='DB_name', payload='', qos=0, retain=False)
+    client_mqtt.loop_stop()
+    client_mqtt.disconnect()
+    print("close connection to MQTT broker")
 
 #-------------------------MQTT instance--------------------------------------
-client_0 = connect_mqtt(client_id='client_0' ,hostname='localhost', port=1883, keepalive=60,) 
-client_0.loop_start()
 
-multi_pub = threading.Thread(
+multi_pub_process = multiprocessing.Process(
+    name='multi_pub_mqtt',
     target=multi_pub,
-    args=(client_0,),
+    args=(),
     )
-multi_pub.start()
+#multi_pub.start()

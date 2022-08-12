@@ -1,6 +1,7 @@
 #python packages
-import threading
+#import threading
 import multiprocessing
+import functools
 import serial
 import RPi.GPIO as GPIO
 from crccheck.crc import Crc16Modbus
@@ -73,60 +74,84 @@ class device_port:
         self.pub_values = {}
         self.err_values = {}
         self.recur_count = {}
-        self.thread_funcs = []
+        self.sample_ticker = multiprocessing.Event()
+        # self.broken_slave_names = params.manager.list()
+
 
         for _slave in slaves:
             for topic in _slave.port_topics.sub_topics:
                 self.sub_topics.append(topic)
-                self.sub_values[topic] = 0
-                self.sub_events[topic] = threading.Event()
+                self.sub_values[topic] = multiprocessing.Value('d', 0.0)
+                self.sub_events[topic] = multiprocessing.Event()
             for topic in _slave.port_topics.pub_topics:
                 self.pub_topics.append(topic)
-                self.pub_values[topic] = 0
+                self.pub_values[topic] = multiprocessing.Value('d', 0.0)
             for topic in _slave.port_topics.err_topics:
                 self.err_topics.append(topic)
-                self.err_values[topic] = [0,0,0] #[err, click_throu, total_recur]
-                self.recur_count[topic] = [0] #[one_call_recur]
+                self.err_values[topic] = multiprocessing.Array('i', 3) #[err, click_throu, correct]
+                self.recur_count[topic] = multiprocessing.Array('i', 2) #[one_call_recur, total_recur]
     
-    def serial_funcs(self, start): 
-        def thread_func():
-            while not params.kb_event.isSet():
+    def comm_funcs(self, start): 
+        self.sample_ticker.set()
+        def comm_process():
+            while not params.kb_event.is_set():
+                #b =  time.time()
                 for slave in self.slaves:
+                    # if slave.name not in self.broken_slave_names:
+                    self.sample_ticker.wait()
                     if slave.kwargs.get('comm_func'):
-                        # b =  time.time()
                         slave.kwargs['comm_func'](start, self, slave)
                         # print(slave.name)
-                        # print( time.time() - b)
-        self.thread_funcs.append(threading.Thread(
-                                    name = f'{self.name}_comm',
-                                    target=thread_func, 
-                                    #args=(,)
-                                    )
-                                )
+                #print(time.time() - b)
+        multiprocessing.Process(
+            name = f'{self.name}_comm',
+            target=comm_process, 
+            #args=(,)
+            ).start()
 
-    def parallel_funcs(self, start): 
+    def analyze_funcs(self, start): 
+        def analyze_process():
+            while not params.kb_event.is_set():
+                lst_analyze_funcs = []
+                for slave in self.slaves:
+                    # if slave.name not in self.broken_slave_names:
+                    if slave.kwargs.get('analyze_func'):
+                        lst_analyze_funcs.append(
+                            multiprocessing.Process(
+                                name=f'{slave.name}_analyze',
+                                target=slave.kwargs['analyze_func'],
+                                args=(start, self, slave,)
+                            )
+                        )
+                time.sleep(params.sample_time)
+                self.sample_ticker.clear()
+                # t = time.time()
+                for process in lst_analyze_funcs:
+                    process.start()
+                for process in lst_analyze_funcs:
+                    process.join()
+                self.sample_ticker.set()
+        multiprocessing.Process(
+            name = f'{self.name}_analyze',
+            target=analyze_process, 
+            #args=(,)
+            ).start()
+    
+    def control_funcs(self, start): 
+        #lst_control_funcs = []
         for slave in self.slaves:
-            if slave.kwargs.get('analyze_func'):
-                self.thread_funcs.append(
-                    threading.Thread(
-                        name=f'{slave.name}_analyze',
-                        target=slave.kwargs['analyze_func'],
-                        args=(start, self, slave,)
-                    )
-                )
-            elif slave.kwargs.get('control_func'):
-                self.thread_funcs.append(
-                    threading.Thread(
-                        name=f'{slave.name}_control',
-                        target=slave.kwargs['control_func'],
-                        args=(self, slave,)
-                    )
-                )
+            # if slave.name not in self.broken_slave_names:
+            if slave.kwargs.get('control_func'):
+                multiprocessing.Process(
+                    name=f'{slave.name}_control',
+                    target=slave.kwargs['control_func'],
+                    args=(self, slave,)
+                ).start()
 
 
 class port_Topics:
     def __init__(self, sub_topics, pub_topics, err_topics):
-        self.event = threading.Event()
+        self.event = multiprocessing.Event()
         self.sub_topics = sub_topics
         self.pub_topics = pub_topics
         self.err_topics = err_topics
@@ -135,13 +160,13 @@ class Slave: # Create Slave data store
     def __init__(self, name, idno, port_topics, **kwargs):
         self.name = name
         self.id = idno # id number of slave
-        self.lst_readings = [] # record readings
-        self.time_readings = [] 
+        self.lst_readings = multiprocessing.Queue()
+        self.time_readings = multiprocessing.Queue()
         if 'DFM' in self.name: 
-            self.DFM_time_readings = {'10_time_readings':[], '60_time_readings':[]} # record time
+            self.DFM_time_readings = {'10_time_readings':params.manager.list(), '60_time_readings':params.manager.list()} # record time
         if 'Scale' in self.name:
-            self.scale_readings = {'10_lst_readings':[], '60_lst_readings':[]}
-            self.scale_time_readings = {'10_time_readings':[], '60_time_readings':[]}
+            self.scale_readings = {'10_lst_readings':params.manager.list(), '60_lst_readings':params.manager.list()}
+            self.scale_time_readings = {'10_time_readings':params.manager.list(), '60_time_readings':params.manager.list()}
         #self.readings = [] # for all data
         self.port_topics = port_topics
         self.kwargs = kwargs # dict of funcs
@@ -369,7 +394,7 @@ DFM_slave = Slave(
                                     'DFM_collect_err', 'DFM_analyze_err', 
                                 ]
                                 ),
-                comm_func=Modbus.VOID,
+                # comm_func=Modbus.VOID,
                 analyze_func=Modbus.DFM_data_analyze
                 )
 
@@ -385,7 +410,7 @@ DFM_AOG_slave = Slave(
                                     'DFM_AOG_collect_err', 'DFM_AOG_analyze_err'
                                 ]
                                 ),
-                    comm_func=Modbus.VOID,
+                    # comm_func=Modbus.VOID,
                     analyze_func=Modbus.DFM_data_analyze
                     )
 
@@ -403,8 +428,8 @@ ADDA_slave = Slave(
                                     'ADDA_collect_err', 'ADDA_set_err', 'ADDA_analyze_err'
                                 ]
                                 ),
-                    comm_func=Modbus.VOID,
-                    analyze_func=Modbus.VOID,
+                    # comm_func=Modbus.VOID,
+                    # analyze_func=Modbus.VOID,
                     )
 
 Air_MFC_slave = Slave(
@@ -460,8 +485,8 @@ WatchDog_slave = Slave(
                                     'WatchDog_collect_err', 'WatchDog_set_err', 'WatchDog_analyze_err'
                                 ]
                                 ),
-                    comm_func=Modbus.VOID,
-                    analyze_func=Modbus.VOID,
+                    # comm_func=Modbus.VOID,
+                    # analyze_func=Modbus.VOID,
                     )
 
 LambdaPID_slave = Slave(
@@ -661,15 +686,15 @@ PID_port = device_port(
 
 lst_ports = [
             MFC_port,
-            Scale_port, 
-            RS232_port, 
+            # Scale_port, 
+            # RS232_port, 
             Setup_port,
-            GPIO_port,
-            ADDA_port,
-            WatchDog_port,
-            PID_port
+            # GPIO_port,
+            # ADDA_port,
+            # WatchDog_port,
+            # PID_port
             ]
 
-NodeRed = {}
+NodeRed = params.manager.dict()
 
 print('Ports are all set')

@@ -5,6 +5,7 @@ from datetime import datetime
 import RPi.GPIO as GPIO
 import pigpio
 import serial
+import multiprocessing
 
 # custome modules
 import params
@@ -37,15 +38,15 @@ try:
     PIG.set_mode(config.channel_DFM_AOG, pigpio.INPUT)
     PIG.set_pull_up_down(config.channel_DFM_AOG, pigpio.PUD_DOWN)
     def DFM_data_collect(user_gpio, level, tick):
-        config.DFM_slave.lst_readings.append(time.time())
+        config.DFM_slave.lst_readings.put(time.time())
     def DFM_AOG_data_collect(user_gpio, level, tick):
-        config.DFM_AOG_slave.lst_readings.append(time.time())
+        config.DFM_AOG_slave.lst_readings.put(time.time())
     PIG.callback(user_gpio=config.channel_DFM, edge=pigpio.RISING_EDGE, func=DFM_data_collect)
     PIG.callback(user_gpio=config.channel_DFM_AOG, edge=pigpio.RISING_EDGE, func=DFM_AOG_data_collect)
     print('GPIO ports open')
     
 except Exception as ex:
-    print ("open serial port error: " + str(ex))
+    print("open serial port error: " + str(ex))
     for device_port in config.lst_ports:
         if type(device_port.port) is serial.serialposix.Serial: 
             device_port.port.close()
@@ -54,15 +55,15 @@ except Exception as ex:
 #-------------------------Sub-Threadingggg-----------------------------------------
 try:
     for device_port in config.lst_ports: 
-        device_port.serial_funcs(start)
-        device_port.parallel_funcs(start) 
-        print(device_port.thread_funcs)
-        for subthread in device_port.thread_funcs:
-            subthread.start()
-            print('start', subthread.name)
-           
+        device_port.comm_funcs(start)
+        device_port.analyze_funcs(start)
+        device_port.control_funcs(start)
+    
+    MQTT_config.multi_pub_process.start()
+    Mariadb_config.multi_insert_process.start()
+
 except Exception as ex:
-    print ("Threading funcs error: " + str(ex))
+    print("Threading funcs error: " + str(ex))
     for device_port in config.lst_ports:
         if type(device_port.port) is serial.serialposix.Serial:
             device_port.port.close()
@@ -70,11 +71,9 @@ except Exception as ex:
 
 #-------------------------Main Threadingggg-----------------------------------------
 try:
-    while not params.kb_event.isSet():
-        if not params.ticker.wait(params.sample_time):
-            print("=="*10 + f'Elapsed time: {round((time.time()-start),2)}' + "=="*10)
-            #for device_port in config.lst_ports: 
-                #print(device_port.thread_funcs)
+    while not params.kb_event.is_set():
+        print("=="*10 + f'Elapsed time: {round((time.time()-start),2)}' + "=="*10)
+        time.sleep(params.sample_time)
         
 except KeyboardInterrupt: 
     print(f"Keyboard Interrupt in main thread!")
@@ -84,19 +83,20 @@ except Exception as ex:
     print("=="*30)
 finally:
     print("=="*30)
+    for process in multiprocessing.active_children():
+        process.join()
+        print(f'Join process: {process.name}')
     for device_port in config.lst_ports: 
         if type(device_port.port) is serial.serialposix.Serial:
             device_port.port.close()
         elif device_port.port == 'GPIO':
-            GPIO.cleanup()
-        Modbus.logger.info(f'Close {device_port.name}, err are {device_port.err_values}')
-        Modbus.logger.info(f'correct rates : {[f"{k}:{round((v[1] - v[0] + v[2])/(v[1] + 0.00000000000000001)*100,2)}%" for k,v in device_port.err_values.items()]}')
-    Modbus.logger.info(f"Program duration: {time.time() - start}")
-    Mariadb_config.conn.close()
-    print("close connection to MariaDB")
-    MQTT_config.client_0.loop_stop()
-    MQTT_config.client_0.disconnect()
-    print("close connection to MQTT broker")
+            #GPIO.cleanup()
+            PIG.stop()
+            
+        Modbus.logger.critical(f'Close {device_port.name}, err are {[f"{k}:{v[:]}" for k,v in device_port.err_values.items()]}')
+        Modbus.logger.critical(f'correct rates : {[f"{k}:{round(v[2]/(v[1] + 0.00000000000000001)*100,2)}%" for k,v in device_port.err_values.items()]}')
+        Modbus.logger.critical(f'Close {device_port.name}, recur are {[f"{k}:{v[:]}" for k,v in device_port.recur_count.items()]}')
+    Modbus.logger.critical(f"Program duration: {time.time() - start}")
     print('kill main thread')
     exit()
 # %%
