@@ -74,6 +74,9 @@ try:
     while not params.kb_event.is_set():
         print("=="*10 + f'Elapsed time: {round((time.time()-start),2)}' + "=="*10)
         time.sleep(params.sample_time)
+    for process in multiprocessing.active_children():
+        process.join()
+        print(f'Join process: {process.name}')
         
 except KeyboardInterrupt: 
     print(f"Keyboard Interrupt in main thread!")
@@ -83,9 +86,6 @@ except Exception as ex:
     print("=="*30)
 finally:
     print("=="*30)
-    for process in multiprocessing.active_children():
-        process.join()
-        print(f'Join process: {process.name}')
     for device_port in config.lst_ports: 
         if type(device_port.port) is serial.serialposix.Serial:
             device_port.port.close()

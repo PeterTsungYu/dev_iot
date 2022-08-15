@@ -75,7 +75,6 @@ class device_port:
         self.err_values = {}
         self.recur_count = {}
         self.comm_ticker = multiprocessing.Event()
-        self.analyze_ticker = multiprocessing.Event()
         # self.broken_slave_names = params.manager.list()
 
 
@@ -126,13 +125,11 @@ class device_port:
                         )
                 time.sleep(params.sample_time)
                 self.comm_ticker.clear()
-                self.analyze_ticker.set()
                 # t = time.time()
                 for process in lst_analyze_funcs:
                     process.start()
                 for process in lst_analyze_funcs:
                     process.join()
-                self.analyze_ticker.clear()
                 self.comm_ticker.set()
         multiprocessing.Process(
             name = f'{self.name}_analyze',
@@ -670,7 +667,7 @@ lst_ports = [
             Setup_port,
             # GPIO_port,
             # WatchDog_port,
-            # PID_port
+            PID_port
             ]
 
 NodeRed = params.manager.dict()

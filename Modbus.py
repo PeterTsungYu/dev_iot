@@ -77,8 +77,8 @@ def analyze_decker(func):
             _size_lst['short_lst_readings'].append(_lst_readings)
             _size_time['short_time_readings'].append(_time_readings)
             if len(_size_lst['short_lst_readings']) > 5: # aggregate lists for 10s in a list
-                _size_lst['short_lst_readings'] = params.manager.list(_size_lst['short_lst_readings'][-10:])
-                _size_time['short_time_readings'] = params.manager.list(_size_time['short_time_readings'][-10:])
+                _size_lst['short_lst_readings'] = params.manager.list(_size_lst['short_lst_readings'][-5:])
+                _size_time['short_time_readings'] = params.manager.list(_size_time['short_time_readings'][-5:])
             _lst_readings = _size_lst
             _time_readings = _size_time
             cond = len(_lst_readings['short_lst_readings'])
@@ -139,11 +139,11 @@ def Scale_data_collect(start, device_port, slave):
     collect_err = device_port.err_values[f'{slave.name}_collect_err']
     try:
         collect_err[1] += 1
-        slave.time_readings.put(time.time()-start)
         time.sleep(params.time_out) # wait for the data input to the buffer
         if port.inWaiting() > slave.r_wait_len:
             readings = port.read(port.inWaiting()).decode('utf-8')
             readings = [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ \-][ .\d]{7}', readings)]
+            slave.time_readings.put(time.time()-start)
             slave.lst_readings.put(readings)
             collect_err[2] += 1
             logging.info(f'Read {readings} from slave_{slave.name}')
@@ -175,7 +175,6 @@ def Modbus_Comm(start, device_port, slave):
         #logging.debug(slave.r_rtu)
         #logging.debug(bytes.fromhex(slave.r_rtu))
         port.write(bytes.fromhex(slave.r_rtu)) #hex to binary(byte) 
-        slave.time_readings.put(time.time()-start)
         time.sleep(params.time_out)
         #logging.debug(port.inWaiting())
         _data_len = port.inWaiting()
@@ -183,6 +182,7 @@ def Modbus_Comm(start, device_port, slave):
             readings = port.read(_data_len).hex() # after reading, the buffer will be clean        
             #logging.debug(readings)
             if slave.name == 'GA':
+                slave.time_readings.put(time.time()-start)
                 slave.lst_readings.put(readings)
                 logging.info(f'Read from slave_{slave.name}')
             else:    
@@ -195,6 +195,7 @@ def Modbus_Comm(start, device_port, slave):
                     #logging.debug(crc)
                     # check sta, func code, datalen, crc
                     if (crc[-2:] + crc[:2]) == readings[-4:]:
+                        slave.time_readings.put(time.time()-start)
                         slave.lst_readings.put(readings)
                         collect_err[2] += 1
                         logging.info(f'Read from slave_{slave.name}')
@@ -320,7 +321,6 @@ def MFC_Comm(start, device_port, slave):
         #logging.debug(slave.r_rtu)
         #logging.debug(bytes(slave.r_rtu, 'ASCII'))
         port.write(bytes(slave.r_rtu, 'ASCII')) #ASCII to byte
-        slave.time_readings.put(time.time()-start)
         time.sleep(params.time_out)
         #logging.debug(port.inWaiting())
         _data_len = port.inWaiting()
@@ -334,6 +334,7 @@ def MFC_Comm(start, device_port, slave):
                 readings = readings[readings.index(re_id):(readings.index(re_id)+slave.r_wait_len)]
                 if re.findall('\d+.\d+',readings):
                     logging.debug(f'collect: {readings}')
+                    slave.time_readings.put(time.time()-start)
                     slave.lst_readings.put(readings)
                     collect_err[2] += 1
                     logging.info(f'Read from slave_{slave.name}')
@@ -447,20 +448,25 @@ def MFC_Comm(start, device_port, slave):
 def ADAM_TC_analyze(start, device_port, slave, **kwargs):
     _lst_readings = kwargs.get('_lst_readings')['short_lst_readings']
     _time_readings = kwargs.get('_time_readings')['short_time_readings']
-    arr_readings = np.array([[int(reading[i-4:i],16) for i in range(10,len(reading)-2,4)] for reading in _lst_readings[-1]])
-    _last_avg = tuple(np.round(1370/65535*(np.sum(arr_readings, axis=0) / len(_lst_readings[-1])), 1))
-    _last_avg = tuple([round(_time_readings[-1][-1],2)]) + _last_avg
-    
-    if _lst_readings[0] and _lst_readings[0] and _lst_readings[-1] and _lst_readings[-1]: 
-        _5_lst_first = np.array([1370/65535*int(_lst_readings[0][0][i-4:i],16) for i in range(10,len(_lst_readings[0][0])-2,4)])
-        _5_time_first = _time_readings[0][0]
-        _5_lst_last = np.array([1370/65535*int(_lst_readings[-1][-1][i-4:i],16) for i in range(10,len(_lst_readings[-1][-1])-2,4)])
-        _5_time_last = _time_readings[-1][-1]
-        _5_rates = tuple(np.round((_5_lst_last - _5_lst_first) / (_5_time_last - _5_time_first))) # BR_rate, SR_rate
+    _lst = []
+    _time = []
+    for i in range(0, len(_lst_readings)):
+        if _lst_readings[i]:
+            _time.extend(_time_readings[i])
+            _lst.extend(_lst_readings[i])
+    if _lst:
+        arr_readings = np.array([[int(reading[i-4:i],16) for i in range(10,len(reading)-2,4)] for reading in _lst])
+        arr_readings = tuple(np.round(1370/65535*arr_readings, 2))
+        _last = tuple([round(_time[-1],2)]) + tuple(arr_readings[-1])
+        
+        if _time[0] == _time[-1]:
+            _5_rates = tuple([0]*8)
+        else:
+            _5_rates = tuple(np.round((arr_readings[-1] - arr_readings[0]) / (_time[-1] - _time[0]))) # BR_rate, SR_rate
     else:
+        _last = tuple([round(_time[-1],2)]) + tuple([0]*8)
         _5_rates = tuple([0]*8)
-    _readings = _last_avg + _5_rates[0:2]
-
+    _readings = _last + _5_rates[0:2]  
     return _readings
 
 
