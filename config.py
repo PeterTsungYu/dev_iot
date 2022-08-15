@@ -75,6 +75,7 @@ class device_port:
         self.err_values = {}
         self.recur_count = {}
         self.comm_ticker = multiprocessing.Event()
+        self.analyze_ticker = multiprocessing.Event()
         # self.broken_slave_names = params.manager.list()
 
 
@@ -96,11 +97,12 @@ class device_port:
         def comm_process():
             while not params.kb_event.is_set():
                 #b =  time.time()
+                self.comm_ticker.wait()
                 for slave in self.slaves:
                     # if slave.name not in self.broken_slave_names:
-                    self.comm_ticker.wait()
                     if slave.kwargs.get('comm_func'):
                         slave.kwargs['comm_func'](start, self, slave)
+                self.analyze_ticker.set()
                         # print(slave.name)
                 #print(time.time() - b)
         multiprocessing.Process(
@@ -125,11 +127,13 @@ class device_port:
                         )
                 time.sleep(params.sample_time)
                 self.comm_ticker.clear()
+                self.analyze_ticker.wait()
                 # t = time.time()
                 for process in lst_analyze_funcs:
                     process.start()
                 for process in lst_analyze_funcs:
                     process.join()
+                self.analyze_ticker.clear()
                 self.comm_ticker.set()
         multiprocessing.Process(
             name = f'{self.name}_analyze',
@@ -665,8 +669,8 @@ lst_ports = [
             # Scale_port, 
             # RS232_port, 
             Setup_port,
-            # GPIO_port,
-            # WatchDog_port,
+            GPIO_port,
+            WatchDog_port,
             PID_port
             ]
 

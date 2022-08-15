@@ -448,6 +448,7 @@ def MFC_Comm(start, device_port, slave):
 def ADAM_TC_analyze(start, device_port, slave, **kwargs):
     _lst_readings = kwargs.get('_lst_readings')['short_lst_readings']
     _time_readings = kwargs.get('_time_readings')['short_time_readings']
+    print(_time_readings)
     _lst = []
     _time = []
     for i in range(0, len(_lst_readings)):

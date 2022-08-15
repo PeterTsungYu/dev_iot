@@ -6,7 +6,7 @@ import signal
 time_out          = 0.1 # for collecting data
 sample_time       = 0.7 # for analyzing data
 comm_time         = 1
-recur_try         = 2
+recur_try         = 1
 exempt_try        = 30
 exempt_threshold  = 10
 
