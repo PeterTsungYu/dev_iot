@@ -83,6 +83,7 @@ def analyze_decker(func):
             _time_readings = _size_time
             cond = len(_lst_readings['short_lst_readings'])
         elif 'DFM' in slave.name:
+            print(_lst_readings)
             _DFM_time = slave.size_time_readings
             _DFM_time['short_time_readings'].append(_lst_readings)
             _DFM_time['long_time_readings'].append(_lst_readings)
@@ -109,7 +110,7 @@ def analyze_decker(func):
                 ## to slave data list
                 #slave.readings.append(_readings)
                 analyze_err[2] += 1
-                logging.info(f"{slave.name}_analyze done: record {_readings}")
+                logging.critical(f"{slave.name}_analyze done: record {_readings}")
             elif (device_port.name == 'GPIO_port') and (cond == 0):
                 _readings = tuple([_time_readings, 0])
                 # casting
@@ -121,7 +122,7 @@ def analyze_decker(func):
                 ## to slave data list
                 #slave.readings.append(_readings)
                 analyze_err[2] += 1
-                logging.info(f"{slave.name}_analyze done: record {_readings}")
+                logging.critical(f"{slave.name}_analyze done: record {_readings}")
             else:
                 analyze_err[0] += 1
                 logging.warning(f"{slave.name}_analyze record nothing")
@@ -448,7 +449,7 @@ def MFC_Comm(start, device_port, slave):
 def ADAM_TC_analyze(start, device_port, slave, **kwargs):
     _lst_readings = kwargs.get('_lst_readings')['short_lst_readings']
     _time_readings = kwargs.get('_time_readings')['short_time_readings']
-    print(_time_readings)
+    #print(_time_readings)
     _lst = []
     _time = []
     for i in range(0, len(_lst_readings)):
@@ -463,7 +464,7 @@ def ADAM_TC_analyze(start, device_port, slave, **kwargs):
         if _time[0] == _time[-1]:
             _5_rates = tuple([0]*8)
         else:
-            _5_rates = tuple(np.round((arr_readings[-1] - arr_readings[0]) / (_time[-1] - _time[0]))) # BR_rate, SR_rate
+            _5_rates = tuple(np.round((arr_readings[-1] - arr_readings[0]) / (_time[-1] - _time[0]),2)) # BR_rate, SR_rate
     else:
         _last = tuple([round(_time[-1],2)]) + tuple([0]*8)
         _5_rates = tuple([0]*8)

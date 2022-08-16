@@ -14,7 +14,7 @@ import params
 import PIDsim
 
 #-----------------Database----------------------------------------------
-db_time = datetime.now().strftime('%Y_%m_%d_%H_%M')
+db_time = datetime.now().strftime('%Y_%m_%d_%H_%M_BW')
 db_connection = False
 
 #-----------------Serial port and DeviceID------------------------------
@@ -49,7 +49,7 @@ pumppid_id    = '16'
 #-----GPIO port setting----------------------------------------------------------------
 ## DFM
 # read High as 3.3V
-channel_DFM     = 18
+channel_DFM     = 24
 channel_DFM_AOG = 23
 GPIO.setmode(GPIO.BCM)
 
@@ -670,8 +670,8 @@ lst_ports = [
             # RS232_port, 
             Setup_port,
             GPIO_port,
-            WatchDog_port,
-            PID_port
+            # WatchDog_port,
+            # PID_port
             ]
 
 NodeRed = params.manager.dict()
