@@ -83,10 +83,10 @@ def analyze_decker(func):
             _time_readings = _size_time
             cond = len(_lst_readings['short_lst_readings'])
         elif 'DFM' in slave.name:
-            print(_lst_readings)
+            #print(_time_readings)
             _DFM_time = slave.size_time_readings
-            _DFM_time['short_time_readings'].append(_lst_readings)
-            _DFM_time['long_time_readings'].append(_lst_readings)
+            _DFM_time['short_time_readings'].append(_time_readings)
+            _DFM_time['long_time_readings'].append(_time_readings)
             if len(_DFM_time['short_time_readings']) > 10: # aggregate lists for 10s in a list
                 _DFM_time['short_time_readings'] = params.manager.list(_DFM_time['short_time_readings'][-10:])
             if len(_DFM_time['long_time_readings']) > 60: # aggregate lists for 60s in a list
@@ -105,7 +105,7 @@ def analyze_decker(func):
                 ind = 1
                 for topic in slave.port_topics.pub_topics:    
                     device_port.pub_values[topic].value = _readings[ind]
-                    #logging.debug(f'{topic} {device_port.pub_values[topic].value}')
+                    #logging.critical(f'{topic} {device_port.pub_values[topic].value}')
                     ind += 1
                 ## to slave data list
                 #slave.readings.append(_readings)

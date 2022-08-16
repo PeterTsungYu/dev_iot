@@ -49,8 +49,8 @@ pumppid_id    = '16'
 #-----GPIO port setting----------------------------------------------------------------
 ## DFM
 # read High as 3.3V
-channel_DFM     = 24
-channel_DFM_AOG = 23
+channel_DFM     = 16
+channel_DFM_AOG = 26
 GPIO.setmode(GPIO.BCM)
 
 #-----Cls----------------------------------------------------------------
@@ -665,7 +665,7 @@ PID_port = device_port(
                     )
 
 lst_ports = [
-            MFC_port,
+            # MFC_port,
             # Scale_port, 
             # RS232_port, 
             Setup_port,

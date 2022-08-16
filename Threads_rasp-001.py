@@ -37,11 +37,11 @@ try:
     PIG.set_mode(config.channel_DFM_AOG, pigpio.INPUT)
 
     def DFM_data_collect(user_gpio, level, tick):
-        print('DFM')
-        config.DFM_slave.lst_readings.put(time.time())
+        #print('DFM')
+        config.DFM_slave.time_readings.put(time.time())
     def DFM_AOG_data_collect(user_gpio, level, tick):
-        print('DFM_AOG')
-        config.DFM_AOG_slave.lst_readings.put(time.time())
+        #print('DFM_AOG')
+        config.DFM_AOG_slave.time_readings.put(time.time())
     PIG.callback(user_gpio=config.channel_DFM, edge=pigpio.RISING_EDGE, func=DFM_data_collect)
     PIG.callback(user_gpio=config.channel_DFM_AOG, edge=pigpio.RISING_EDGE, func=DFM_AOG_data_collect)
     print('GPIO ports open')

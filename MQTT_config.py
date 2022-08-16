@@ -93,17 +93,16 @@ def multi_pub():
         time.sleep(params.comm_time)
         for device_port in config.lst_ports:
             #print(device_port.name)
-            if (device_port.name != 'GPIO_port'):
-                for _slave in device_port.slaves:
-                    payload = {}
-                    #print(_slave.name)
-                    for _topic in _slave.port_topics.pub_topics:
-                        payload[_topic] = device_port.pub_values[_topic].value
-                        #print(type(payload[_topic]), payload[_topic])
-                    payload = json.dumps(payload)
-                    #print(f'pub_{payload}')
-                    client_mqtt.publish(topic=_slave.name, payload=payload, qos=0, retain=False)
-                    #rint(f"pub {_slave.name}:{payload} succeed from {client_mqtt._client_id} >>> localhost")
+            for _slave in device_port.slaves:
+                payload = {}
+                #print(_slave.name)
+                for _topic in _slave.port_topics.pub_topics:
+                    payload[_topic] = device_port.pub_values[_topic].value
+                    #print(type(payload[_topic]), payload[_topic])
+                payload = json.dumps(payload)
+                #print(f'pub_{payload}')
+                client_mqtt.publish(topic=_slave.name, payload=payload, qos=0, retain=False)
+                #print(f"pub {_slave.name}:{payload} succeed from {client_mqtt._client_id} >>> localhost")
         # client.publish(topic='DFM_total', payload=config.GPIO_port.pub_values['DFM_RichGas'] + config.GPIO_port.pub_values['DFM_AOG'], qos=2, retain=False)
         # client_mqtt.publish(topic='DFM', payload=json.dumps({'10_DFM_RichGas':config.GPIO_port.pub_values['10_DFM_RichGas'].value, '60_DFM_RichGas':config.GPIO_port.pub_values['60_DFM_RichGas'].value}), qos=2, retain=False)
         # client_mqtt.publish(topic='DFM_AOG', payload=json.dumps({'10_DFM_AOG':config.GPIO_port.pub_values['10_DFM_AOG'].value, '60_DFM_AOG':config.GPIO_port.pub_values['60_DFM_AOG'].value}), qos=2, retain=False)
