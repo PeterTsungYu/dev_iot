@@ -14,7 +14,7 @@ ticker = threading.Event()
 kb_event = threading.Event()
 def signal_handler(signum, frame):
     kb_event.set()
-signal.signal(signal.SIGINT, signal_handler) # Keyboard interrupt to stop the program
+signal.signal(signal.SIGTERM, signal_handler) # Stop systemctl to stop the program
 
 
 def terminate(event): # ask user input to stop the program

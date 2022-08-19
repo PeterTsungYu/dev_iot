@@ -12,7 +12,7 @@ from crccheck.crc import Crc16Modbus
 import logging
 import ADDA_ADS1256
 import ADDA_DAC8532
-import RPi.GPIO as GPIO
+#import RPi.GPIO as GPIO
 import pigpio
 
 #custom modules
@@ -47,7 +47,7 @@ DAC.DAC8532_Out_Voltage(ADDA_DAC8532.channel_B, 0)
 
 channel_Relay01_IN1     = 24
 channel_Relay01_IN2     = 25
-GPIO.setmode(GPIO.BCM) # for software PWM
+#GPIO.setmode(GPIO.BCM) # for software PWM
 PIG = pigpio.pi() # for hardware PWM
 
 #------------------------------Decker---------------------------------
@@ -217,20 +217,13 @@ def PWM_comm(start, device_port, slave):
                 duty = device_port.sub_values[f'{slave.name}_duty_SV']
                 f = device_port.sub_values[f'{slave.name}_f_SV']
                 if open_SV:
-                    #print(dir(slave.GPIO_instance))
-                    #GPIO.setup(slave.id, GPIO.OUT, initial=0)
-                    if slave.GPIO_instance:
-                        slave.GPIO_instance.ChangeFrequency(f)
-                        slave.GPIO_instance.ChangeDutyCycle(duty)
-                    else:
-                        slave.GPIO_instance = GPIO.PWM(slave.id, f)
-                        slave.GPIO_instance.start(duty)
+                    PIG.set_PWM_frequency(self.id, f)
+                    print(PIG.get_PWM_frequency(self.id))
+                    PIG.set_PWM_dutycycle(self.id, duty)
+                    print(PIG.get_PWM_dutycycle(self.id))
                     print(f"open at duty:{duty}, f: {f}")
                 else:
-                    if slave.GPIO_instance:
-                        slave.GPIO_instance.stop()
-                        # slave.GPIO_instance = GPIO.PWM(slave.id, 1)
-                        # slave.GPIO_instance.start(0)
+                    PIG.write(self.id, 0)
                     print(f"close at duty:{0}, f: {1}")
                 for i in device_port.sub_events.values():
                     i.clear()
@@ -291,10 +284,10 @@ def Relay_comm(start, device_port, slave):
             try: # try to set value
                 if device_port.sub_values[topic]:
                     #GPIO.output(channel_Relay01_IN1, 0)
-                    GPIO.output(channel_Relay01_IN2, 0)
+                    PIG.output(channel_Relay01_IN2, 0)
                 else:
                     #GPIO.output(channel_Relay01_IN1, 1)
-                    GPIO.output(channel_Relay01_IN2, 1)
+                    PIG.output(channel_Relay01_IN2, 1)
                 device_port.sub_events[topic].clear()
             except Exception as e:
                 set_err[0] += 1

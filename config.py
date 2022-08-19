@@ -149,7 +149,7 @@ class Slave: # Create Slave data store
         self.readings = [] # for all data
         self.port_topics = port_topics
         self.kwargs = kwargs # dict of funcs
-        self.GPIO_instance = None
+        #self.GPIO_instance = None
 
     def read_rtu(self, *_fields, wait_len):
         self.r_wait_len = wait_len
@@ -174,9 +174,17 @@ class Slave: # Create Slave data store
     
     def PWM_instance(self, mode: str, frequency=1, duty=0):
         if mode == 'software': # frequency up tp 1-150Hz, duty = 0-100%
-            Modbus.GPIO.setup(self.id, Modbus.GPIO.OUT, initial=0)
-            self.GPIO_instance = Modbus.GPIO.PWM(self.id, frequency)  
-            self.GPIO_instance.start(duty)
+            Modbus.PIG.set_mode(self.id, Modbus.pigpio.OUTPUT)
+            # dutycycle:= 0-range (range defaults to 255).
+            ## dutyrange set to 100
+            Modbus.PIG.set_PWM_range(self.id, 100) 
+            # Each GPIO can be independently set to one of 18 different PWM frequencies.
+            ## 8000  4000  2000 1600 1000  800  500  400  320
+            ## 250   200   160  100   80   50   40   20   10
+            Modbus.PIG.set_PWM_frequency(self.id, 10)
+            print(Modbus.PIG.get_PWM_frequency(self.id))
+            Modbus.PIG.set_PWM_dutycycle(self.id, 0)
+            print(Modbus.PIG.get_PWM_dutycycle(self.id))
         elif mode == 'hardware': # frequency up tp 0-30kHz (or more), duty = 0-100%
             Modbus.PIG.set_mode(self.id, Modbus.pigpio.ALT5)
             Modbus.PIG.hardware_PWM(self.id, 0, 0)

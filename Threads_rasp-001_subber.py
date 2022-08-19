@@ -32,9 +32,12 @@ try:
             device_port.port.reset_output_buffer() #flush output buffer
     print('serial ports open')
 
-    Modbus.GPIO.setup(config.channel_Relay01_IN1, Modbus.GPIO.OUT, initial=1)
-    Modbus.GPIO.setup(config.channel_Relay01_IN2, Modbus.GPIO.OUT, initial=1)
-    Modbus.GPIO.setup(config.GPIO_TTL, Modbus.GPIO.OUT, initial=1)
+    Modbus.PIG.set_mode(config.channel_Relay01_IN1, Modbus.pigpio.OUTPUT)
+    Modbus.PIG.write(config.channel_Relay01_IN1, 1)
+    Modbus.PIG.set_mode(config.channel_Relay01_IN2, Modbus.pigpio.OUTPUT)
+    Modbus.PIG.write(config.channel_Relay01_IN2, 1)
+    Modbus.PIG.set_mode(config.GPIO_TTL, Modbus.pigpio.OUTPUT)
+    Modbus.PIG.write(config.GPIO_TTL, 1)
     '''def DFM_data_collect(self):
         config.DFM_slave.time_readings.append(time.time())
     def DFM_AOG_data_collect(self):
@@ -65,7 +68,11 @@ except Exception as ex:
     for device_port in config.lst_ports:
         if type(device_port.port) is serial.serialposix.Serial:
             device_port.port.close()
-    Modbus.GPIO.cleanup()
+        elif device_port.port == 'GPIO':
+            for slave in device_port.slaves:
+                Modbus.PIG.write(slave.id, 0)
+            Modbus.PIG.stop()
+            print ("close GPIO")
     print ("\r\nProgram end")
     exit()
 
@@ -88,9 +95,7 @@ finally:
             device_port.port.close()
         elif device_port.port == 'GPIO':
             for slave in device_port.slaves:
-                if slave.GPIO_instance:
-                    slave.GPIO_instance.stop()
-            Modbus.GPIO.cleanup()
+                Modbus.PIG.write(slave.id, 0)
             Modbus.PIG.stop()
             print ("close GPIO")
         Modbus.logger.info(f'Close {device_port.name}, err are {device_port.err_values}')
