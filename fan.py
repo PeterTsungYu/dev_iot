@@ -9,8 +9,9 @@ GPIO.set_mode(channel, pigpio.OUTPUT)
 
 def signal_handler(signum, frame):
     # Pull down the GPIO-Pin and cleanup with stop()
-    GPIO.write(channel, 0)
+    GPIO.write(channel, 1)
     GPIO.stop()
+    exit()
 signal.signal(signal.SIGTERM, signal_handler) # Stop systemctl to stop the program
  
 upper_temp = 50

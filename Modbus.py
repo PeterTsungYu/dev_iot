@@ -217,13 +217,13 @@ def PWM_comm(start, device_port, slave):
                 duty = device_port.sub_values[f'{slave.name}_duty_SV']
                 f = device_port.sub_values[f'{slave.name}_f_SV']
                 if open_SV:
-                    PIG.set_PWM_frequency(self.id, f)
-                    print(PIG.get_PWM_frequency(self.id))
-                    PIG.set_PWM_dutycycle(self.id, duty)
-                    print(PIG.get_PWM_dutycycle(self.id))
+                    PIG.set_PWM_frequency(slave.id, f)
+                    print(PIG.get_PWM_frequency(slave.id))
+                    PIG.set_PWM_dutycycle(slave.id, duty)
+                    print(PIG.get_PWM_dutycycle(slave.id))
                     print(f"open at duty:{duty}, f: {f}")
                 else:
-                    PIG.write(self.id, 0)
+                    PIG.write(slave.id, 0)
                     print(f"close at duty:{0}, f: {1}")
                 for i in device_port.sub_events.values():
                     i.clear()
@@ -284,10 +284,10 @@ def Relay_comm(start, device_port, slave):
             try: # try to set value
                 if device_port.sub_values[topic]:
                     #GPIO.output(channel_Relay01_IN1, 0)
-                    PIG.output(channel_Relay01_IN2, 0)
+                    PIG.write(channel_Relay01_IN2, 0)
                 else:
                     #GPIO.output(channel_Relay01_IN1, 1)
-                    PIG.output(channel_Relay01_IN2, 1)
+                    PIG.write(channel_Relay01_IN2, 1)
                 device_port.sub_events[topic].clear()
             except Exception as e:
                 set_err[0] += 1

@@ -58,6 +58,7 @@ GPIO_PWM_1              = 12 #GPIO 12 (PWM0)    # GP
 GPIO_PWM_2              = 13 #GPIO 13 (PWM1)    # Blower
 GPIO_PWM_3              = 26 #GPIO 26 (PWM)     # Nozzle 
 GPIO_TTL                = 5
+GPIO_MOS                = 21
 
 #-----Cls----------------------------------------------------------------
 def tohex(value):

@@ -38,6 +38,8 @@ try:
     Modbus.PIG.write(config.channel_Relay01_IN2, 1)
     Modbus.PIG.set_mode(config.GPIO_TTL, Modbus.pigpio.OUTPUT)
     Modbus.PIG.write(config.GPIO_TTL, 1)
+    Modbus.PIG.set_mode(config.GPIO_MOS, Modbus.pigpio.OUTPUT)
+    Modbus.PIG.write(config.GPIO_MOS, 0)
     '''def DFM_data_collect(self):
         config.DFM_slave.time_readings.append(time.time())
     def DFM_AOG_data_collect(self):
@@ -95,7 +97,8 @@ finally:
             device_port.port.close()
         elif device_port.port == 'GPIO':
             for slave in device_port.slaves:
-                Modbus.PIG.write(slave.id, 0)
+                if isinstance(slave.id, int): 
+                    Modbus.PIG.write(slave.id, 0)
             Modbus.PIG.stop()
             print ("close GPIO")
         Modbus.logger.info(f'Close {device_port.name}, err are {device_port.err_values}')
@@ -111,4 +114,4 @@ finally:
     print("close connection to MQTT broker")
     
     print('kill main thread')
-    exit()
+    #exit()
