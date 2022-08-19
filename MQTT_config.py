@@ -32,7 +32,7 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
     def on_message(client, userdata, msg):
         #print(msg.topic+ ": " + str(msg.payload) + f">>> {client_id}")
         resp = json.loads(msg.payload.decode('utf-8'))
-        print(resp)
+        #print(resp)
         '''if (msg.topic == 'NodeRed'):
             print(f'{hostname} Receive topic: NodeRed')
             _resp = {}
@@ -67,9 +67,9 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
                 if port.sub_values.get(key) != None:
                     if (port.sub_values[key] != value):
                         port.sub_values[key] = value
-                        print(key, port.sub_values[key])
+                        #print(key, port.sub_values[key])
                         port.sub_events[key].set()
-                        print(port.sub_events[key].isSet())
+                        #print(port.sub_events[key].isSet())
                     # elif type(port.sub_values[key]) != type(value):
                     #     if isinstance(value, bool):
                     #         if isinstance(port.sub_values[key], int):

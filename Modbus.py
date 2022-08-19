@@ -217,13 +217,23 @@ def PWM_comm(start, device_port, slave):
                 duty = device_port.sub_values[f'{slave.name}_duty_SV']
                 f = device_port.sub_values[f'{slave.name}_f_SV']
                 if open_SV:
-                    slave.GPIO_instance.start(duty) # start at initial duty
-                    slave.GPIO_instance.ChangeFrequency(f) # start at initial frequency
+                    #print(dir(slave.GPIO_instance))
+                    #GPIO.setup(slave.id, GPIO.OUT, initial=0)
+                    if slave.GPIO_instance:
+                        slave.GPIO_instance.ChangeFrequency(f)
+                        slave.GPIO_instance.ChangeDutyCycle(duty)
+                    else:
+                        slave.GPIO_instance = GPIO.PWM(slave.id, f)
+                        slave.GPIO_instance.start(duty)
                     print(f"open at duty:{duty}, f: {f}")
                 else:
-                    slave.GPIO_instance.stop()
-                    print('close')
-                device_port.sub_events[topic].clear()
+                    if slave.GPIO_instance:
+                        slave.GPIO_instance.stop()
+                        # slave.GPIO_instance = GPIO.PWM(slave.id, 1)
+                        # slave.GPIO_instance.start(0)
+                    print(f"close at duty:{0}, f: {1}")
+                for i in device_port.sub_events.values():
+                    i.clear()
                 print('clear flag')
             except Exception as e:
                 set_err[0] += 1
@@ -304,15 +314,15 @@ def ADDA_comm(start, device_port, slave):
     #collect:
     #8ch 24bit high-precision ADC (4ch differential input), 30ksps sampling rate
     ADC_Value = ADC.ADS1256_GetAll()
-    print(ADC_Value)
-    print ("0 ADC = %lf"%(ADC_Value[0]*5.0/0x7fffff)) #32-bit integer in hexadecimal with all but the highest bit set
-    print ("1 ADC = %lf"%(ADC_Value[1]*5.0/0x7fffff))
-    print ("2 ADC = %lf"%(ADC_Value[2]*3.3/0x7fffff))
-    print ("3 ADC = %lf"%(ADC_Value[3]*3.3/0x7fffff))
-    print ("4 ADC = %lf"%(ADC_Value[4]*3.3/0x7fffff))
-    print ("5 ADC = %lf"%(ADC_Value[5]*3.3/0x7fffff))
-    print ("6 ADC = %lf"%(ADC_Value[6]*3.3/0x7fffff))
-    print ("7 ADC = %lf"%(ADC_Value[7]*3.3/0x7fffff))
+    # print(ADC_Value)
+    # print ("0 ADC = %lf"%(ADC_Value[0]*5.0/0x7fffff)) #32-bit integer in hexadecimal with all but the highest bit set
+    # print ("1 ADC = %lf"%(ADC_Value[1]*5.0/0x7fffff))
+    # print ("2 ADC = %lf"%(ADC_Value[2]*3.3/0x7fffff))
+    # print ("3 ADC = %lf"%(ADC_Value[3]*3.3/0x7fffff))
+    # print ("4 ADC = %lf"%(ADC_Value[4]*3.3/0x7fffff))
+    # print ("5 ADC = %lf"%(ADC_Value[5]*3.3/0x7fffff))
+    # print ("6 ADC = %lf"%(ADC_Value[6]*3.3/0x7fffff))
+    # print ("7 ADC = %lf"%(ADC_Value[7]*3.3/0x7fffff))
 
     for topic in slave.port_topics.sub_topics:
         #logging.critical((slave.name, topic))

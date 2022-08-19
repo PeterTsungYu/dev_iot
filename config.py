@@ -54,9 +54,10 @@ RST    ->    GPIO 18
 # read High as 3.3V
 channel_Relay01_IN1     = 24
 channel_Relay01_IN2     = 25
-GPIO_PWM_1              = 12 #GPIO 12 (PWM0)
-GPIO_PWM_2              = 13 #GPIO 13 (PWM1)
-GPIO_PWM_3              = 26 #GPIO 26 (PWM)
+GPIO_PWM_1              = 12 #GPIO 12 (PWM0)    # GP
+GPIO_PWM_2              = 13 #GPIO 13 (PWM1)    # Blower
+GPIO_PWM_3              = 26 #GPIO 26 (PWM)     # Nozzle 
+GPIO_TTL                = 5
 
 #-----Cls----------------------------------------------------------------
 def tohex(value):
@@ -171,12 +172,12 @@ class Slave: # Create Slave data store
             crc = Crc16Modbus.calchex(bytearray.fromhex(data_struc))
             self.w_rtu = data_struc + crc[-2:] + crc[:2]
     
-    def PWM_instance(self, mode: str, frequency=1.0, duty=0):
-        if mode == 'software':
-            Modbus.GPIO.setup(self.id, Modbus.GPIO.OUT)
-            self.GPIO_instance = Modbus.GPIO.PWM(self.id, frequency)  # channel=12 frequency=50Hz (1 Hz up to few kiloHertz.)
+    def PWM_instance(self, mode: str, frequency=1, duty=0):
+        if mode == 'software': # frequency up tp 1-150Hz, duty = 0-100%
+            Modbus.GPIO.setup(self.id, Modbus.GPIO.OUT, initial=0)
+            self.GPIO_instance = Modbus.GPIO.PWM(self.id, frequency)  
             self.GPIO_instance.start(duty)
-        elif mode == 'hardware':
+        elif mode == 'hardware': # frequency up tp 0-30kHz (or more), duty = 0-100%
             Modbus.PIG.set_mode(self.id, Modbus.pigpio.ALT5)
             Modbus.PIG.hardware_PWM(self.id, 0, 0)
 
@@ -576,7 +577,7 @@ lst_ports = [
             # RS232_port, 
             # Setup_port,
             GPIO_port,
-            ADDA_port,
+            #ADDA_port,
             #miniModbus_port
             ]
 
