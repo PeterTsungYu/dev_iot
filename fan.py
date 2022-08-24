@@ -1,27 +1,23 @@
-from RPi import GPIO
+import pigpio
 import time
- 
+
+PIG = pigpio.pi()
+
 upper_temp = 50
 lower_temp = 45
-
-GPIO.setmode(GPIO.BOARD)
-# GPIO.setwarnings(False)
-channel = 8
-GPIO.setup(channel, GPIO.OUT, initial = GPIO.HIGH)
+channel = 14
+PIG.set_mode(channel, pigpio.OUTPUT)
+PIG.set_pull_up_down(channel, pigpio.PUD_UP)
  
 def get_temp():
     with open('/sys/class/thermal/thermal_zone0/temp') as fp:
         return int(fp.read()) / 1000
  
-try:
+while True:
     temp = get_temp()
     if temp >= upper_temp:
-        GPIO.output(channel, GPIO.LOW)
+        PIG.write(channel, 0)
     elif temp < lower_temp:
-        GPIO.output(channel, GPIO.HIGH)
+        PIG.write(channel, 1)
     time.sleep(10)
-except Exception as e:
-    print(e)
-finally:
-    GPIO.cleanup()
-    pass
+PIG.stop()
