@@ -44,6 +44,7 @@ currentpid_id = '13'
 catbedpid_id  = '14'
 pcbpid_id     = '15'
 pumppid_id    = '16'
+ADAM_TC_02_id = '17'
 
 
 #-----GPIO port setting----------------------------------------------------------------
@@ -223,6 +224,25 @@ ADAM_TC_slave = Slave(
                     )
 ADAM_TC_slave.read_rtu('0000', '0008', wait_len=21)
 ADAM_TC_slave.w_wait_len = 8
+
+
+ADAM_TC_02_slave = Slave(
+                    name = 'ADAM_TC_02',
+                    idno=ADAM_TC_02_id,
+                    port_topics=port_Topics(sub_topics=[
+                                            ],
+                                            pub_topics=[
+                                                'EVA_inside', 'flue_gas'
+                                            ],
+                                            err_topics=[
+                                                'ADAM_TC_02_collect_err', 'ADAM_TC_02_analyze_err',
+                                            ]
+                                            ),
+                    comm_func=Modbus.Modbus_Comm,
+                    analyze_func=Modbus.ADAM_TC_analyze
+                    )
+ADAM_TC_02_slave.read_rtu('0000', '0008', wait_len=21)
+ADAM_TC_02_slave.w_wait_len = 8
 
 # GA slave
 GA_slave = Slave(
@@ -630,11 +650,12 @@ RS232_port = device_port(GA_slave,
 Setup_port = device_port(
                         # Header_BR_slave,
                         # Header_BR_SET_slave,
-                        Header_EVA_slave,
-                        Header_EVA_SET_slave,
+                        #Header_EVA_slave,
+                        #Header_EVA_SET_slave,
                         ADAM_TC_slave,
                         ADAM_READ_slave,
                         ADAM_SET_slave,
+                        ADAM_TC_02_slave,
                         name='Setup_port',
                         port=serial.Serial(port=Setup_port_path,
                                             baudrate=9600, 
@@ -665,7 +686,7 @@ PID_port = device_port(
                     )
 
 lst_ports = [
-            # MFC_port,
+            MFC_port,
             # Scale_port, 
             # RS232_port, 
             Setup_port,
