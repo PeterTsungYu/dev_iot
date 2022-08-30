@@ -211,8 +211,8 @@ ADAM_TC_slave = Slave(
                     port_topics=port_Topics(sub_topics=[
                                             ],
                                             pub_topics=[
-                                                'TC7', 'TC8', 'TC9', 'TC10', 
-                                                'TC11', 'EVA_out', 'RAD_in', 'RAD_out',
+                                                'BR', 'SR_front', 'SR_mid', 'SR_end', 
+                                                'flue_gas', 'RAD_in', 'RAD_out', 'TC_7'
                                                 'BN_rate', 'SR_rate',
                                             ],
                                             err_topics=[
@@ -232,7 +232,7 @@ ADAM_TC_02_slave = Slave(
                     port_topics=port_Topics(sub_topics=[
                                             ],
                                             pub_topics=[
-                                                'EVA_inside', 'flue_gas'
+                                                'EVA_out', 'EVA_inside'
                                             ],
                                             err_topics=[
                                                 'ADAM_TC_02_collect_err', 'ADAM_TC_02_analyze_err',
