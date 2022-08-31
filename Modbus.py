@@ -9,6 +9,8 @@ import time
 import re
 from crccheck.crc import Crc16Modbus
 import logging
+import RPi.GPIO as GPIO
+
 
 #custom modules
 import params
@@ -30,6 +32,10 @@ fh.setFormatter(formatter)
 
 logger.addHandler(ch)
 logger.addHandler(fh)
+#-----ADDA port setting----------------------------------------------------------------
+
+GPIO.setmode(GPIO.BCM) # for software PWM
+
 
 #------------------------------Decker---------------------------------
 def kb_event(func):
@@ -53,10 +59,33 @@ def analyze_decker(func):
         _lst_readings = slave.lst_readings
         _time_readings = slave.time_readings
         slave.lst_readings = []
-        if 'DFM' in slave.name:
+        if 'Scale' in slave.name:
+            _scale_lst = slave.scale_readings
+            _scale_time = slave.scale_time_readings
+            if len(_scale_lst) == 0:
+                _scale_lst['10_lst_readings'].append([])
+                _scale_lst['60_lst_readings'].append([])
+                _scale_time['10_time_readings'].append([])
+                _scale_time['60_time_readings'].append([])
+            else:
+                _scale_lst['10_lst_readings'].append(_lst_readings)
+                _scale_lst['60_lst_readings'].append(_lst_readings)
+                _scale_time['10_time_readings'].append(_time_readings)
+                _scale_time['60_time_readings'].append(_time_readings)
+            if len(_scale_lst['10_lst_readings']) > 10: # aggregate lists for 10s in a list
+                _scale_lst['10_lst_readings'] = _scale_lst['10_lst_readings'][-10:]
+                _scale_time['10_time_readings'] = _scale_time['10_time_readings'][-10:]
+            if len(_scale_lst['60_lst_readings']) > 60: # aggregate lists for 60s in a list
+                _scale_lst['60_lst_readings'] = _scale_lst['60_lst_readings'][-60:]
+                _scale_time['60_time_readings'] = _scale_time['60_time_readings'][-60:]
+            _lst_readings = _scale_lst
+            _time_readings = _scale_time
+            cond = len(_lst_readings['10_lst_readings'])
+
+        elif 'DFM' in slave.name:
             if len(_lst_readings) == 0:
-                _time_readings['10_time_readings'].append([0])
-                _time_readings['60_time_readings'].append([0])
+                _time_readings['10_time_readings'].append([])
+                _time_readings['60_time_readings'].append([])
             else:
                 _time_readings['10_time_readings'].append(_lst_readings)
                 _time_readings['60_time_readings'].append(_lst_readings)
@@ -65,6 +94,10 @@ def analyze_decker(func):
             if len(_time_readings['60_time_readings']) > 60: # aggregate lists for 60s in a list
                 _time_readings['60_time_readings'] = _time_readings['60_time_readings'][-60:]
             cond = len(_time_readings['10_time_readings'])
+            # print(cond)
+        elif 'PWM' in slave.name:
+            cond = len(_time_readings)
+            slave.time_readings = []
         else:    
             cond = len(_lst_readings)
         try:
@@ -87,7 +120,6 @@ def analyze_decker(func):
         finally:
             logging.info(f"{slave.name}_analyze_err: {round((analyze_err[1] - analyze_err[0])/(analyze_err[1] + 0.00000000000000001)*100, 2)}%")
     return wrapper
-
 #------------------------------Collect and Analyze func---------------------------------
 def Scale_data_collect(start, device_port, slave):
     #while not params.kb_event.isSet():
@@ -100,7 +132,7 @@ def Scale_data_collect(start, device_port, slave):
         if port.inWaiting() > slave.r_wait_len:
             readings = port.read(port.inWaiting()).decode('utf-8')
             readings = [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ \-][ .\d]{7}', readings)]
-            slave.lst_readings.append(readings)
+            slave.lst_readings.extend(readings)
             logging.info(f'Read {readings} from slave_{slave.name}')
             port.reset_input_buffer() # reset the buffer after each reading process
         else: # if data len is no data
@@ -217,7 +249,6 @@ def Modbus_Comm(start, device_port, slave):
                 w_data_site += 1
         else:
             w_data_site += 1
-        
 
 def MFC_Comm(start, device_port, slave):    
     port = device_port.port
@@ -310,6 +341,39 @@ def MFC_Comm(start, device_port, slave):
         else:
             w_data_site += 1
 
+def PWM_comm(start, device_port, slave):
+    port = device_port.port
+    collect_err = device_port.err_values.get(f'{slave.name}_collect_err')
+    set_err = device_port.err_values.get(f'{slave.name}_set_err')
+    re_collect = device_port.recur_count.get(f'{slave.name}_collect_err')
+    re_set = device_port.recur_count.get(f'{slave.name}_set_err')
+    # set PWM to ON / OFF, frequency, duty 
+    for topic in slave.port_topics.sub_topics:
+        #logging.critical((slave.name, topic))
+        if device_port.sub_events[topic].isSet():
+            #logging.critical(device_port.sub_values[topic])
+            try: # try to set value
+                open_SV = device_port.sub_values[f'{slave.name}_open_SV']
+                duty = device_port.sub_values[f'{slave.name}_duty_SV']
+                f = device_port.sub_values[f'{slave.name}_f_SV']
+                print(open_SV, duty, f)
+                if open_SV:
+                    slave.GPIO_instance.start(duty) # start at initial duty
+                    slave.GPIO_instance.ChangeFrequency(f) # start at initial frequency
+                    print(f"open at duty:{duty}, f: {f}")
+                else:
+                    slave.GPIO_instance.stop()
+                    print('close')
+                device_port.sub_events[topic].clear()
+                print('clear flag')
+            except Exception as e:
+                set_err[0] += 1
+                err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: " + str(e)
+                logging.error(err_msg)
+            finally:
+                logging.info(f"{slave.name}_set_err: {round((set_err[1] - set_err[0])/(set_err[1]+0.00000000000000001)*100, 2)}%")
+
+
 
 @kb_event
 @sampling_event(params.sample_time)
@@ -342,28 +406,30 @@ def ADAM_READ_analyze(start, device_port, slave, **kwargs):
 def DFM_data_analyze(start, device_port, slave, **kwargs):
     _time_readings = kwargs.get('_time_readings')
     _sampling_time = round(time.time()-start, 2)
+    _10_flow_lst = []
     try:
-        _10_flow_lst = []
-        for i in _time_readings['10_time_readings']:
-            if isinstance(i, list):
-                _10_flow_lst.extend(i)
-        if len(_time_readings['10_time_readings']) == 10:
-            _10_flow_rate = len(_10_flow_lst)/(_10_flow_lst[-1] - _10_flow_lst[0]) * 10 * 0.1
-        elif len(_time_readings['10_time_readings']) == 0:
-            _10_flow_rate = 0
-        else:
-            _10_flow_rate = None
+        for i in range(len(_time_readings['10_time_readings'])):
+            if i != [] and (len(_time_readings['10_time_readings'][i]) > 1):
+                _10_flow_lst.append((len(_time_readings['10_time_readings'][i]) - 1) / (_time_readings['10_time_readings'][i][-1] - _time_readings['10_time_readings'][i][0]))
+            else:
+                _10_flow_lst.append(0)
+        _10_flow_rate = sum(_10_flow_lst) / len(_10_flow_lst)
+        if slave.name == 'DFM':
+            _10_flow_rate = _10_flow_rate * 10 * 0.1
+        elif slave.name == 'DFM_AOG':
+            _10_flow_rate = _10_flow_rate * 10 * 0.01
 
         _60_flow_lst = []
-        for i in _time_readings['60_time_readings']:
-            if isinstance(i, list):
-                _60_flow_lst.extend(i)
-        if len(_time_readings['60_time_readings']) == 60:
-            _60_flow_rate = len(_60_flow_lst)/(_60_flow_lst[-1] - _60_flow_lst[0]) * 60 * 0.1
-        elif len(_time_readings['60_time_readings']) == 0:
-            _60_flow_rate = 0
-        else:
-            _60_flow_rate = None        
+        for i in range(len(_time_readings['60_time_readings'])):
+            if i != [] and (len(_time_readings['60_time_readings'][i]) > 1):
+                _60_flow_lst.append((len(_time_readings['60_time_readings'][i]) - 1) / (_time_readings['60_time_readings'][i][-1] - _time_readings['60_time_readings'][i][0]))
+            else:
+                _60_flow_lst.append(0)
+        _60_flow_rate = sum(_60_flow_lst) / len(_60_flow_lst)
+        if slave.name == 'DFM':
+            _60_flow_rate = _60_flow_rate * 60 * 0.1
+        elif slave.name == 'DFM_AOG':
+            _60_flow_rate = _60_flow_rate * 60 * 0.01
         _readings = tuple([_sampling_time, round(_10_flow_rate,2), round(_60_flow_rate,2)])
     except:
         _readings = tuple([_sampling_time, 0])
@@ -374,11 +440,39 @@ def DFM_data_analyze(start, device_port, slave, **kwargs):
 @sampling_event(params.sample_time)
 @analyze_decker
 def Scale_data_analyze(start, device_port, slave, **kwargs):
+    _sampling_time = round(time.time()-start, 2)
     _lst_readings = kwargs.get('_lst_readings')
     _time_readings = kwargs.get('_time_readings')
-    _arr_readings = np.array([sum(i)/len(i) for i in _lst_readings])
-    _lst_readings = tuple([np.sum(_arr_readings) / len(_lst_readings)])
-    _readings = tuple([round(_time_readings,2)]) + _lst_readings
+    _10_scale_lst = []
+    _10_scale_time = []
+    
+    for i in range(0, len(_lst_readings['10_lst_readings'])):
+        _10_scale_lst.extend(_lst_readings['10_lst_readings'][i])
+        _10_scale_time.extend(_time_readings['10_time_readings'])
+    for i in _10_scale_lst: 
+        if -0.00001 < i < 0.00001:
+            _10_scale_lst.remove(i)
+            _10_scale_time.remove(i)
+    _10_scale = (_10_scale_lst[0] - _10_scale_lst[-1]) / (_10_scale_time[-1] - _10_scale_time[0]) * 1000 * 10
+
+    _60_scale_lst = []
+    _60_scale_time = []
+    for i in range(0, len(_lst_readings['60_lst_readings'])):
+        _60_scale_lst.extend(_lst_readings['60_lst_readings'][i])
+        _60_scale_time.extend(_time_readings['60_time_readings'])
+    for i in _60_scale_lst: 
+        if -0.00001 < i < 0.00001:
+            _60_scale_lst.remove(i)
+            _60_scale_time.remove(i)
+    _60_scale = (_60_scale_lst[0] - _60_scale_lst[-1]) / (_60_scale_time[-1] - _60_scale_time[0]) * 1000 * 60
+
+    if _10_scale <= 0:
+        _10_scale = 0
+    if _60_scale <=0:
+        _60_scale = 0
+        
+    _readings = tuple([round(_sampling_time,2), round(_10_scale, 2), round(_60_scale, 2)])
+    # print(_readings)
     return _readings
 
 @kb_event
@@ -457,7 +551,7 @@ def H2_MFC_analyze(start, device_port, slave, **kwargs):
 def control(device_port, slave):
     _update_parameter = False
     for topic in slave.port_topics.sub_topics:
-        if topic in [f'{slave.name}_Kp', f'{slave.name}_Ki', f'{slave.name}_Kd', f'{slave.name}_MVmin',  f'{slave.name}_MVmax', f'{slave.name}_mode']:
+        if topic in [f'{slave.name}_Kp', f'{slave.name}_Ki', f'{slave.name}_Kd', f'{slave.name}_MVmin',  f'{slave.name}_MVmax', f'{slave.name}_mode', f'{slave.name}_beta', f'{slave.name}_tstep', f'{slave.name}_kick']:
             if device_port.sub_events[topic].isSet():
                 _update_parameter = True
                 device_port.sub_events[topic].clear()
@@ -473,15 +567,54 @@ def control(device_port, slave):
     SP = _sub_values.get(f'{slave.name}_SP')
     PV = _sub_values.get(f'{slave.name}_PV')
     MV = _sub_values.get(f'{slave.name}_setting')
+    beta = _sub_values.get(f'{slave.name}_beta')
+    kick = _sub_values.get(f'{slave.name}_kick')
+    tstep = _sub_values.get(f'{slave.name}_tstep')
+    if kick is None:
+        kick = 1
+    if tstep is None:
+        tstep = 1
     if _update_parameter:
-        slave.controller.update_paramater(Kp=Kp, Ki=Ki, Kd=Kd, MVmin=MVmin, MVmax=MVmax, mode=mode)
+        slave.controller.update_paramater(Kp=Kp, Ki=Ki, Kd=Kd, MVmin=MVmin, MVmax=MVmax, mode=mode, beta=beta, kick=kick, tstep=tstep)
 
     # update manipulated variable
-    print('here')
-    print(slave.controller.Kp, slave.controller.Ki, slave.controller.Kd, slave.controller.mode)
-    # print(SP, PV, MV)
-    updates = slave.controller.update(params.tstep, SP, PV, MV)
-    #print(updates)
-    for idx, topic in enumerate(slave.port_topics.pub_topics):    
-        device_port.pub_values[topic] = updates[idx]
-    time.sleep(params.tstep)
+    # print('here')
+    # print(slave.controller.Kp, slave.controller.Ki, slave.controller.Kd, slave.controller.mode)
+    # print(slave.name, SP, PV, MV) 
+    try:
+        updates = slave.controller.update(tstep, SP, PV, MV, kick)
+        #print(updates)
+        for idx, topic in enumerate(slave.port_topics.pub_topics):    
+            device_port.pub_values[topic] = updates[idx]
+    except Exception as e:
+        logging.error(f'{e}')
+    time.sleep(tstep)
+
+@kb_event
+def control_testing(device_port, slave):
+    _update_parameter = False
+    for topic in slave.port_topics.sub_topics:
+        if topic in [f'{slave.name}_MVmin',  f'{slave.name}_MVmax', f'{slave.name}_mode']:
+            if device_port.sub_events[topic].isSet():
+                _update_parameter = True
+                device_port.sub_events[topic].clear()
+
+    _sub_values = device_port.sub_values
+    _pub_values = device_port.pub_values
+    slave.parameters['MVmin'] = _sub_values.get(f'{slave.name}_MVmin')
+    slave.parameters['MVmax'] = _sub_values.get(f'{slave.name}_MVmax')
+    mode = _sub_values.get(f'{slave.name}_mode')
+    SP = _sub_values.get(f'{slave.name}_SP')
+    PV = _sub_values.get(f'{slave.name}_PV')
+    MV = _sub_values.get(f'{slave.name}_setting')
+
+    if _update_parameter:
+        slave.controller.update_paramater_testing(slave.parameters, mode=mode)
+    try:
+        updates = slave.controller.update(slave.parameters['tstep'], SP, PV, MV, slave.parameters['kick'])
+        # print(slave.name, updates)
+        for idx, topic in enumerate(slave.port_topics.pub_topics):
+            device_port.pub_values[topic] = updates[idx]
+    except Exception as e:
+        logging.error(f'{e}')
+    time.sleep(slave.parameters['tstep'])

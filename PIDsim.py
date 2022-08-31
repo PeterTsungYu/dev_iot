@@ -9,10 +9,12 @@ class PID:
     """
     def __init__(self, name=None):
         self.name = name
-        self.SP = None
-        self.Kp = None
-        self.Ki = None
-        self.Kd = None
+        self.SP = 0
+        self._SP_stepping = 0
+        self._SP_increment = 3
+        self.Kp = 0
+        self.Ki = 0
+        self.Kd = 0
         self.beta = 0 # 0~1
         self.gamma = 0 # 0~1
         self.MVmin = 0
@@ -21,8 +23,11 @@ class PID:
         self.mode = False
         self._log = []
         self._errorP0 = 0
+        self._errorP1 = 0
+        self._errorI0 = 0
         self._errorD0 = 0
         self._errorD1 = 0
+        self._errorD2 = 0
         
     def auto(self):
         """Change to automatic control mode. In automatic control mode the .update()
@@ -181,42 +186,62 @@ class PID:
     def PV(self,PV):
         self._PV = PV
 
-    def update_paramater(self, Kp=0, Ki=0, Kd=0, beta=0, gamma=0, MVmin=0, MVmax=0, DirectAction=False, mode=False):
+    def update_paramater(self, Kp=0, Ki=0, Kd=0, beta=0, gamma=0, MVmin=0, MVmax=0, kick=1, tstep=1, DirectAction=False, mode=False):
         self.Kp = Kp
         self.Ki = Ki
-        self.Kd = Kd
         self.Kd = Kd
         self.MVmin = MVmin
         self.MVmax = MVmax
         self.beta = beta
         self.gamma = gamma
+        self.kick = kick
+        self.tstep = tstep
         self.DirectAction = DirectAction
         self.mode = mode
 
-    def update(self, tstep, SP, PV, MV):
-        self.SP = SP
-        self.PV = PV
-        self.MV = MV # MV tracking
+    def update_paramater_testing(self, parameters, mode=False, gamma=0, DirectAction=False):
+        self.Kp = parameters.get('Kp')
+        self.Ki = parameters.get('Ki')
+        self.Kd = parameters.get('Kd')
+        self.MVmin = parameters.get('MVmin')
+        self.MVmax = parameters.get('MVmax')
+        self.beta = parameters.get('beta')
+        self.gamma = gamma
+        self.kick = parameters.get('kick')
+        self.tstep = parameters.get('tstep')
+        self.DirectAction = DirectAction
+        self.mode = mode
 
+    def update(self, tstep, SP, PV, MV, kick):
+        self.SP = SP
+        kick_prop = 1
+        if self._SP_stepping < self.SP:
+            self._SP_stepping += self._SP_increment
+            kick_prop = kick
+            if self._SP_stepping > self.SP:
+                self._SP_stepping = self.SP
+                kick_prop = 1
+        elif self._SP_stepping > self.SP:
+            self._SP_stepping -= self._SP_increment
+            kick_prop = kick
+            if self._SP_stepping < self.SP:
+                self._SP_stepping = self.SP 
+                kick_prop = 1 
+        self.PV = PV
+        self.MV = MV
         if self.mode == False:
             # Setpoint tracking
-            self.SP = PV 
-
+            self._SP_stepping = PV
         self._errorP1 = self._errorP0
-        self._errorP0 = self.beta*self.SP - self.PV # setpoint weighting
-        self._errorI0 = self.SP - self.PV            
+        self._errorP0 = self.beta*self._SP_stepping - self.PV # setpoint weighting
+        self._errorI0 = self._SP_stepping - self.PV           
         self._errorD2 = self._errorD1
         self._errorD1 = self._errorD0
-        self._errorD0 = self.gamma*self.SP - self.PV # setpoint weighting
-        # if self.mode == True:
+        self._errorD0 = self.gamma*self._SP_stepping - self.PV # setpoint weighting
         P = self.Kp*(self._errorP0 - self._errorP1)
         I = self.Ki*tstep*self._errorI0
         D = self.Kd*(self._errorD0 - 2*self._errorD1 + self._errorD2)/tstep
-        self._deltaMV =  P + I + D
-        print(self._deltaMV)
-        print(self.MV)
+        self._deltaMV =  P*kick_prop + I + D*kick_prop
         self.MV -= self._action*self._deltaMV
-        print(self.MV)
-        #self._logger(self.SP,self.PV,self.MV)
-        
+        print(self.name, self.MV, P, I, D, self.Kp, self.Ki, self.Kd, self.kick, self.beta, self.tstep)
         return self.MV, P, I, D

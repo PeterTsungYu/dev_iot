@@ -2,7 +2,7 @@
 # python packages
 import time
 from datetime import datetime
-import RPi.GPIO as GPIO
+import pigpio
 import serial
 
 # custome modules
@@ -19,6 +19,7 @@ timeit = datetime.now().strftime('%Y_%m_%d_%H_%M')
 print(f'Execution time is {timeit}')
 print('=='*30)
 start = time.time()
+PIG = pigpio.pi()
 
 #-------------------------Open ports--------------------------------------
 try:
@@ -29,15 +30,19 @@ try:
             device_port.port.reset_input_buffer() #flush input buffer
             device_port.port.reset_output_buffer() #flush output buffer
     print('serial ports open')
+
+    Modbus.GPIO.setup(config.GPIO_PWM_1, Modbus.GPIO.OUT, initial=1)
     
-    GPIO.setup(config.channel_DFM, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-    GPIO.setup(config.channel_DFM_AOG, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-    def DFM_data_collect(self):
+    PIG.set_mode(config.channel_DFM, pigpio.INPUT)
+    PIG.set_mode(config.channel_DFM_AOG, pigpio.INPUT)
+
+    def DFM_data_collect(user_gpio, level, tick):
         config.DFM_slave.lst_readings.append(time.time()) # 0.1L/pulse
-    def DFM_AOG_data_collect(self):
+    def DFM_AOG_data_collect(user_gpio, level, tick):
         config.DFM_AOG_slave.lst_readings.append(time.time()) # 0.01L/pulse
-    GPIO.add_event_detect(config.channel_DFM, GPIO.RISING, callback=DFM_data_collect)
-    GPIO.add_event_detect(config.channel_DFM_AOG, GPIO.RISING, callback=DFM_AOG_data_collect)
+    PIG.callback(user_gpio=config.channel_DFM, edge=pigpio.RISING_EDGE, func=DFM_data_collect)
+    PIG.callback(user_gpio=config.channel_DFM_AOG, edge=pigpio.RISING_EDGE, func=DFM_AOG_data_collect)
+    
     print('GPIO ports open')
     
 except Exception as ex:
@@ -62,6 +67,7 @@ except Exception as ex:
     for device_port in config.lst_ports:
         if type(device_port.port) is serial.serialposix.Serial:
             device_port.port.close()
+    Modbus.GPIO.cleanup()        
     exit()
 
 #-------------------------Main Threadingggg-----------------------------------------
@@ -82,7 +88,9 @@ finally:
         if type(device_port.port) is serial.serialposix.Serial:
             device_port.port.close()
         elif device_port.port == 'GPIO':
-            GPIO.cleanup()
+            Modbus.GPIO.cleanup()
+            PIG.stop()
+            
         Modbus.logger.info(f'Close {device_port.name}, err are {device_port.err_values}')
         Modbus.logger.info(f'correct rates : {[f"{k}:{round((v[1]-v[0])/(v[1] + 0.00000000000000001)*100,2)}%" for k,v in device_port.err_values.items()]}')
     Modbus.logger.info(f"Program duration: {time.time() - start}")

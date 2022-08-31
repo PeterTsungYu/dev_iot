@@ -5,7 +5,6 @@ import signal
 time_out          = 0.1 # for collecting data
 sample_time       = 1 # for analyzing data
 sample_time_DFM   = 1
-tstep = 1
 
 # count down events
 ticker = threading.Event() # for analyzing data
