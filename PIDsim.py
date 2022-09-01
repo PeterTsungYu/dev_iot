@@ -100,6 +100,10 @@ class PID:
             self._action = multiprocessing.Value('i', -1)
     
     @property
+    def action(self):
+        return self._action.value
+
+    @property
     def gamma(self):
         """gamma is the setpoint weighting for derivative control where the derivative error
         is given by gamma*SP - PV.  The default value is zero. 
@@ -300,7 +304,6 @@ class PID:
         if self.mode == 0:
             # Setpoint tracking
             self.SP_stepping = PV
-
         self.errorP1 = self.errorP0
         self.errorP0 = self.beta*self.SP_stepping - self.PV # setpoint weighting
         self.errorI0 = self.SP_stepping - self.PV            
@@ -310,7 +313,7 @@ class PID:
         P = self.Kp*(self.errorP0 - self.errorP1)
         I = self.Ki*self.tstep*self.errorI0
         D = self.Kd*(self.errorD0 - 2*self.errorD1 + self.errorD2)/self.tstep
-        
-        self.MV -= self._action*(P*self.kick_prop + I + D*self.kick_prop)
-        
+
+        self.MV -= self.action*(P*self.kick_prop + I + D*self.kick_prop)
+        # print(self.MV, P, I, D)
         return self.MV, P, I, D

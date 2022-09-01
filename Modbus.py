@@ -71,7 +71,7 @@ def analyze_decker(func):
             _lst_readings = _size_lst
             _time_readings = _size_time
             cond = len(_lst_readings['short_lst_readings'])
-        elif slave.name in ['ADAM_TC']:
+        elif 'ADAM_TC' in slave.name:
             _size_lst = slave.size_lst_readings
             _size_time = slave.size_time_readings
             _size_lst['short_lst_readings'].append(_lst_readings)
@@ -173,8 +173,8 @@ def Modbus_Comm(start, device_port, slave):
     try: # try to collect
         recur = False
         collect_err[1] += 1
-        #logging.debug(slave.r_rtu)
-        #logging.debug(bytes.fromhex(slave.r_rtu))
+        # logging.debug(slave.r_rtu)
+        # logging.debug(bytes.fromhex(slave.r_rtu))
         port.write(bytes.fromhex(slave.r_rtu)) #hex to binary(byte) 
         time.sleep(params.time_out)
         #logging.debug(port.inWaiting())
@@ -628,6 +628,7 @@ def VOID(start, device_port, slave):
     time.sleep(params.time_out)
 
 #------------------------------PID controller---------------------------------
+@kb_event
 def control(device_port, slave):
     _update_parameter = False
     for topic in slave.port_topics.sub_topics:
@@ -651,14 +652,16 @@ def control(device_port, slave):
     tstep = _sub_values.get(f'{slave.name}_tstep').value
     if kick is None:
         kick = 1
-    if tstep is None:
+    if tstep is None or tstep == 0:
         tstep = 1
     if _update_parameter:
         slave.controller.update_paramater(Kp=Kp, Ki=Ki, Kd=Kd, MVmin=MVmin, MVmax=MVmax, mode=mode, beta=beta)
     try:
+        print(slave.name, tstep, SP, PV, MV, kick)
         updates = slave.controller.update(tstep, SP, PV, MV, kick)
         for idx, topic in enumerate(slave.port_topics.pub_topics):    
             device_port.pub_values[topic].value = updates[idx]
     except Exception as e:
         logging.error(f'{e}')
+    # print(tstep)
     time.sleep(tstep)
