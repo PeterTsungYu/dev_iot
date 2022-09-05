@@ -173,7 +173,7 @@ def Modbus_Comm(start, device_port, slave):
     try: # try to collect
         recur = False
         collect_err[1] += 1
-        # logging.debug(slave.r_rtu)
+        #logging.error(slave.r_rtu)
         # logging.debug(bytes.fromhex(slave.r_rtu))
         port.write(bytes.fromhex(slave.r_rtu)) #hex to binary(byte) 
         time.sleep(params.time_out)
@@ -657,7 +657,7 @@ def control(device_port, slave):
     if _update_parameter:
         slave.controller.update_paramater(Kp=Kp, Ki=Ki, Kd=Kd, MVmin=MVmin, MVmax=MVmax, mode=mode, beta=beta)
     try:
-        print(slave.name, tstep, SP, PV, MV, kick)
+        #print(slave.name, tstep, SP, PV, MV, kick)
         updates = slave.controller.update(tstep, SP, PV, MV, kick)
         for idx, topic in enumerate(slave.port_topics.pub_topics):    
             device_port.pub_values[topic].value = updates[idx]

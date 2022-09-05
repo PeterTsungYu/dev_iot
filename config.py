@@ -632,7 +632,7 @@ MFC_port = device_port(
                         # H2_MFC_slave,
                         name='MFC_port',
                         port=serial.Serial(port=MFC_port_path,
-                                            baudrate=19200, 
+                                            baudrate=115200, 
                                             bytesize=8, 
                                             stopbits=1, 
                                             parity='N'),
@@ -667,7 +667,7 @@ Setup_port = device_port(
                         ADAM_TC_02_slave,
                         name='Setup_port',
                         port=serial.Serial(port=Setup_port_path,
-                                            baudrate=9600, 
+                                            baudrate=115200, 
                                             bytesize=8, 
                                             stopbits=1, 
                                             parity='N'),
@@ -695,13 +695,13 @@ PID_port = device_port(
                     )
 
 lst_ports = [
-            # MFC_port,
+            MFC_port,
             # Scale_port, 
             # RS232_port, 
             Setup_port,
-            GPIO_port,
+            #GPIO_port,
             # WatchDog_port,
-            PID_port
+            #PID_port
             ]
 
 NodeRed = params.manager.dict()
