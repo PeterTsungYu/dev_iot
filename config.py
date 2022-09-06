@@ -695,13 +695,13 @@ PID_port = device_port(
                     )
 
 lst_ports = [
-            MFC_port,
+            # MFC_port,
             # Scale_port, 
             # RS232_port, 
             Setup_port,
-            #GPIO_port,
+            # GPIO_port,
             # WatchDog_port,
-            #PID_port
+            # PID_port
             ]
 
 NodeRed = params.manager.dict()

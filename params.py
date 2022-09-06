@@ -3,7 +3,7 @@ import multiprocessing
 import signal
 
 #-------------------------Global var--------------------------------------
-time_out          = 0.05 # for collecting data
+time_out          = 0.02 # for collecting data
 sample_time       = 0.3 # for analyzing data
 comm_time         = 1
 recur_try         = 1
