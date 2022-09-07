@@ -403,7 +403,7 @@ ADAM_READ_slave = Slave(
                         port_topics=port_Topics(
                                 sub_topics=[],
                                 pub_topics=[
-                                    'SMC_0_PV', 'SMC_1_PV', 'ADAM_READ_PV2', 'ADAM_READ_PV3', 'ADAM_READ_PV4', 'Lambda', 'ADAM_P_Nozzle', 'ADAM_READ_PV8' # ADAM_READ_PV0 (SMC), ADAM_READ_PV1 (SMC), ADAM_READ_PV2, ADAM_READ_PV3, ADAM_READ_PV4(pump), ADAM_READ_PV5(Air_MFC), ADAM_READ_PV6(H2_MFC), ADAM_READ_PV7
+                                    'error_0', 'SMC_0_PV', 'SMC_1_PV', 'ADAM_READ_PV3', 'ADAM_READ_PV4', 'Lambda', 'ADAM_READ_PV6', 'ADAM_READ_PV7' # ADAM_READ_PV0 (SMC), ADAM_READ_PV1 (SMC), ADAM_READ_PV2, ADAM_READ_PV3, ADAM_READ_PV4(pump), ADAM_READ_PV5(Air_MFC), ADAM_READ_PV6(H2_MFC), ADAM_READ_PV7
                                 ],
                                 err_topics=[
                                     'ADAM_READ_collect_err', 'ADAM_READ_analyze_err',
@@ -632,7 +632,7 @@ MFC_port = device_port(
                         # H2_MFC_slave,
                         name='MFC_port',
                         port=serial.Serial(port=MFC_port_path,
-                                            baudrate=115200, 
+                                            baudrate=57600, 
                                             bytesize=8, 
                                             stopbits=1, 
                                             parity='N'),
@@ -667,7 +667,7 @@ Setup_port = device_port(
                         ADAM_TC_02_slave,
                         name='Setup_port',
                         port=serial.Serial(port=Setup_port_path,
-                                            baudrate=115200, 
+                                            baudrate=57600, 
                                             bytesize=8, 
                                             stopbits=1, 
                                             parity='N'),
@@ -695,13 +695,13 @@ PID_port = device_port(
                     )
 
 lst_ports = [
-            # MFC_port,
+            MFC_port,
             # Scale_port, 
             # RS232_port, 
             Setup_port,
-            # GPIO_port,
-            # WatchDog_port,
-            # PID_port
+            GPIO_port,
+            WatchDog_port,
+            PID_port
             ]
 
 NodeRed = params.manager.dict()
