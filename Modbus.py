@@ -135,7 +135,6 @@ def analyze_decker(func):
 
 #------------------------------Collect and Analyze func---------------------------------
 def Scale_data_collect(start, device_port, slave):
-    #while not params.kb_event.is_set():
     port = device_port.port
     collect_err = device_port.err_values[f'{slave.name}_collect_err']
     try:
@@ -527,40 +526,35 @@ def Scale_data_analyze(start, device_port, slave, **kwargs):
     _time_readings = kwargs.get('_time_readings')
     _10_scale_lst = []
     _10_scale_time = []
+    # print(_lst_readings['short_lst_readings'])
+    # print(_time_readings['short_time_readings'])
+    assert len(_lst_readings['short_lst_readings']) == len(_time_readings['short_time_readings'])
     for i in range(0, len(_lst_readings['short_lst_readings'])):
-        for j in range(0, len(_lst_readings['short_lst_readings'][i])):
-            _10_scale_lst.extend(_lst_readings['short_lst_readings'][i][j])
-        if _10_scale_lst != []:
-            pass
-        else:
-            _10_scale_lst.extend([0,0])
-    _10_scale_time.extend(_time_readings['short_time_readings'])
+        _10_scale_lst.extend(_lst_readings['short_lst_readings'][i])
+        _10_scale_time.extend(_time_readings['short_time_readings'][i])
     for i in _10_scale_lst: 
         if -0.00001 < i < 0.00001:
             _10_scale_lst.remove(i)
             _10_scale_time.remove(i)
-    _10_scale = (_10_scale_lst[0] - _10_scale_lst[-1]) / (_10_scale_time[-1] - _10_scale_time[0]) * 1000 * 10
-
+    if _10_scale_lst:
+        _10_scale = (_10_scale_lst[0] - _10_scale_lst[-1]) / (_10_scale_time[-1] - _10_scale_time[0]) * 1000 * 10
+    else:
+        _10_scale = 0
+    # print(_10_scale)
+    
     _60_scale_lst = []
     _60_scale_time = []
-    
+    assert len(_lst_readings['long_lst_readings']) == len(_time_readings['long_time_readings'])
     for i in range(0, len(_lst_readings['long_lst_readings'])):
-        for j in range(0, len(_lst_readings['long_lst_readings'][i])):
-            _60_scale_lst.extend(_lst_readings['long_lst_readings'][i][j])
-        if _60_scale_lst != []:
-            pass
-        else:
-            _60_scale_lst.extend([0,0])
-    _60_scale_time.extend(_time_readings['long_time_readings'])
+        _60_scale_lst.extend(_lst_readings['long_lst_readings'][i])
+        _60_scale_time.extend(_time_readings['long_time_readings'][i])
     for i in _60_scale_lst: 
         if -0.00001 < i < 0.00001:
             _60_scale_lst.remove(i)
             _60_scale_time.remove(i)
-    _60_scale = (_60_scale_lst[0] - _60_scale_lst[-1]) / (_60_scale_time[-1] - _60_scale_time[0]) * 1000 * 60
-
-    if _10_scale <= 0:
-        _10_scale = 0
-    if _60_scale <=0:
+    if _60_scale_lst:
+        _60_scale = (_60_scale_lst[0] - _60_scale_lst[-1]) / (_60_scale_time[-1] - _60_scale_time[0]) * 1000 * 60
+    else:
         _60_scale = 0
         
     _readings = tuple([round(_sampling_time,2), round(_10_scale, 2), round(_60_scale, 2)])

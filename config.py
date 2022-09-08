@@ -3,7 +3,6 @@
 import multiprocessing
 import functools
 import serial
-import RPi.GPIO as GPIO
 from crccheck.crc import Crc16Modbus
 from datetime import datetime
 import time
@@ -52,7 +51,6 @@ ADAM_TC_02_id = '17'
 # read High as 3.3V
 channel_DFM     = 16
 channel_DFM_AOG = 26
-GPIO.setmode(GPIO.BCM)
 
 #-----Cls----------------------------------------------------------------
 def tohex_pad4(value):

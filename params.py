@@ -17,11 +17,8 @@ manager = multiprocessing.Manager()
 # Keyboard interrupt event to kill all the threads (Ctr + C)
 kb_event = multiprocessing.Event()
 def signal_handler(signum, frame):
-    if kb_event.is_set():
-        kb_event.clear()
-        kb_event.set()
-    else:
-        kb_event.set()
+    kb_event.clear()
+    kb_event.set()
 signal.signal(signal.SIGINT, signal_handler) # Keyboard interrupt to stop the program
 
 
