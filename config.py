@@ -1,9 +1,8 @@
 #python packages
-#import threading
+import threading
 import multiprocessing
 import functools
 import serial
-import RPi.GPIO as GPIO
 from crccheck.crc import Crc16Modbus
 from datetime import datetime
 import time
@@ -14,12 +13,12 @@ import params
 import PIDsim
 
 #-----------------Database----------------------------------------------
-db_time = datetime.now().strftime('%Y_%m_%d_%H_%M_BW')
+db_time = datetime.now().strftime('%Y_%m_%d_%H_%M_15kW')
 db_connection = False
 
 #-----------------Serial port and DeviceID------------------------------
-#_port_path = '/dev/ttyUSB'
-MFC_port_path = '/dev/ttyUSB_RS485' # for monitoring MFC (rasp-001_MFC branch)
+_port_path = '/dev/ttyUSB'
+# MFC_port_path = '/dev/ttyUSB_RS485' # for monitoring MFC (rasp-001_MFC branch)
 Scale_port_path = '/dev/ttyUSB_Scale' # for monitoring Scale
 RS232_port_path = '/dev/ttyUSB_RS232' # for monitoring GA
 Setup_port_path = '/dev/ttyUSB_PC' # for controling (ADAM, TCHeader)
@@ -34,9 +33,9 @@ ADAM_TC_id    = '05' # ReformerTP ADAM_4018+ for monitoring temp @ RS485_port_pa
 Scale_id      = '06'
 DFM_id        = '07'
 DFM_AOG_id    = '08'
-WatchDog_id       = '09'
+WatchDog_id   = '09'
 Relay01_id    = '10' # control Relay for Lambda sensor and Glow Plug
-GA_id         = '11' # ReformerTP GA for monitoring gas conc. @ RS232_port_path
+Relay02_id    = '11' 
 Air_MFC_id    = 'A'
 H2_MFC_id     = 'B'
 lambdapid_id  = '12'
@@ -44,15 +43,19 @@ currentpid_id = '13'
 catbedpid_id  = '14'
 pcbpid_id     = '15'
 pumppid_id    = '16'
-
+GA_id         = '17' # ReformerTP GA for monitoring gas conc. @ RS232_port_path
 
 #-----GPIO port setting----------------------------------------------------------------
 ## DFM
 # read High as 3.3V
-channel_DFM     = 16
-channel_DFM_AOG = 26
-GPIO.setmode(GPIO.BCM)
-
+channel_DFM     = 24
+channel_DFM_AOG = 25
+channel_Relay01_IN1     = 22
+channel_Relay01_IN2     = 23
+GPIO_PWM_1              = 26 #GPIO 26 (PWM0)    # BR
+GPIO_PWM_2              = 6 #GPIO 6 (PWM1)    # SR
+GPIO_TTL                = 5
+GPIO_MOS                = 21
 #-----Cls----------------------------------------------------------------
 def tohex(value):
     value = int(value)
@@ -169,7 +172,6 @@ class Slave: # Create Slave data store
         if self.name in ['ADAM_TC', 'Scale', 'DFM', 'DFM_AOG']:
             self.size_lst_readings = {'short_lst_readings':params.manager.list(), 'long_lst_readings':params.manager.list()}
             self.size_time_readings = {'short_time_readings':params.manager.list(), 'long_time_readings':params.manager.list()}
-        
         #self.readings = [] # for all data
         self.port_topics = port_topics
         self.kwargs = kwargs # dict of funcs
@@ -196,7 +198,24 @@ class Slave: # Create Slave data store
         elif len(_fields) == 1:
             if 'MFC' in self.name:
                 self.w_rtu = f'\r{self.id}S{_fields[0]}\r\r'
-                
+
+    def PWM_instance(self, mode: str, frequency=1, duty=0):
+        # Modbus.PIG.stop()
+        if mode == 'software': # frequency up tp 1-150Hz, duty = 0-100%
+            Modbus.PIG.set_mode(self.id, Modbus.pigpio.OUTPUT)
+            # dutycycle:= 0-range (range defaults to 255).
+            ## dutyrange set to 100
+            Modbus.PIG.set_PWM_range(self.id, 100) 
+            # Each GPIO can be independently set to one of 18 different PWM frequencies.
+            ## 8000  4000  2000 1600 1000  800  500  400  320
+            ## 250   200   160  100   80   50   40   20   10
+            Modbus.PIG.set_PWM_frequency(self.id, 10)
+            #print(Modbus.PIG.get_PWM_frequency(self.id))
+            Modbus.PIG.set_PWM_dutycycle(self.id, 0)
+            #print(Modbus.PIG.get_PWM_dutycycle(self.id))
+        elif mode == 'hardware': # frequency up tp 0-30kHz (or more), duty = 0-100%
+            Modbus.PIG.set_mode(self.id, Modbus.pigpio.ALT5)
+            Modbus.PIG.hardware_PWM(self.id, 0, 0)           
     def control_constructor(self):
         self.controller = PIDsim.PID(name=f'{self.name}_controller')
     
@@ -351,10 +370,10 @@ ADAM_SET_slave = Slave(
                         idno=ADAM_SET_id,
                         port_topics=port_Topics(
                                 sub_topics=[
-                                    'PCB_SET_SV', 'PCB_AWG_SET_SV', 'Nozzle_SET_SV', 'SR_Pump_SET_SV' # PCB(ADAM_SET_SV0), Pump(ADAM_SET_SV1), Air_MFC(ADAM_SET_SV2), H2_MFC(ADAM_SET_SV3)
+                                    'KNF_SET_SV', 'SOL_1_SET_SV', 'TOM_SET_SV',# 'SOL_2_SET_SV' # PCB(ADAM_SET_SV0), Pump(ADAM_SET_SV1), Air_MFC(ADAM_SET_SV2), H2_MFC(ADAM_SET_SV3)
                                 ],
                                 pub_topics=[
-                                    'PCB_SET_PV', 'PCB_AWG_SET_PV', 'Nozzle_SET_PV', 'SR_Pump_SET_PV', # PCB(ADAM_SET_PV0), Pump(ADAM_SET_PV1), Air_MFC(ADAM_SET_PV2), H2_MFC(ADAM_SET_PV3)
+                                    'KNF_SET_PV', 'SOL_1_SET_PV', 'TOM_SET_PV',# 'SOL_2_SET_SV', # PCB(ADAM_SET_PV0), Pump(ADAM_SET_PV1), Air_MFC(ADAM_SET_PV2), H2_MFC(ADAM_SET_PV3)
                                 ],
                                 err_topics=[
                                     'ADAM_SET_collect_err', 'ADAM_SET_set_err', 'ADAM_SET_analyze_err',
@@ -374,7 +393,7 @@ ADAM_READ_slave = Slave(
                         port_topics=port_Topics(
                                 sub_topics=[],
                                 pub_topics=[
-                                    'SMC_0_PV', 'SMC_1_PV', 'ADAM_READ_PV2', 'ADAM_READ_PV3', 'ADAM_READ_PV4', 'Lambda', 'ADAM_P_Nozzle', 'ADAM_READ_PV8' # ADAM_READ_PV0 (SMC), ADAM_READ_PV1 (SMC), ADAM_READ_PV2, ADAM_READ_PV3, ADAM_READ_PV4(pump), ADAM_READ_PV5(Air_MFC), ADAM_READ_PV6(H2_MFC), ADAM_READ_PV7
+                                    'SMC_0_PV', 'SMC_1_PV', 'ADAM_READ_PV2', 'ADAM_READ_PV3', 'ADAM_READ_PV4', 'ADAM_P_BR', 'ADAM_P_SR', 'ADAM_P_ACC' # ADAM_READ_PV0 (SMC), ADAM_READ_PV1 (SMC), ADAM_READ_PV2, ADAM_READ_PV3, ADAM_READ_PV4(pump), ADAM_READ_PV5(Air_MFC), ADAM_READ_PV6(H2_MFC), ADAM_READ_PV7
                                 ],
                                 err_topics=[
                                     'ADAM_READ_collect_err', 'ADAM_READ_analyze_err',
@@ -418,45 +437,115 @@ DFM_AOG_slave = Slave(
                     analyze_func=Modbus.DFM_data_analyze
                     )
 
-Air_MFC_slave = Slave(
-                    name='Air_MFC',
-                    idno=Air_MFC_id, 
-                    port_topics=port_Topics(
-                                sub_topics=[
-                                    'Air_MFC_SET_SV',
-                                ],
-                                pub_topics=[
-                                    'Air_MFC_P', 'Air_MFC_T', 'Air_MFC_LPM', 'Air_MFC_SLPM', 'Air_MFC_SET_PV',
-                                ],
-                                err_topics=[
-                                    'Air_MFC_collect_err', 'Air_MFC_set_err', 'Air_MFC_analyze_err'
-                                ]
-                                ),
-                    comm_func=Modbus.MFC_Comm,
-                    analyze_func=Modbus.MFC_analyze,
-                    )
-Air_MFC_slave.read_rtu(f'\r{Air_MFC_id}\r\r', wait_len=49)
-Air_MFC_slave.w_wait_len = 49
+# Air_MFC_slave = Slave(
+#                     name='Air_MFC',
+#                     idno=Air_MFC_id, 
+#                     port_topics=port_Topics(
+#                                 sub_topics=[
+#                                     'Air_MFC_SET_SV',
+#                                 ],
+#                                 pub_topics=[
+#                                     'Air_MFC_P', 'Air_MFC_T', 'Air_MFC_LPM', 'Air_MFC_SLPM', 'Air_MFC_SET_PV',
+#                                 ],
+#                                 err_topics=[
+#                                     'Air_MFC_collect_err', 'Air_MFC_set_err', 'Air_MFC_analyze_err'
+#                                 ]
+#                                 ),
+#                     comm_func=Modbus.MFC_Comm,
+#                     analyze_func=Modbus.MFC_analyze,
+#                     )
+# Air_MFC_slave.read_rtu(f'\r{Air_MFC_id}\r\r', wait_len=49)
+# Air_MFC_slave.w_wait_len = 49
 
-H2_MFC_slave = Slave(
-                    name='H2_MFC',
-                    idno=H2_MFC_id, 
+# H2_MFC_slave = Slave(
+#                     name='H2_MFC',
+#                     idno=H2_MFC_id, 
+#                     port_topics=port_Topics(
+#                                 sub_topics=[
+#                                     'H2_MFC_SET_SV',
+#                                 ],
+#                                 pub_topics=[
+#                                     'H2_MFC_P', 'H2_MFC_T', 'H2_MFC_LPM', 'H2_MFC_SLPM', 'H2_MFC_SET_PV',
+#                                 ],
+#                                 err_topics=[
+#                                     'H2_MFC_collect_err', 'H2_MFC_set_err', 'H2_MFC_analyze_err'
+#                                 ]
+#                                 ),
+#                     comm_func=Modbus.MFC_Comm,
+#                     analyze_func=Modbus.MFC_analyze,
+#                     )
+# H2_MFC_slave.read_rtu(f'\r{H2_MFC_id}\r\r', wait_len=49)
+# H2_MFC_slave.w_wait_len = 49
+
+Relay01_slave = Slave(
+                    name='Relay01',
+                    idno=channel_Relay01_IN1, 
                     port_topics=port_Topics(
                                 sub_topics=[
-                                    'H2_MFC_SET_SV',
+                                    'Relay01_Set',
                                 ],
                                 pub_topics=[
-                                    'H2_MFC_P', 'H2_MFC_T', 'H2_MFC_LPM', 'H2_MFC_SLPM', 'H2_MFC_SET_PV',
                                 ],
                                 err_topics=[
-                                    'H2_MFC_collect_err', 'H2_MFC_set_err', 'H2_MFC_analyze_err'
+                                    'Relay01_collect_err', 'Relay01_set_err', 'Relay01_analyze_err'
                                 ]
                                 ),
-                    comm_func=Modbus.MFC_Comm,
-                    analyze_func=Modbus.MFC_analyze,
+                    comm_func=Modbus.Relay_comm,
+                    #analyze_func=Modbus.,
                     )
-H2_MFC_slave.read_rtu(f'\r{H2_MFC_id}\r\r', wait_len=49)
-H2_MFC_slave.w_wait_len = 49
+Relay02_slave = Slave(
+                    name='Relay02',
+                    idno=channel_Relay01_IN2, 
+                    port_topics=port_Topics(
+                                sub_topics=[
+                                    'Relay02_Set',
+                                ],
+                                pub_topics=[
+                                ],
+                                err_topics=[
+                                    'Relay02_collect_err', 'Relay02_set_err', 'Relay02_analyze_err'
+                                ]
+                                ),
+                    comm_func=Modbus.Relay_comm,
+                    #analyze_func=Modbus.,
+                    )
+
+PWM01_slave = Slave(
+                    name='PWM01',
+                    idno=GPIO_PWM_1, #GPIO
+                    port_topics=port_Topics(
+                                sub_topics=[
+                                    'PWM01_open_SV', 'PWM01_f_SV', 'PWM01_duty_SV'
+                                ],
+                                pub_topics=[
+                                ],
+                                err_topics=[
+                                    'PWM01_collect_err', 'PWM01_set_err', 'PWM01_analyze_err'
+                                ]
+                                ),
+                    comm_func=Modbus.PWM_comm,
+                    #analyze_func=Modbus.,
+                    )
+PWM01_slave.PWM_instance('software')
+
+
+PWM02_slave = Slave(
+                    name='PWM02',
+                    idno=GPIO_PWM_2, #GPIO
+                    port_topics=port_Topics(
+                                sub_topics=[
+                                    'PWM02_open_SV', 'PWM02_f_SV', 'PWM02_duty_SV'
+                                ],
+                                pub_topics=[
+                                ],
+                                err_topics=[
+                                    'PWM02_collect_err', 'PWM02_set_err', 'PWM02_analyze_err'
+                                ]
+                                ),
+                    comm_func=Modbus.PWM_comm,
+                    #analyze_func=Modbus.,
+                    )
+PWM02_slave.PWM_instance('software')
 
 WatchDog_slave = Slave(
                     name='WatchDog',
@@ -598,16 +687,16 @@ PumpPID_slave.control_constructor()
 print('Slaves are all set')
 
 #-----Port setting----------------------------------------------------------------
-MFC_port = device_port(
-                        Air_MFC_slave,
-                        H2_MFC_slave,
-                        name='MFC_port',
-                        port=serial.Serial(port=MFC_port_path,
-                                            baudrate=19200, 
-                                            bytesize=8, 
-                                            stopbits=1, 
-                                            parity='N'),
-                        )
+# MFC_port = device_port(
+#                         Air_MFC_slave,
+#                         H2_MFC_slave,
+#                         name='MFC_port',
+#                         port=serial.Serial(port=MFC_port_path,
+#                                             baudrate=19200, 
+#                                             bytesize=8, 
+#                                             stopbits=1, 
+#                                             parity='N'),
+#                         )
 
 Scale_port = device_port(Scale_slave,
                         name='Scale_port',
@@ -618,21 +707,21 @@ Scale_port = device_port(Scale_slave,
                                             parity='N'),
                         )
 
-RS232_port = device_port(GA_slave,
-                        name='RS232_port',
-                        port=serial.Serial(port=RS232_port_path,
-                                            baudrate=9600, 
-                                            bytesize=8, 
-                                            stopbits=1, 
-                                            parity='N'),
-                        )
+# RS232_port = device_port(GA_slave,
+#                         name='RS232_port',
+#                         port=serial.Serial(port=RS232_port_path,
+#                                             baudrate=9600, 
+#                                             bytesize=8, 
+#                                             stopbits=1, 
+#                                             parity='N'),
+#                         )
 # somehow the headers are affecting ADAMs
 Setup_port = device_port(
                         # Header_BR_slave,
                         # Header_BR_SET_slave,
-                        Header_EVA_slave,
-                        Header_EVA_SET_slave,
-                        ADAM_TC_slave,
+                        # Header_EVA_slave,
+                        # Header_EVA_SET_slave,
+                        # ADAM_TC_slave,
                         ADAM_READ_slave,
                         ADAM_SET_slave,
                         name='Setup_port',
@@ -643,8 +732,13 @@ Setup_port = device_port(
                                             parity='N'),
                         )
 
-GPIO_port = device_port(DFM_slave,
-                        DFM_AOG_slave,
+GPIO_port = device_port(
+                        Relay01_slave,
+                        Relay02_slave,
+                        #DFM_slave,
+                        #DFM_AOG_slave,
+                        PWM01_slave,
+                        PWM02_slave,
                         name='GPIO_port',
                         port='GPIO',
                         )
@@ -666,10 +760,10 @@ PID_port = device_port(
 
 lst_ports = [
             # MFC_port,
-            # Scale_port, 
+            Scale_port, 
             # RS232_port, 
-            Setup_port,
-            GPIO_port,
+            # Setup_port,
+            # GPIO_port,
             # WatchDog_port,
             # PID_port
             ]

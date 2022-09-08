@@ -22,9 +22,11 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
         # reconnect then subscriptions will be renewed.
         client.subscribe("Set_bit", qos=0)
         client.subscribe("NodeRed", qos=0)
-        client.subscribe("MFC_Set", qos=0)
+        # client.subscribe("MFC_Set", qos=0)
         client.subscribe("ADDA_Set", qos=0)
-        client.subscribe("PID_Set", qos=0)
+        # client.subscribe("PID_Set", qos=0)
+        client.subscribe("PWM_Set", qos=0)
+        client.subscribe("Relay_Set", qos=0)
         #client.subscribe([(u,0) for i in config.lst_ports for u in i.sub_topics])
         #client.subscribe([("Header_EVA_SV", 0), ("Header_BR_SV", 0)])
 
@@ -51,13 +53,19 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
                 elif (msg.topic == "ADDA_Set"):
                     print(f'{hostname} Receive topic: ADDA_Set')
                     port = config.WatchDog_port
-                elif (msg.topic == 'MFC_Set'):
-                    print(f'{hostname} Receive topic: MFC_Set')
-                    port = config.MFC_port
-                elif (msg.topic == 'PID_Set'):
-                    print(f'{hostname} Receive topic: PID_Set')
-                    # print(msg.payload)
-                    port = config.PID_port
+                # elif (msg.topic == 'MFC_Set'):
+                #     print(f'{hostname} Receive topic: MFC_Set')
+                #     port = config.MFC_port
+                if (msg.topic == "PWM_Set"):
+                    print(f'{hostname} Receive topic: PWM_Set')
+                    port = config.GPIO_port
+                elif (msg.topic == "Relay_Set"):
+                    print(f'{hostname} Receive topic: Relay_Set')
+                    port = config.GPIO_port        
+                # elif (msg.topic == 'PID_Set'):
+                #     print(f'{hostname} Receive topic: PID_Set')
+                #     # print(msg.payload)
+                #     port = config.PID_port
                 for key, value in resp.items():
                     if port.sub_values.get(key) != None:
                         if port.sub_values[key].value != float(value):

@@ -32,6 +32,15 @@ try:
             device_port.port.reset_input_buffer() #flush input buffer
             device_port.port.reset_output_buffer() #flush output buffer
     print('serial ports open')
+
+    Modbus.PIG.set_mode(config.channel_Relay01_IN1, Modbus.pigpio.OUTPUT)
+    Modbus.PIG.write(config.channel_Relay01_IN1, 1)
+    Modbus.PIG.set_mode(config.channel_Relay01_IN2, Modbus.pigpio.OUTPUT)
+    Modbus.PIG.write(config.channel_Relay01_IN2, 1)
+    Modbus.PIG.set_mode(config.GPIO_TTL, Modbus.pigpio.OUTPUT)
+    Modbus.PIG.write(config.GPIO_TTL, 1)
+    Modbus.PIG.set_mode(config.GPIO_MOS, Modbus.pigpio.OUTPUT)
+    Modbus.PIG.write(config.GPIO_MOS, 0)
     
     PIG.set_mode(config.channel_DFM, pigpio.INPUT)
     PIG.set_mode(config.channel_DFM_AOG, pigpio.INPUT)
@@ -68,6 +77,12 @@ except Exception as ex:
     for device_port in config.lst_ports:
         if type(device_port.port) is serial.serialposix.Serial:
             device_port.port.close()
+        elif device_port.port == 'GPIO':
+            for slave in device_port.slaves:
+                Modbus.PIG.write(slave.id, 0)
+            Modbus.PIG.stop()
+            print ("close GPIO")
+    print ("\r\nProgram end")
     exit()
 
 #-------------------------Main Threadingggg-----------------------------------------
@@ -75,10 +90,24 @@ try:
     while not params.kb_event.is_set():
         print("=="*10 + f'Elapsed time: {round((time.time()-start),2)}' + "=="*10)
         time.sleep(params.sample_time)
+    params.kb_event.set()
+    print([i.name for i in multiprocessing.active_children()])
+    active_managers = [i for i in multiprocessing.active_children() if 'SyncManager' in i.name]
     for process in multiprocessing.active_children():
-        process.join()
-        print(f'Join process: {process.name}')
-        
+        if process not in active_managers:
+            print(f'Terminate process: {process.name}')
+            process.terminate()
+    for process in multiprocessing.active_children():
+        if process not in active_managers:
+            print(f'Join process: {process.name}')
+            process.join()
+    for manager in active_managers:
+        print(f'Terminate process: {manager.name}')
+        manager.terminate()
+    for manager in active_managers:
+        print(f'Join process: {manager.name}')
+        manager.join()
+    
 except KeyboardInterrupt: 
     print(f"Keyboard Interrupt in main thread!")
     print("=="*30)
@@ -91,8 +120,11 @@ finally:
         if type(device_port.port) is serial.serialposix.Serial:
             device_port.port.close()
         elif device_port.port == 'GPIO':
-            #GPIO.cleanup()
-            PIG.stop()
+            for slave in device_port.slaves:
+                if isinstance(slave.id, int): 
+                    Modbus.PIG.write(slave.id, 0)
+            Modbus.PIG.stop()
+            print ("close GPIO")
             
         Modbus.logger.critical(f'Close {device_port.name}, err are {[f"{k}:{v[:]}" for k,v in device_port.err_values.items()]}')
         Modbus.logger.critical(f'correct rates : {[f"{k}:{round(v[2]/(v[1] + 0.00000000000000001)*100,2)}%" for k,v in device_port.err_values.items()]}')

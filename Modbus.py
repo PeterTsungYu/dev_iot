@@ -9,28 +9,33 @@ import time
 import re
 from crccheck.crc import Crc16Modbus
 import logging
-
+import pigpio
 #custom modules
 import params
 
 #------------------------------Logger---------------------------------
 logger = logging.getLogger()
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter(
 	'[%(levelname)s %(asctime)s %(module)s:%(lineno)d] %(message)s',
 	datefmt='%Y%m%d %H:%M:%S')
 
 ch = logging.StreamHandler()
-ch.setLevel(logging.ERROR)
+ch.setLevel(logging.DEBUG)
 ch.setFormatter(formatter)
 
 fh = logging.FileHandler(filename='platform.log', mode='w')
-fh.setLevel(logging.ERROR)
+fh.setLevel(logging.DEBUG)
 fh.setFormatter(formatter)
 
 logger.addHandler(ch)
 logger.addHandler(fh)
+#-----ADDA port setting----------------------------------------------------------------
 
+channel_Relay01_IN1     = 22
+channel_Relay01_IN2     = 23
+#GPIO.setmode(GPIO.BCM) # for software PWM
+PIG = pigpio.pi() # for hardware PWM
 #------------------------------Decker---------------------------------
 def kb_event(func):
     def wrapper(*arg):
@@ -56,6 +61,7 @@ def analyze_decker(func):
         _lst_readings = list(iter(slave.lst_readings.get, None))
         _time_readings = list(iter(slave.time_readings.get, None))
         if slave.name in ['Scale']:
+            #print(slave.name, _lst_readings)
             _size_lst = slave.size_lst_readings
             _size_time = slave.size_time_readings
             _size_lst['short_lst_readings'].append(_lst_readings)
@@ -95,6 +101,9 @@ def analyze_decker(func):
             _time_readings = _DFM_time
             cond = len(_DFM_time['short_time_readings'])
             # print(cond)
+        elif 'PWM' in slave.name:
+            cond = len(_time_readings)
+            slave.time_readings = []
         else:    
             cond = len(_lst_readings)
         try:
@@ -135,7 +144,6 @@ def analyze_decker(func):
 
 #------------------------------Collect and Analyze func---------------------------------
 def Scale_data_collect(start, device_port, slave):
-    #while not params.kb_event.is_set():
     port = device_port.port
     collect_err = device_port.err_values[f'{slave.name}_collect_err']
     try:
@@ -143,7 +151,7 @@ def Scale_data_collect(start, device_port, slave):
         time.sleep(params.time_out) # wait for the data input to the buffer
         if port.inWaiting() > slave.r_wait_len:
             readings = port.read(port.inWaiting()).decode('utf-8')
-            readings = [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ \-][ .\d]{7}', readings)]
+            readings = [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ \-][ .\d]{7}', readings)][-1]
             slave.time_readings.put(time.time()-start)
             slave.lst_readings.put(readings)
             collect_err[2] += 1
@@ -163,25 +171,53 @@ def Scale_data_collect(start, device_port, slave):
         #     if slave.name not in device_port.broken_slave_names:
         #         device_port.broken_slave_names.append(slave.name)
 
+def Relay_comm(start, device_port, slave):
+    port = device_port.port
+    collect_err = device_port.err_values.get(f'{slave.name}_collect_err')
+    set_err = device_port.err_values.get(f'{slave.name}_set_err')
+    re_collect = device_port.recur_count.get(f'{slave.name}_collect_err')
+    re_set = device_port.recur_count.get(f'{slave.name}_set_err')
+
+    # set Relay to ON / OFF 
+    for topic in slave.port_topics.sub_topics:
+        #logging.critical((slave.name, topic))
+        if device_port.sub_events[topic].is_set():
+            #logging.critical(device_port.sub_values[topic])
+            try: # try to set value
+                print(device_port.sub_values[topic].value)
+                if device_port.sub_values[topic].value:
+                    #GPIO.output(channel_Relay01_IN1, 0)
+                    PIG.write(slave.id, 0)
+                else:
+                    #GPIO.output(channel_Relay01_IN1, 1)
+                    PIG.write(slave.id, 1)
+                device_port.sub_events[topic].clear()
+            except Exception as e:
+                set_err[0] += 1
+                err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: " + str(e)
+                logging.error(err_msg)
+            finally:
+                logging.info(f"{slave.name}_set_err: {round((set_err[1] - set_err[0])/(set_err[1]+0.00000000000000001)*100, 2)}%")
+
 
 def Modbus_Comm(start, device_port, slave):    
     port = device_port.port
-    collect_err = device_port.err_values.get(f'{slave.name}_collect_err')
+    collect_err = device_port.err_values.get(f'{slave.name}_collect_err')    
     set_err = device_port.err_values.get(f'{slave.name}_set_err')
     re_collect = device_port.recur_count.get(f'{slave.name}_collect_err')
     re_set = device_port.recur_count.get(f'{slave.name}_set_err')
     try: # try to collect
         recur = False
         collect_err[1] += 1
-        #logging.debug(slave.r_rtu)
+        logging.debug(slave.r_rtu)
         #logging.debug(bytes.fromhex(slave.r_rtu))
         port.write(bytes.fromhex(slave.r_rtu)) #hex to binary(byte) 
         time.sleep(params.time_out)
-        #logging.debug(port.inWaiting())
+        logging.debug(port.inWaiting())
         _data_len = port.inWaiting()
         if _data_len >= slave.r_wait_len: 
             readings = port.read(_data_len).hex() # after reading, the buffer will be clean        
-            #logging.debug(readings)
+            logging.debug(readings)
             if slave.name == 'GA':
                 slave.time_readings.put(time.time()-start)
                 slave.lst_readings.put(readings)
@@ -242,24 +278,27 @@ def Modbus_Comm(start, device_port, slave):
 
     w_data_site=0
     for topic in slave.port_topics.sub_topics:
-        #logging.critical((slave.name, topic))
+        logging.critical((slave.name, topic))
         if device_port.sub_events[topic].is_set():
-            #logging.critical(device_port.sub_values[topic])
+            logging.critical(device_port.sub_values[topic])
             try: # try to set value
                 recur = False
                 set_err[1] += 1
                 slave.write_rtu(f"{w_data_site:0>4}", device_port.sub_values[topic].value)
+                print(device_port.sub_values[topic].value)
+                print(slave.w_rtu)
                 port.write(bytes.fromhex(slave.w_rtu)) #hex to binary(byte) 
                 time.sleep(params.time_out)
                 _data_len = port.inWaiting()
+                print(_data_len)
                 if _data_len >= slave.w_wait_len:
                     readings = port.read(_data_len).hex() # after reading, the buffer will be clean
-                    #logging.critical(readings)
+                    logging.critical(readings)
                     re = hex(int(slave.id))[2:].zfill(2) + '06' + f"{w_data_site:0>4}"
                     #logging.critical(re)
                     if re in readings:
                         readings = readings[readings.index(re):(readings.index(re)+slave.w_wait_len*2)]
-                        #logging.critical(readings)
+                        logging.critical(readings)
                         crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
                         # check sta, func code, datalen, crc
                         if (crc[-2:] + crc[:2]) == readings[-4:]:
@@ -443,6 +482,74 @@ def MFC_Comm(start, device_port, slave):
                 #         device_port.broken_slave_names.append(slave.name)
         else:
             w_data_site += 1
+            
+def PWM_comm(start, device_port, slave):
+    port = device_port.port
+    collect_err = device_port.err_values.get(f'{slave.name}_collect_err')
+    set_err = device_port.err_values.get(f'{slave.name}_set_err')
+    re_collect = device_port.recur_count.get(f'{slave.name}_collect_err')
+    re_set = device_port.recur_count.get(f'{slave.name}_set_err')
+    # set PWM to ON / OFF, frequency, duty 
+    for topic in slave.port_topics.sub_topics:
+        #logging.critical((slave.name, topic))
+        if device_port.sub_events[topic].is_set():
+            #logging.critical(device_port.sub_values[topic])
+            try: # try to set value
+                open_SV = int(device_port.sub_values[f'{slave.name}_open_SV'].value)
+                duty = int(device_port.sub_values[f'{slave.name}_duty_SV'].value)
+                f = int(device_port.sub_values[f'{slave.name}_f_SV'].value)
+                # print(open_SV, duty, f)
+                # print(type(open_SV), type(duty))
+                if open_SV:
+                    PIG.set_PWM_frequency(slave.id, f)
+                    print(PIG.get_PWM_frequency(slave.id))
+                    PIG.set_PWM_dutycycle(slave.id, duty)
+                    print(PIG.get_PWM_dutycycle(slave.id))
+                    print(f"{slave.name} open at duty:{duty}, f: {f}")
+                else:
+                    PIG.write(slave.id, 0)
+                    print(f"close at duty:{0}, f: {1}")
+                for i in device_port.sub_events.values():
+                    i.clear()
+                print('clear flag')
+            except Exception as e:
+                set_err[0] += 1
+                err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: " + str(e)
+                logging.error(err_msg)
+            finally:
+                logging.info(f"{slave.name}_set_err: {round((set_err[1] - set_err[0])/(set_err[1]+0.00000000000000001)*100, 2)}%")
+
+def PIG_PWM_comm(start, device_port, slave):
+    port = device_port.port
+    collect_err = device_port.err_values.get(f'{slave.name}_collect_err')
+    set_err = device_port.err_values.get(f'{slave.name}_set_err')
+    re_collect = device_port.recur_count.get(f'{slave.name}_collect_err')
+    re_set = device_port.recur_count.get(f'{slave.name}_set_err')
+    # set PWM to ON / OFF, frequency, duty 
+    for topic in slave.port_topics.sub_topics:
+        #logging.critical((slave.name, topic))
+        if device_port.sub_events[topic].is_set():
+            #logging.critical(device_port.sub_values[topic])
+            try: # try to set value
+                # print(topic)
+                open_SV = device_port.sub_values[f'{slave.name}_open_SV'].value
+                duty = device_port.sub_values[f'{slave.name}_duty_SV'].value
+                f = device_port.sub_values[f'{slave.name}_f_SV'].value
+                if open_SV:
+                    PIG.hardware_PWM(slave.id, int(f * 1e3), int(duty * 1e4))
+                    print(f"open at duty:{duty}%, f: {f}kHz")
+                else:
+                    PIG.write(slave.id, 0)
+                    print('close')
+                device_port.sub_events[topic].clear()
+                print('clear flag')
+            except Exception as e:
+                PIG.write(slave.id, 0)
+                set_err[0] += 1
+                err_msg = f"{slave.name}_set_err_{set_err} at {round((time.time()-start),2)}s: " + str(e)
+                logging.error(err_msg)
+            finally:
+                logging.info(f"{slave.name}_set_err: {round((set_err[1] - set_err[0])/(set_err[1]+0.00000000000000001)*100, 2)}%")
 
 
 @analyze_decker
@@ -527,40 +634,35 @@ def Scale_data_analyze(start, device_port, slave, **kwargs):
     _time_readings = kwargs.get('_time_readings')
     _10_scale_lst = []
     _10_scale_time = []
+    # print(_lst_readings['short_lst_readings'])
+    # print(_time_readings['short_time_readings'])
+    assert len(_lst_readings['short_lst_readings']) == len(_time_readings['short_time_readings'])
     for i in range(0, len(_lst_readings['short_lst_readings'])):
-        for j in range(0, len(_lst_readings['short_lst_readings'][i])):
-            _10_scale_lst.extend(_lst_readings['short_lst_readings'][i][j])
-        if _10_scale_lst != []:
-            pass
-        else:
-            _10_scale_lst.extend([0,0])
-    _10_scale_time.extend(_time_readings['short_time_readings'])
+        _10_scale_lst.extend(_lst_readings['short_lst_readings'][i])
+        _10_scale_time.extend(_time_readings['short_time_readings'][i])
     for i in _10_scale_lst: 
         if -0.00001 < i < 0.00001:
             _10_scale_lst.remove(i)
             _10_scale_time.remove(i)
-    _10_scale = (_10_scale_lst[0] - _10_scale_lst[-1]) / (_10_scale_time[-1] - _10_scale_time[0]) * 1000 * 10
-
+    if _10_scale_lst:
+        _10_scale = (_10_scale_lst[0] - _10_scale_lst[-1]) / (_10_scale_time[-1] - _10_scale_time[0]) * 1000 * 10
+    else:
+        _10_scale = 0
+    # print(_10_scale)
+    
     _60_scale_lst = []
     _60_scale_time = []
-    
+    assert len(_lst_readings['long_lst_readings']) == len(_time_readings['long_time_readings'])
     for i in range(0, len(_lst_readings['long_lst_readings'])):
-        for j in range(0, len(_lst_readings['long_lst_readings'][i])):
-            _60_scale_lst.extend(_lst_readings['long_lst_readings'][i][j])
-        if _60_scale_lst != []:
-            pass
-        else:
-            _60_scale_lst.extend([0,0])
-    _60_scale_time.extend(_time_readings['long_time_readings'])
+        _60_scale_lst.extend(_lst_readings['long_lst_readings'][i])
+        _60_scale_time.extend(_time_readings['long_time_readings'][i])
     for i in _60_scale_lst: 
         if -0.00001 < i < 0.00001:
             _60_scale_lst.remove(i)
             _60_scale_time.remove(i)
-    _60_scale = (_60_scale_lst[0] - _60_scale_lst[-1]) / (_60_scale_time[-1] - _60_scale_time[0]) * 1000 * 60
-
-    if _10_scale <= 0:
-        _10_scale = 0
-    if _60_scale <=0:
+    if _60_scale_lst:
+        _60_scale = (_60_scale_lst[0] - _60_scale_lst[-1]) / (_60_scale_time[-1] - _60_scale_time[0]) * 1000 * 60
+    else:
         _60_scale = 0
         
     _readings = tuple([round(_sampling_time,2), round(_10_scale, 2), round(_60_scale, 2)])
