@@ -53,7 +53,8 @@ pip install -r requirements.txt
 ```shell
 sudo apt update
 sudo apt install mosquitto mosquitto-clients
-## restart, also start other dependent services
+
+# to start the service
 sudo systemctl start mosquitto
 
 # to stop the service 
@@ -65,5 +66,90 @@ sudo systemctl enable mosquitto
 # to disable the service on boot (/lib/systemd)
 sudo systemctl disable mosquitto
 ```
+
+### MariaDB as mySQL drop-in replacement
+> If you wish to apply a pipe to a database, you should establish a database somewhere. Either as a localhost or as a remoe database server.
+
+```shell
+# install MariaDB
+sudo apt-get install mariadb-server
+
+# for secure setting
+sudo mysql_secure_installation
+
+# check systemctl status 
+systemctl status mysql
+
+# to start the service
+sudo systemctl start mysql
+
+# to stop the service 
+sudo systemctl stop mysql
+
+# for login as root 
+$ sudo mysql -u root -p
+```
+
+```
+# inside the shell of mysql
+## create a new db
+CREATE DATABASE <example>;
+
+## create a table in a db
+create table <customer>(<name> varchar(10), <join_date> date) DEFAULT CHARSET=utf8;
+
+## create a new user
+CREATE USER <user>@<IP> IDENTIFIED by <password>;
+
+## grant privilege
+GRANT ALL PRIVILEGES ON <database>.<table> TO <user>@<IP>;
+FLUSH PRIVILEGES;
+
+## show grants
+SHOW GRANTS FOR <user>@<IP>;
+```
+
+### .env file
+You can find an example of an .env file inside the folder of .env_example.
+```shell
+touch .env 
+```
+
+```
+# inside the .env, fill in the info
+db_user=''
+db_pwd=''
+host_vpn=''
+```
+> "db_user", the one you created within mysql
+
+> "db_pwd", the one you created within mysql as the user is created
+
+> "host_vpn", it is the IP v4 address of your host of database
+
+
+### Assign names to the USB port on RPi
+
+
+### Create your slaves
+
+
+### Define your topics to be published / subscribed
+
+
+### Execute Python script in shell
+```shell
+python3 Threads_rasp.py
+```
+#### If start successfully
+![dev_iot_img_0](https://i.imgur.com/K3yjgn5.png)
+
+#### If analyze successfully
+![dev_iot_img_1](https://i.imgur.com/0aL0qFd.png)
+
+#### If shut down gracefully
+![dev_iot_img_2](https://i.imgur.com/PfAyyde.png)
+
+
 
 
