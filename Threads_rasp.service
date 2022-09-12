@@ -3,12 +3,12 @@ Description=My service
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/python3.7 -u Threads_rasp-001.py
+ExecStart=/usr/bin/python3.7 -u Threads_rasp.py
 WorkingDirectory=/home/pi/dev_iot
 StandardOutput=file:/home/pi/dev_iot/outlog.log
 StandardError=file:/home/pi/dev_iot/errlog.log
-KillSignal=SIGINT
-Restart=always
+#KillSignal=SIGINT
+#Restart=always
 User=pi
 
 [Install]
