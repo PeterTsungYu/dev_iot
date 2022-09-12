@@ -31,5 +31,9 @@ Take a look at this [NodeRed dashboard](https://github.com/PeterTsungYu/flows_Re
 | Slide Mode        | [:link:][Slide-mode]    | 
 | Share & Publish   | [:link:][Share-Publish] |
 
+
+
+![permalink setting demo](https://imgur.com/cLKPwj7)
+
 # Clone the project
 
