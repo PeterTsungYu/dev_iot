@@ -1,9 +1,12 @@
+# Pythonic IoT Project
+## Scope
 The aims of this IoT project are to establish a framework for the below...
 - Collect and analyze data
 - Remotely automatic control
 - Pipe to databases
 - Wirelessly communicate via the MQTT protocol
 
+## Dependencies
 A physical interface is built on [PySerial](https://pyserial.readthedocs.io/en/latest/pyserial.html) or [pigpio](https://abyz.me.uk/rpi/pigpio/), in which newly-defined classes and objects are created to communicate between a master (Linux system, or dev board like RPi) and slaves.
 Several industrial IoT devices (or called slaves inside the project files) could be communicated, such as the Mass Flow Controllers, Dry Gas Meters, Scales, Pumps, Heaters, Blowers, Fans, PWM-driven modules, RS485 / RS232 modules, and more.
 
@@ -23,17 +26,44 @@ Data conveys either from the master as a publisher or to the master as a subscri
 With this IoT project folder, one could further pipe data to a [NodeRed platform](https://nodered.org/) for monitoring, controlling, and visualizing. 
 Take a look at this [NodeRed dashboard](https://github.com/PeterTsungYu/flows_Reformer) that is created under the same scope of this project.   
 
-| Features          | Links                   |
-| ----------------- |:----------------------- |
-|NodeRed dashboard  | [:link:][https://github.com/PeterTsungYu/flows_Reformer]   |
-| Browser Extension | [:link:][HackMD-it]     |
-| Book Mode         | [:link:][Book-mode]     |
-| Slide Mode        | [:link:][Slide-mode]    | 
-| Share & Publish   | [:link:][Share-Publish] |
+| Features              | Links                   |
+| -----------------     |:----------------------- |
+| NodeRed dashboard     | [:link:][https://github.com/PeterTsungYu/flows_Reformer]    |
+| Visualization project | [:link:][https://github.com/PeterTsungYu/dev_eda]           |
 
+## Quick Start
+Below instructions are employed in the environment as...
+- Linux-based or Linux system
+- Raspberry Pi board (Rpi 3B+ is used in this project)
+- Available USB ports (4 ports on Rpi 3B+)
+- Wifi or Intranet access
 
+### Clone the project
+```shell
+git clone https://github.com/PeterTsungYu/dev_iot.git
+```
 
-![Imgur](https://i.imgur.com/TN5QZqt.gif)
+### Install required packages
+```shell
+cd dev_iot/
+pip install -r requirements.txt
+```
 
-# Clone the project
+### Install MQTT Eclipse
+```shell
+sudo apt update
+sudo apt install mosquitto mosquitto-clients
+## restart, also start other dependent services
+sudo systemctl start mosquitto
+
+# to stop the service 
+sudo systemctl stop mosquitto
+
+# to enable the service on boot (/lib/systemd)
+sudo systemctl enable mosquitto
+
+# to disable the service on boot (/lib/systemd)
+sudo systemctl disable mosquitto
+```
+
 
