@@ -33,7 +33,7 @@ Take a look at this [NodeRed dashboard](https://github.com/PeterTsungYu/flows_Re
 
 
 
-![permalink setting demo](https://imgur.com/cLKPwj7)
+![Imgur](https://i.imgur.com/TN5QZqt.gif)
 
 # Clone the project
 
