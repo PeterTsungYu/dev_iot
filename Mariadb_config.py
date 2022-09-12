@@ -4,21 +4,21 @@
 #python packages
 import os
 import sys
-import threading
+import multiprocessing
 import mariadb
-from datetime import datetime
 from dotenv import load_dotenv
+import time
 
 #custom modules
+import params
 import config
-import MQTT_config
 
 #-------------------------time and tokens--------------------------------------
-time = datetime.now().strftime('%Y_%m_%d_%H')
 load_dotenv()
 username = os.environ.get("db_user")
 password = os.environ.get("db_pwd")
-print(username, password)
+host_vpn = os.environ.get("host_vpn")
+#print(username, password)
 
 #-------------------------mariadb conn--------------------------------------
 try:
@@ -26,83 +26,80 @@ try:
     conn = mariadb.connect(
         user=username,
         password=password,
-        host="rasp-002.local",
+        host=host_vpn,
         port=3306,
-        database="catalyst",
+        database="reformer",
         autocommit=True
     )
 
     # Get Cursor for tx
     cur = conn.cursor()
-except mariadb.Error as e:
-    print(f"Error connecting to MariaDB Platform: {e}")
-    sys.exit(1)
 
-#-------------------------create table--------------------------------------
-TableSchema = [
-    f'create table platform_{time} (',
-    'Id int NOT NULL AUTO_INCREMENT,',
-    'TCHeader_SV0 FLOAT,',
-    'TCHeader_SV1 FLOAT,',
-    'ADAM_4024_SV0 FLOAT,',
-    'TCHeader_PV0 FLOAT,',
-    'TCHeader_PV1 FLOAT,',
-    'Scale FLOAT,',
-    'ADAM_4024_PV0 FLOAT,',
-    'PRIMARY KEY (Id)',
-    ')'
-    ]
-try:
-    cur.execute(f'drop table if exists platform_{time}') 
-    cur.execute(''.join(TableSchema)) 
-    print('Create tables succeed')       
-except mariadb.Error as e:
-    print(f"Error creating Table: {e}")
-    sys.exit(2)
+        #-------------------------create table--------------------------------------
+    Table_col = [u + ' FLOAT' for i in config.lst_ports for u in i.pub_topics + i.sub_topics]
+    TableSchema = f'create table platform_{config.db_time} (Id int NOT NULL AUTO_INCREMENT,' \
+                    + ','.join(Table_col) \
+                    + ',PRIMARY KEY (Id))'
+    #print(TableSchema)
 
-#-------------------------db func--------------------------------------
-insertSchema = [
-    f'INSERT INTO platform_{time} (',
-    'TCHeader_SV0,',
-    'TCHeader_SV1,',
-    'ADAM_4024_SV0,',
-    'TCHeader_PV0,',
-    'TCHeader_PV1,',
-    'Scale,',
-    'ADAM_4024_PV0',
-    ') ',
-    'VALUES (?, ?, ?, ?, ?, ?, ?)'
-    ]
-def multi_insert(cur):
-    while not config.kb_event.isSet():
-        if not config.ticker.wait(config.sample_time):
-            try:
-                cur.execute(
-                    ''.join(insertSchema), 
-                    tuple(i['value'] for i in MQTT_config.sub_Topics.values()) + 
-                    tuple(MQTT_config.pub_Topics.values())
-                    )
-                print(f"Successfully added entry to database. Last Inserted ID: {cur.lastrowid}")
-            except mariadb.Error as e:
-                print(f"Error adding entry to database: {e}")
-        
-
-def get_data(last_name):
     try:
-      cur.execute("SELECT first_name, last_name FROM employees WHERE last_name=?", (last_name,))
-      for (first_name, last_name) in cur:
-        print(f"Successfully retrieved {first_name}, {last_name}")
-    except database.Error as e:
-      print(f"Error retrieving entry from database: {e}")
+        cur.execute(f'drop table if exists platform_{config.db_time}') 
+        cur.execute(TableSchema)
+        config.db_connection = True
+        print('Create tables succeed')       
+    except mariadb.Error as e:
+        config.db_connection = False
+        print(f"Error creating Table: {e}")
+        #sys.exit(2)
 
-#-------------------------main--------------------------------------
-multi_insert = threading.Thread(
-    target=multi_insert,
-    args=(cur,),
+    #-------------------------db func--------------------------------------
+    insert_col = [u for i in config.lst_ports for u in i.pub_topics + i.sub_topics]
+    insertSchema = f'INSERT INTO platform_{config.db_time} (' \
+                    + ','.join(insert_col) \
+                    + f') VALUES ({("?,"*len(insert_col))[:-1]})'
+    #print(insert_col)
+except mariadb.Error as e:
+    config.db_connection = False
+    print(f"Error connecting to MariaDB Platform: {e}")
+    #sys.exit(1)
+finally:
+    conn.close()
+    print("After table and scheme creation. Close connection to MariaDB")    
+
+
+def multi_insert():
+    # Connect to MariaDB Platform
+    conn = mariadb.connect(
+        user=username,
+        password=password,
+        host=host_vpn,
+        port=3306,
+        database="reformer",
+        autocommit=True
     )
-multi_insert.start()
+    cur = conn.cursor()
+    
+    while not params.kb_event.is_set():
+        time.sleep(params.comm_time)
+        try:
+            #print(f'Insert config.NodeRed: {config.NodeRed}')
+            cur.execute(
+                insertSchema,
+                #tuple(i for i in config.Setup_port.sub_values.values()) + # sub value
+                #tuple(u for i in config.lst_ports for u in list(i.pub_values.values()) + list(i.sub_values.values())) # pub value
+                tuple(config.NodeRed.get(_k) for _k in insert_col)
+                )
+            print(f"Successfully added entry to database. Last Inserted ID: {cur.lastrowid}")
+        except mariadb.Error as e:
+            config.db_connection = False
+            print(f"Error multi_insert to MariaDB Platform: {e}")
+    conn.close()
+    print("close connection to MariaDB")    
 
-'''
-while True:
-    pass
-'''
+multi_insert_process = multiprocessing.Process(
+    name='multi_insert_process',
+    target=multi_insert,
+    args=(),
+    )
+#multi_insert.start()
+    

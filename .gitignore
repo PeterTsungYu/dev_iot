@@ -1,3 +1,7 @@
 /__pycache__/*
 /NodeRed_sandbox/data/*
 /.env
+/*.log
+/test*
+/dc_slash_cmd.py
+/discordbot

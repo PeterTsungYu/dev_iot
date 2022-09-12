@@ -4,761 +4,658 @@
 # pip3 install pyserial
 
 #python packages
-from crccheck.crc import Crc16Modbus
 import numpy as np
-import serial
 import time
 import re
-import random
+from crccheck.crc import Crc16Modbus
+import logging
 
 #custom modules
-import config
-import MQTT_config
+import params
 
-#-------------------------RTU & Slave--------------------------------------
-class RTU: # generate the CRC for the complete RTU 
-    def __init__(self, idno='', func_code='', data_site='', data_len=''):
-        self.id = idno # id number of slave
-        self.data_len = data_len
-        data_struc = idno + func_code + data_site + data_len
-        crc = Crc16Modbus.calchex(bytearray.fromhex(data_struc))
-        self.rtu = data_struc + crc[-2:] + crc[:2]
+#------------------------------Logger---------------------------------
+logger = logging.getLogger()
+logger.setLevel(logging.ERROR)
+formatter = logging.Formatter(
+	'[%(levelname)s %(asctime)s %(module)s:%(lineno)d] %(message)s',
+	datefmt='%Y%m%d %H:%M:%S')
+
+ch = logging.StreamHandler()
+ch.setLevel(logging.ERROR)
+ch.setFormatter(formatter)
+
+fh = logging.FileHandler(filename='platform.log', mode='w')
+fh.setLevel(logging.ERROR)
+fh.setFormatter(formatter)
+
+logger.addHandler(ch)
+logger.addHandler(fh)
+
+#------------------------------Decker---------------------------------
+def kb_event(func):
+    def wrapper(*arg):
+        while not params.kb_event.is_set():
+            func(*arg)
+    return wrapper
 
 
-class Slave: # Create Slave data store 
-    def __init__(self, idno='', rtu=''):
-        self.id = idno # id number of slave
-        self.rtu = rtu # str or a list. list[0]:read, list[1]:write 
-        self.lst_readings = [] # record readings
-        self.time_readings = 0 # record time
-        self.readings = [] # for all data 
+def sampling_event():
+    def decker(func):
+        def wrapper(*arg):
+            params.sample_ticker.wait()
+            func(*arg)
+        return wrapper
+    return decker
 
-'''deprecated 
-def gen_Slave(RTU):
-    slave = Slave(RTU.id, RTU.rtu)
-    return slave
-'''
 
-'''
-class SlaveThread(threading.Thread): # deprecated 
-    def __init__(self, name='SlaveThread'):
-        threading.Thread.__init__(self, name=name)
-        self._kill = threading.Event()
-        self._sleepperiod = 1
-    def run(self):
-        while not self._kill.isSet(): # inspect the event till it is set
-            self._kill.wait(self._sleepperiod) # inspect every period
-        print('end')
-    def join(self, timeout=None):
-        self._stopevent.set(  ) # stop the tread by join method
-        threading.Thread.join(self, timeout)
-'''
-
-'''deprecated
-from pymodbus.datastore import ModbusSequentialDataBlock
-from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
-
-def serverDB_gen(slave_id=0x00):
-    register_block = ModbusSequentialDataBlock(0x00, [0x00]*0x17) # each address can hold from a range 0x00 to 0xffff
-    store = ModbusSlaveContext(
-        #di=ModbusSequentialDataBlock(0, [1]*100),
-        #co=ModbusSequentialDataBlock(0, [2]*100),
-        hr=register_block, # holding register block, for func = 3, 6, 16
-        #ir=ModbusSequentialDataBlock(0, [4]*100),
-        zero_mode=True
-        )
-    context = ModbusServerContext(
-        slaves={slave_id:store,}, # collection of slaves; here only slave 6
-        single=False
-        )
-    print("Succeed to generate a server context")
-    return context
-'''
-'''deprecated
-from pymodbus.device import ModbusDeviceIdentification
-from pymodbus.server.asynchronous import StartSerialServer
-from pymodbus.transaction import ModbusRtuFramer
-from pymodbus.server.asynchronous import StopServer
-
-def run_server(context, port, timeout=1, baudrate=115200, stopbits=1, bytesize=8, parity='N'):
-    
-    identity = ModbusDeviceIdentification()
-    identity.VendorName = 'RPi'
-    identity.ProductCode = 'RPi'
-    identity.VendorUrl = ''
-    identity.ProductName = 'RPi Server'
-    identity.ModelName = 'RPi Server'
-    identity.MajorMinorRevision = '0.0.1'
-
-    StartSerialServer(
-        context, 
-        framer=ModbusRtuFramer,
-        identity=identity,  
-        port=port, 
-        timeout=timeout, 
-        baudrate=baudrate,
-        stopbits=stopbits,
-        bytesize=bytesize,
-        parity=parity, 
-        )
-
-    print("Server is offline")
-'''
+def analyze_decker(func):
+    def wrapper(start, device_port, slave):
+        analyze_err = device_port.err_values[f'{slave.name}_analyze_err']
+        slave.lst_readings.put(None)
+        slave.time_readings.put(None)
+        _lst_readings = list(iter(slave.lst_readings.get, None))
+        _time_readings = list(iter(slave.time_readings.get, None))
+        if slave.name in ['Scale']:
+            _size_lst = slave.size_lst_readings
+            _size_time = slave.size_time_readings
+            _size_lst['short_lst_readings'].append(_lst_readings)
+            _size_lst['long_lst_readings'].append(_lst_readings)
+            _size_time['short_time_readings'].append(_time_readings)
+            _size_time['long_time_readings'].append(_time_readings)
+            if len(_size_lst['short_lst_readings']) > 10: # aggregate lists for 10s in a list
+                _size_lst['short_lst_readings'] = params.manager.list(_size_lst['short_lst_readings'][-10:])
+                _size_time['short_time_readings'] = params.manager.list(_size_time['short_time_readings'][-10:])
+            if len(_size_lst['long_lst_readings']) > 60: # aggregate lists for 60s in a list
+                _size_lst['long_lst_readings'] = params.manager.list(_size_lst['long_lst_readings'][-60:])
+                _size_time['long_time_readings'] = params.manager.list(_size_time['long_time_readings'][-60:])
+            _lst_readings = _size_lst
+            _time_readings = _size_time
+            cond = len(_lst_readings['short_lst_readings'])
+        elif 'ADAM_TC' in slave.name:
+            _size_lst = slave.size_lst_readings
+            _size_time = slave.size_time_readings
+            _size_lst['short_lst_readings'].append(_lst_readings)
+            _size_time['short_time_readings'].append(_time_readings)
+            if len(_size_lst['short_lst_readings']) > 5: # aggregate lists for 10s in a list
+                _size_lst['short_lst_readings'] = params.manager.list(_size_lst['short_lst_readings'][-5:])
+                _size_time['short_time_readings'] = params.manager.list(_size_time['short_time_readings'][-5:])
+            _lst_readings = _size_lst
+            _time_readings = _size_time
+            cond = len(_lst_readings['short_lst_readings'])
+        elif 'DFM' in slave.name:
+            #print(_time_readings)
+            _DFM_time = slave.size_time_readings
+            _DFM_time['short_time_readings'].append(_time_readings)
+            _DFM_time['long_time_readings'].append(_time_readings)
+            if len(_DFM_time['short_time_readings']) > 10: # aggregate lists for 10s in a list
+                _DFM_time['short_time_readings'] = params.manager.list(_DFM_time['short_time_readings'][-10:])
+            if len(_DFM_time['long_time_readings']) > 60: # aggregate lists for 60s in a list
+                _DFM_time['long_time_readings'] = params.manager.list(_DFM_time['long_time_readings'][-60:])
+            _lst_readings = []
+            _time_readings = _DFM_time
+            cond = len(_DFM_time['short_time_readings'])
+            # print(cond)
+        else:    
+            cond = len(_lst_readings)
+        try:
+            analyze_err[1] += 1
+            if cond > 0:
+                _readings = func(start, device_port, slave, _lst_readings=_lst_readings, _time_readings=_time_readings)
+                # casting
+                ind = 1
+                for topic in slave.port_topics.pub_topics:    
+                    device_port.pub_values[topic].value = _readings[ind]
+                    #logging.critical(f'{topic} {device_port.pub_values[topic].value}')
+                    ind += 1
+                ## to slave data list
+                #slave.readings.append(_readings)
+                analyze_err[2] += 1
+                logging.critical(f"{slave.name}_analyze done: record {_readings}")
+            elif (device_port.name == 'GPIO_port') and (cond == 0):
+                _readings = tuple([_time_readings, 0])
+                # casting
+                ind = 1
+                for topic in slave.port_topics.pub_topics:    
+                    device_port.pub_values[topic].value = _readings[ind]
+                    #logging.debug(f'{topic} {device_port.pub_values[topic].value}')
+                    ind += 1
+                ## to slave data list
+                #slave.readings.append(_readings)
+                analyze_err[2] += 1
+                logging.critical(f"{slave.name}_analyze done: record {_readings}")
+            else:
+                analyze_err[0] += 1
+                logging.warning(f"{slave.name}_analyze record nothing")
+        except Exception as e:
+            analyze_err[0] += 1
+            logging.critical(f"{slave.name}_analyze_err_{analyze_err[:]} at {round((time.time()-start),2)}s: " + str(e))
+        finally:
+            logging.critical(f"{slave.name}_analyze_err: {round(analyze_err[2]/(analyze_err[1] + 0.00000000000000001)*100, 2)}%, analyze_err_{analyze_err[:]}")
+    return wrapper
 
 #------------------------------Collect and Analyze func---------------------------------
-def tohex(value):
-    value = int(value)
-    hex_value = hex(value)[2:]
-    add_zeros = 4 - len(hex_value)
-    hex_value = add_zeros * '0' + hex_value
-    return hex_value
-
-
-def RPiserver(start, port, slave, wait_data):
-    while not config.kb_event.isSet():
-        try:
-            if port.inWaiting() >= wait_data: # Rpi protocol has 8 bytes ('0603000000170473')
-                # '06' is slave 6
-                # '03' is func code 
-                # 17*2 data entries
-                writing = '0603' + hex(34)[2:]
-                #print(slave.readings)
-                for i in slave.readings:
-                    i = hex(i)
-                    if len(i) != 6: # ex. 0x10
-                        i = '0'*(6-len(i)) + i[2:]
-                    elif len(i) == 6: # ex. 0x10
-                        i = i[2:]
-                    writing = writing + i
-                crc = Crc16Modbus.calchex(bytearray.fromhex(writing)) # ex. bytearray.fromhex('0010'), two-by-two digits in the bytearray
-                writing_RTU = writing + crc[-2:] + crc[:2]
-                #print(writing)
-
-                readings = port.read(port.inWaiting()).hex()
-                #print(readings)
-                if slave.rtu in readings: # Rpi protocol, '06 03 0000 0017 0473'
-                    port.write(bytes.fromhex(writing_RTU)) #hex to binary(byte)
-                    readings = '' 
-                    print(slave.readings)
-                    print(f'RPiserver write at {round(time.time()-start, 2)}s : {writing}')
-                port.reset_input_buffer()
-            #time.sleep(1)
-        except Exception as e:
-            print ("RPiserver error: " + str(e))
-            time.sleep(1)
-
-    port.close()
-    print('kill RPiserver')
-    #barrier_kill.wait()
-
-
-def Adam_data_collect(start, port, slave, wait_data):
-    #start = time.time()
-    count_err = 0
-    while not config.kb_event.isSet():
-        try:
-            slave.time_readings.append(round(time.time()-start, 2))
-            port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
-
-            time.sleep(config.time_out)
-
-            # look up the buffer for 21 bytes, which is for 8 channels data length
-            if port.inWaiting() >= wait_data:
-                '''
-                check sta, func code, datalen, crc
-                ''' 
-                readings = port.read(wait_data).hex()
-                #print(readings)
-                slave.lst_readings.append(readings)
-                print('Adam_data_collect: done')
-                port.reset_input_buffer() # reset the buffer after each reading process
-            else: # if data len is less than the wait data
-                count_err += 1
-                print('XX'*10 + f" {count_err} Adam_data_collect error at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10)
-        except Exception as e:
-            print('XX'*10 + f" {count_err} Adam_data_collect error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
-        finally:
-            pass
-
-    port.close()
-    print('kill Adam_data_collect')
-    print(f'Final Adam_data_collect: {count_err} errors occured')
-    #barrier_kill.wait()
-
-
-def Scale_data_collect(start, port, slave, wait_data):
-    #start = time.time()
-    count_err = 0
-    while not config.kb_event.isSet():
-        try:
-            slave.time_readings = time.time()-start
-            time.sleep(config.time_out) # wait for the data input to the buffer
-            if port.inWaiting() > wait_data:
-                readings = port.read(port.inWaiting()).decode('utf-8')
-                readings = [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ \-][ .\d]{7}', readings)]
-                slave.lst_readings.append(readings)
-                print(f'Scale_data_collect done: read from slave_{slave.id}')
-                port.reset_input_buffer() # reset the buffer after each reading process
-            else: # if data len is no data
-                count_err += 1
-                print('XX'*10 + f"Scale_data_collect error: from slave_{slave.id}, err_{count_err} at {round((time.time()-start),2)}s: data len is no data" + 'XX'*10)
-        except Exception as e:
-            print('XX'*10 + f"Scale_data_collect error: err_{count_err} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
-        finally:
-            pass
-
-    port.close()
-    print('kill Scale_data_collect')
-    print(f'Final Scale_data_collect: {count_err} errors occured')
-    #barrier_kill.wait()
-
-
-def MFC_data_comm(start, count_err, port, slave, wait_data):
-    #start = time.time()
-    #while not config.kb_event.isSet():
+def Scale_data_collect(start, device_port, slave):
+    port = device_port.port
+    collect_err = device_port.err_values[f'{slave.name}_collect_err']
     try:
-        slave.time_readings.append(round(time.time()-start, 2))
-        port.write(bytes(slave.rtu, 'utf-8')) #string to binary(byte) 
-
-        time.sleep(config.time_out)
-        
-        #print(port.inWaiting())
-        if port.inWaiting() >= wait_data:
-            '''
-                check sta, func code, datalen, crc
-            ''' 
+        collect_err[1] += 1
+        time.sleep(params.time_out) # wait for the data input to the buffer
+        if port.inWaiting() > slave.r_wait_len:
             readings = port.read(port.inWaiting()).decode('utf-8')
-            #print(readings)
-            slave.lst_readings.append(readings)
-            print('MFC_data_collect done')
+            readings = [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ \-][ .\d]{7}', readings)]
+            slave.time_readings.put(time.time()-start)
+            slave.lst_readings.put(readings)
+            collect_err[2] += 1
+            logging.info(f'Read {readings} from slave_{slave.name}')
             port.reset_input_buffer() # reset the buffer after each reading process
-        else: # if data len is less than the wait data
-            count_err += 1
-            print('XX'*10 + f" {count_err} MFC_data_collect error at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10)
+        else: # if data len is no data
+            collect_err[0] += 1
+            err_msg = f"{slave.name}_collect_err_{collect_err[:]} at {round((time.time()-start),2)}s: data len is no wait data"
+            logging.error(err_msg)
     except Exception as e:
-        print('XX'*10 + f" {count_err} MFC_data_collect error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+        collect_err[0] += 1
+        err_msg = f"{slave.name}_collect_err_{collect_err[:]} at {round((time.time()-start),2)}s: " + str(e)
+        logging.error(err_msg)
     finally:
-        pass
+        logging.critical(f"{slave.name}_collect_err: {round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2)}%, collect_err_{collect_err[:]}")
+        # if (collect_err[1] >= params.exempt_try) and (round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
+        #     if slave.name not in device_port.broken_slave_names:
+        #         device_port.broken_slave_names.append(slave.name)
+
+
+def Modbus_Comm(start, device_port, slave):    
+    port = device_port.port
+    collect_err = device_port.err_values.get(f'{slave.name}_collect_err')
+    set_err = device_port.err_values.get(f'{slave.name}_set_err')
+    re_collect = device_port.recur_count.get(f'{slave.name}_collect_err')
+    re_set = device_port.recur_count.get(f'{slave.name}_set_err')
+    try: # try to collect
+        recur = False
+        collect_err[1] += 1
+        #logging.error(slave.r_rtu)
+        # logging.debug(bytes.fromhex(slave.r_rtu))
+        port.write(bytes.fromhex(slave.r_rtu)) #hex to binary(byte) 
+        time.sleep(params.time_out)
+        #logging.debug(port.inWaiting())
+        _data_len = port.inWaiting()
+        if _data_len >= slave.r_wait_len: 
+            readings = port.read(_data_len).hex() # after reading, the buffer will be clean        
+            #logging.debug(readings)
+            if slave.name == 'GA':
+                slave.time_readings.put(time.time()-start)
+                slave.lst_readings.put(readings)
+                logging.info(f'Read from slave_{slave.name}')
+            else:    
+                re = hex(int(slave.id))[2:].zfill(2) + '03' + hex(slave.r_wait_len-5)[2:].zfill(2)
+                #logging.debug(readings.index(re))
+                if re in readings:
+                    readings = readings[readings.index(re):(readings.index(re)+slave.r_wait_len*2)]
+                    logging.debug(readings)
+                    crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
+                    #logging.debug(crc)
+                    # check sta, func code, datalen, crc
+                    if (crc[-2:] + crc[:2]) == readings[-4:]:
+                        slave.time_readings.put(time.time()-start)
+                        slave.lst_readings.put(readings)
+                        collect_err[2] += 1
+                        logging.info(f'Read from slave_{slave.name}')
+                    else:
+                        recur = True
+                        collect_err[0] += 1
+                        err_msg = f"{slave.name}_collect_err_{collect_err[:]} at {round((time.time()-start),2)}s: crc validation failed"
+                        logging.error(err_msg)
+                else:
+                    recur = True
+                    collect_err[0] += 1
+                    err_msg = f"{slave.name}_collect_err_{collect_err[:]} at {round((time.time()-start),2)}s: Modbus protocol failed"
+                    logging.error(err_msg)
+        else: # if data len is less than the wait data
+            if _data_len == 0:
+                recur = True
+                collect_err[0] += 1
+                err_msg = f"{slave.name}_collect_err_{collect_err[:]} at {round((time.time()-start),2)}s: wrong rtu code led to null receiving"
+                logging.error(err_msg)
+            elif _data_len < slave.r_wait_len:
+                recur = True
+                collect_err[0] += 1
+                err_msg = f"{port.read(_data_len).hex()} {slave.name}_collect_err_{collect_err[:]} at {round((time.time()-start),2)}s: data len_{_data_len} is less than the wait data"
+                logging.error(err_msg)
+    except Exception as e:
+        collect_err[0] += 1
+        err_msg = f"{slave.name}_collect_err_{collect_err[:]} at {round((time.time()-start),2)}s: " + str(e)
+        logging.error(err_msg)
+    finally:
+        # recursive part if the rtu was transferred but crushed in between the lines
+        if (recur == True) and (re_collect[0] < params.recur_try):
+            re_collect[0] += 1
+            re_collect[1] += 1
+            logging.debug(f're_collect: {re_collect[:]}')
+            logging.debug(f'collect_err: {collect_err[:]}')
+            Modbus_Comm(start, device_port, slave)
+        re_collect[0] = 0
+        port.reset_input_buffer()
+        logging.critical(f"{slave.name}_collect_err: {round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2)}%, recollect_cover: {round(re_collect[1]/(collect_err[0]+0.00000000000000001)*100, 2)}%")
+        # if (collect_err[1] >= params.exempt_try) and (round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
+        #     if slave.name not in device_port.broken_slave_names:
+        #         device_port.broken_slave_names.append(slave.name)
+
+    w_data_site=0
+    for topic in slave.port_topics.sub_topics:
+        #logging.critical((slave.name, topic))
+        if device_port.sub_events[topic].is_set():
+            #logging.critical(device_port.sub_values[topic])
+            try: # try to set value
+                recur = False
+                set_err[1] += 1
+                slave.write_rtu(f"{w_data_site:0>4}", device_port.sub_values[topic].value)
+                port.write(bytes.fromhex(slave.w_rtu)) #hex to binary(byte) 
+                time.sleep(params.time_out)
+                _data_len = port.inWaiting()
+                if _data_len >= slave.w_wait_len:
+                    readings = port.read(_data_len).hex() # after reading, the buffer will be clean
+                    #logging.critical(readings)
+                    re = hex(int(slave.id))[2:].zfill(2) + '06' + f"{w_data_site:0>4}"
+                    #logging.critical(re)
+                    if re in readings:
+                        readings = readings[readings.index(re):(readings.index(re)+slave.w_wait_len*2)]
+                        #logging.critical(readings)
+                        crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
+                        # check sta, func code, datalen, crc
+                        if (crc[-2:] + crc[:2]) == readings[-4:]:
+                            set_err[2] += 1
+                            device_port.sub_events[topic].clear()
+                            logging.debug(f'write: {readings}')
+                            logging.info(f'Read from slave_{slave.name}')
+                        else:
+                            recur = True
+                            set_err[0] += 1
+                            err_msg = f"{slave.name}_set_err_{set_err[:]} at {round((time.time()-start),2)}s: crc validation failed"
+                            logging.error(err_msg)
+                    else:
+                        recur = True
+                        set_err[0] += 1
+                        err_msg = f"{slave.name}_set_err_{set_err[:]} at {round((time.time()-start),2)}s: Modbus protocol failed"
+                        logging.error(err_msg)
+                else: # if data len is less than the wait data
+                    if _data_len == 0:
+                        recur = True
+                        set_err[0] += 1
+                        err_msg = f"{slave.name}_set_err_{set_err[:]} at {round((time.time()-start),2)}s: wrong rtu code led to null receiving"
+                        logging.error(err_msg)
+                    elif _data_len < slave.w_wait_len:
+                        recur = True
+                        set_err[0] += 1
+                        err_msg = f"{port.read(_data_len).hex()} {slave.name}_set_err_{set_err[:]} at {round((time.time()-start),2)}s: data len_{_data_len} is less than the wait data"
+                        logging.error(err_msg)
+            except Exception as e:
+                set_err[0] += 1
+                err_msg = f"{slave.name}_set_err_{set_err[:]} at {round((time.time()-start),2)}s: " + str(e)
+                logging.error(err_msg)
+            finally:
+                # recursive part if the rtu was transferred but crushed in between the lines
+                if (recur == True) and (re_set[0] < params.recur_try):
+                    re_set[0] += 1
+                    re_set[1] += 1
+                    logging.debug(f're_set: {re_set[:]}')
+                    Modbus_Comm(start, device_port, slave)
+                re_set[0] = 0
+                port.reset_input_buffer()
+                logging.critical(f"{slave.name}_set_err: {round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2)}%, reset_cover: {round(re_set[1]/(collect_err[0]+0.00000000000000001)*100, 2)}%")
+                w_data_site += 1
+                # if (set_err[1] >= params.exempt_try) and (round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
+                #     if slave.name not in device_port.broken_slave_names:
+                #         device_port.broken_slave_names.append(slave.name)
+        else:
+            w_data_site += 1
         
-    #port.close()
-    #print('kill MFC_data_collect')
-    #print(f'Final MFC_data_collect: {count_err} errors occured')
-    ##barrier_kill.wait()
 
-
-def GA_data_comm(start, port, slave, wait_data, count_err):
-    #start = time.time()
-    #while not config.kb_event.isSet(): # it is written in the ReadingThreads.py
-    try:
-        slave.time_readings.append(time.time()-start)
-        port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
-
-        time.sleep(config.time_out)
-
-        #print(port.inWaiting())
-        if port.inWaiting() >= wait_data:
-            '''
-                check sta, func code, datalen, crc
-            '''  
-            readings = port.read(wait_data).hex()
-            #print(len(readings))
-            slave.lst_readings.append(readings)
-            print('GA_data_collect done')
-            port.reset_input_buffer() # reset the buffer after each reading process
+def MFC_Comm(start, device_port, slave):    
+    port = device_port.port
+    collect_err = device_port.err_values.get(f'{slave.name}_collect_err')
+    set_err = device_port.err_values.get(f'{slave.name}_set_err')
+    re_collect = device_port.recur_count.get(f'{slave.name}_collect_err')
+    re_set = device_port.recur_count.get(f'{slave.name}_set_err')
+    try: # try to collect
+        recur = False
+        collect_err[1] += 1
+        #logging.debug(slave.r_rtu)
+        #logging.debug(bytes(slave.r_rtu, 'ASCII'))
+        port.write(bytes(slave.r_rtu, 'ASCII')) #ASCII to byte
+        time.sleep(params.time_out)
+        #logging.debug(port.inWaiting())
+        _data_len = port.inWaiting()
+        if _data_len >= slave.r_wait_len: 
+            readings = str(port.read(_data_len)) # after reading, the buffer will be clean
+            logging.debug(readings)
+            # validate received data
+            re_id = slave.id
+            #logging.debug(readings.index(re))
+            if re_id in readings:
+                readings = readings[readings.index(re_id):(readings.index(re_id)+slave.r_wait_len)]
+                if re.findall('\d+.\d+',readings):
+                    logging.debug(f'collect: {readings}')
+                    slave.time_readings.put(time.time()-start)
+                    slave.lst_readings.put(readings)
+                    collect_err[2] += 1
+                    logging.info(f'Read from slave_{slave.name}')
+                else:
+                    recur = True
+                    collect_err[0] += 1
+                    err_msg = f"{slave.name}_collect_err_{collect_err[:]} at {round((time.time()-start),2)}s: validation failed (slave_id conflicted with gas name in resp)"
+                    logging.error(err_msg)        
+            else:
+                recur = True
+                collect_err[0] += 1
+                err_msg = f"{slave.name}_collect_err_{collect_err[:]} at {round((time.time()-start),2)}s: validation failed"
+                logging.error(err_msg)    
         else: # if data len is less than the wait data
-            count_err += 1
-            print('XX'*10 + f" {count_err} GA_data_collect error at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
+            if _data_len == 0:
+                recur = True
+                collect_err[0] += 1
+                err_msg = f"{slave.name}_collect_err_{collect_err[:]} at {round((time.time()-start),2)}s: wrong rtu code led to null receiving"
+                logging.error(err_msg)
+            elif _data_len < slave.r_wait_len:
+                recur = True
+                collect_err[0] += 1
+                err_msg = f"{slave.name}_collect_err_{collect_err[:]} at {round((time.time()-start),2)}s: data len_{_data_len} is less than the wait data"
+                logging.error(err_msg)
     except Exception as e:
-        print('XX'*10 + f" {count_err} GA_data_collect error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
+        collect_err[0] += 1
+        err_msg = f"{slave.name}_collect_err_{collect_err[:]} at {round((time.time()-start),2)}s: " + str(e)
+        logging.error(err_msg)
     finally:
-        return count_err
-    #port.close()
-    #print('kill GA_data_collect')
-    #print(f'Final GA_data_collect: {count_err} errors occured')
-    ##barrier_kill.wait()
+        # recursive part if the rtu was transferred but crushed in between the lines
+        if (recur == True) and (re_collect[0] < params.recur_try):
+            re_collect[0] += 1
+            re_collect[1] += 1
+            logging.debug(f're_collect: {re_collect[:]}')
+            MFC_Comm(start, device_port, slave)
+        re_collect[0] = 0
+        port.reset_input_buffer()
+        logging.critical(f"{slave.name}_collect_err: {round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2)}%, recollect_cover: {round(re_collect[1]/(collect_err[0]+0.00000000000000001)*100, 2)}%")
+        # if (collect_err[1] >= params.exempt_try) and (round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
+        #     if slave.name not in device_port.broken_slave_names:
+        #         device_port.broken_slave_names.append(slave.name)
+
+    w_data_site=0
+    for topic in slave.port_topics.sub_topics:
+        #logging.critical((slave.name, topic))
+        if device_port.sub_events[topic].is_set():
+            #logging.debug(device_port.sub_values[topic])
+            try: # try to set value
+                recur = False
+                set_err[1] += 1
+                slave.write_rtu(device_port.sub_values[topic].value)
+                #logging.debug(slave.w_rtu)
+                port.write(bytes(slave.w_rtu, 'ASCII')) 
+                time.sleep(params.time_out)
+                _data_len = port.inWaiting()
+                #logging.debug(_data_len)
+                if _data_len >= slave.w_wait_len:
+                    readings = str(port.read(_data_len)) # after reading, the buffer will be clean
+                    re_id = slave.id
+                    #logging.critical(re)
+                    if re_id in readings:
+                        readings = readings[readings.index(re_id):(readings.index(re_id)+slave.w_wait_len)]
+                        if re.findall('\d+.\d+',readings):
+                            set_err[2] += 1
+                            device_port.sub_events[topic].clear()
+                            logging.debug(f'write: {readings}')
+                            logging.info(f'Read from slave_{slave.name}')
+                        else:
+                            recur = True
+                            set_err[0] += 1
+                            err_msg = f"{slave.name}_set_err_{set_err[:]} at {round((time.time()-start),2)}s: validation failed (slave_id conflicted with gas name in resp)"
+                            logging.error(err_msg)    
+                    else:
+                        recur = True
+                        set_err[0] += 1
+                        err_msg = f"{slave.name}_set_err_{set_err[:]} at {round((time.time()-start),2)}s: validation failed"
+                        logging.error(err_msg)
+                else: # if data len is less than the wait data
+                    if _data_len == 0:
+                        recur = True
+                        set_err[0] += 1
+                        err_msg = f"{slave.name}_set_err_{set_err[:]} at {round((time.time()-start),2)}s: wrong rtu code led to null receiving"
+                        logging.error(err_msg)
+                    elif _data_len < slave.w_wait_len:
+                        recur = True
+                        set_err[0] += 1
+                        err_msg = f"{port.read(_data_len).hex()} {slave.name}_set_err_{set_err[:]} at {round((time.time()-start),2)}s: data len_{_data_len} is less than the wait data"
+                        logging.error(err_msg)
+            except Exception as e:
+                set_err[0] += 1
+                err_msg = f"{slave.name}_set_err_{set_err[:]} at {round((time.time()-start),2)}s: " + str(e)
+                logging.error(err_msg)
+            finally:
+                # recursive part if the rtu was transferred but crushed in between the lines
+                if (recur == True) and (re_set[0] < params.recur_try):
+                    re_set[0] += 1
+                    logging.debug(f're_set: {re_set[:]}')
+                    Modbus_Comm(start, device_port, slave)
+                re_set[0] = 0
+                port.reset_input_buffer()
+                logging.critical(f"{slave.name}_set_err: {round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2)}%, reset_cover: {round(re_set[1]/(collect_err[0]+0.00000000000000001)*100, 2)}%")
+                w_data_site += 1
+                # if (set_err[1] >= params.exempt_try) and (round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
+                #     if slave.name not in device_port.broken_slave_names:
+                #         device_port.broken_slave_names.append(slave.name)
+        else:
+            w_data_site += 1
 
 
-def TCHeader_comm(start, port, slave, wait_data, count_err, write_event, write_value):
-    #start = time.time()
-    #while not config.kb_event.isSet(): # it is written in the ReadingThreads.py
-    if not write_event.isSet():
-        collect_err = 0
-        try: # try to collect
-            slave.time_readings = time.time()-start
-            port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
-
-            time.sleep(config.time_out)
-
-            #print(port.inWaiting())
-            #print(port.read(wait_data).hex())
-            if port.inWaiting() >= wait_data: 
-                readings = port.read(wait_data).hex() # after reading, the buffer will be clean
-                crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
-                #print(readings)
-                #print(crc)
-                # check sta, func code, datalen, crc
-                if (readings[0:2] == slave.id) and (readings[2:4] == '03') and ((crc[-2:] + crc[:2]) == readings[-4:]):
-                    slave.lst_readings.append(readings)
-                    print(f'TCHeader_collect done: read from slave_{slave.id}')
-                else:
-                    port.reset_input_buffer() # reset the buffer if no read
-                    collect_err += 1
-                    print('XX'*10 + f"TCHeader_collect error: from slave_{slave.id}, err_{count_err[0] + collect_err} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
-            else: # if data len is less than the wait data
-                port.reset_input_buffer() # reset the buffer if no read
-                collect_err += 1
-                print('XX'*10 + f"TCHeader_collect error: from slave_{slave.id}, err_{count_err[0] + collect_err} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
-        except Exception as e:
-            print('XX'*10 + f"TCHeader_collect error: from slave_{slave.id}, err_{count_err[0] + collect_err} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
-        finally:
-            count_err[0] += collect_err
-
+@analyze_decker
+def ADAM_TC_analyze(start, device_port, slave, **kwargs):
+    _lst_readings = kwargs.get('_lst_readings')['short_lst_readings']
+    _time_readings = kwargs.get('_time_readings')['short_time_readings']
+    #print(_time_readings)
+    _lst = []
+    _time = []
+    for i in range(0, len(_lst_readings)):
+        if _lst_readings[i]:
+            _time.extend(_time_readings[i])
+            _lst.extend(_lst_readings[i])
+    if _lst:
+        arr_readings = np.array([[int(reading[i-4:i],16) for i in range(10,len(reading)-2,4)] for reading in _lst])
+        arr_readings = tuple(np.round(1370/65535*arr_readings, 2))
+        _last = tuple([round(_time[-1],2)]) + tuple(arr_readings[-1])
+        
+        if _time[0] == _time[-1]:
+            _5_rates = tuple([0]*8)
+        else:
+            _5_rates = tuple(np.round((arr_readings[-1] - arr_readings[0]) / (_time[-1] - _time[0]),2)) # BR_rate, SR_rate
     else:
-        set_err = 0
-        try: # try to set value
-            #print(write_value)
-            # TCHeader Writing, RTU func code 06, SV value site at '0000'
-            TCHeader_SV = tohex(write_value*10)  # setting TCHeader value in hex
-            #print(TCHeader_SV)
-            TCHeader_RTU_W = RTU(slave.id, '06', '0000', TCHeader_SV) #md: subscription value and rtu 
-            #print(TCHeader_RTU_W.rtu)
-
-            port.write(bytes.fromhex(TCHeader_RTU_W.rtu)) #hex to binary(byte) #md: subscription value and rtu
-            time.sleep(config.time_out)
-            if port.inWaiting() >= 8: 
-                readings = port.read(8).hex() # after reading, the buffer will be clean
-                #print(readings)
-                crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
-                # check sta, func code, datalen, crc
-                if (readings[0:2] == slave.id) and (readings[2:4] == '06') and ((crc[-2:] + crc[:2]) == readings[-4:]):
-                    print(f'TCHeader_set done: write {write_value} to slave_{slave.id}')
-                else:
-                    port.reset_input_buffer() # reset the buffer if no read
-                    set_err += 1
-                    print('XX'*10 + f"TCHeader_set error: from slave_{slave.id}, err_{count_err[1] + set_err} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
-            else: # if data len is less than the wait data
-                port.reset_input_buffer() # reset the buffer if no read
-                set_err += 1
-                print('XX'*10 + f"TCHeader_set error: from slave_{slave.id}, err_{count_err[1] + set_err} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
-        except Exception as e:
-            print('XX'*10 + f"TCHeader_set error: from slave_{slave.id}, err_{count_err[1] + set_err} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
-        finally:
-            count_err[1] += set_err
-            write_event.clear()
-            
-    return count_err
-    #port.close()
-    #print('kill GA_data_collect')
-    #print(f'Final GA_data_collect: {count_err} errors occured')
-    ##barrier_kill.wait()
+        _last = tuple([round(_time[-1],2)]) + tuple([0]*8)
+        _5_rates = tuple([0]*8)
+    _readings = _last + _5_rates[0:2]  
+    return _readings
 
 
-def Adam_data_analyze(start, slave, server_DB):
-    count_err = 0
-    while not config.kb_event.isSet():
-        if not config.ticker.wait(config.sample_time):
-            lst_readings = slave.lst_readings
-            time_readings = slave.time_readings
-            #print(f'Adam_data_analyze: {lst_readings}')
-            slave.lst_readings = []
-            slave.time_readings = []
-            try:
-                arr_readings = np.array([[int(reading[i-4:i],16) for i in range(10,len(reading)-2,4)] for reading in lst_readings])
-                lst_readings = tuple(np.round(1370/65535*(np.sum(arr_readings, axis=0) / len(lst_readings)), 1))
-                #print(lst_readings)
-                readings = tuple([round(time_readings[-1],2)]) + lst_readings
-                #print(readings)
+@analyze_decker
+def ADAM_READ_analyze(start, device_port, slave, **kwargs):
+    _lst_readings = kwargs.get('_lst_readings')
+    logging.debug(_lst_readings)
+    _time_readings = kwargs.get('_time_readings')[-1]
+    _arr_readings = np.array([[int(reading[i-4:i],16) for i in range(10,len(reading)-2,4)] for reading in _lst_readings])
+    logging.debug(_arr_readings)
+    _lst_readings = np.sum(_arr_readings, axis=0) / len(_lst_readings)
+    logging.debug(_lst_readings)
+    _readings = tuple([round(_time_readings,2)]) + tuple(np.round(_lst_readings, 3))
+    return _readings
+    
 
-                # casting
-                #slave.readings.append(readings)
-                # RTU write to master
-                # 0x09:1f:TC_0, 0x10:1f:TC_1, 0x11:1f:TC_2, 0x12:1f:TC_3, 0x13:1f:TC_4, 0x14:1f:TC_5, 0x15:1f:TC_6, 0x16:1f:TC_7
-                server_DB.readings[9:17] = [int(i*10) for i in readings[1:]]
-                #server_DB[0x06].setValues(fx=3, address=0x09, values=[int(i*10) for i in readings[1:]])
-                print(f'Adam_data_analyze done: {readings}')
-                #barrier_analyze.wait()
-            except Exception as e:
-                count_err += 1
-                print('XX'*10 + f" {count_err} Adam_data_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
-            finally:
-                pass
-                '''
-                try:
-                    #barrier_cast.wait()
-                    conn.execute(
-                        "INSERT INTO ADAM_TC(Time, TC_0, TC_1, TC_2, TC_3, TC_4, TC_5, TC_6, TC_7) VALUES (?,?,?,?,?,?,?,?,?);", 
-                        readings
-                        )
-                    # publish via MQTT
-                    #for i in range(8):
-                        #client_mqtt.publish(config.topic_ADAM_TC[i], readings[i+1])
-                    pass
-                except Exception as e6_1:
-                    print ("Adam_data_cast error: " + str(e6_1))
-                finally:
-                    print(f'Adam_data_cast done')
-                    #print(None/2)
-                '''
-                    
-    print('kill Adam_data_analyze')
-    print(f'Final Adam_data_analyze: {count_err} errors occured')
-    #barrier_kill.wait()
+@analyze_decker
+def DFM_data_analyze(start, device_port, slave, **kwargs):
+    _time_readings = kwargs.get('_time_readings')
+    _sampling_time = round(time.time()-start, 2)
+    _10_flow_lst = []
+    try:
+        for i in range(len(_time_readings['short_time_readings'])):
+            if i != [] and (len(_time_readings['short_time_readings'][i]) > 1):
+                _10_flow_lst.append((len(_time_readings['short_time_readings'][i]) - 1) / (_time_readings['short_time_readings'][i][-1] - _time_readings['short_time_readings'][i][0]))
+            else:
+                _10_flow_lst.append(0)
+        _10_flow_rate = sum(_10_flow_lst) / len(_10_flow_lst)
+        if slave.name == 'DFM':
+            _10_flow_rate = _10_flow_rate * 10 * 0.1
+        elif slave.name == 'DFM_AOG':
+            _10_flow_rate = _10_flow_rate * 10 * 0.01
+
+        _60_flow_lst = []
+        for i in range(len(_time_readings['long_time_readings'])):
+            if i != [] and (len(_time_readings['long_time_readings'][i]) > 1):
+                _60_flow_lst.append((len(_time_readings['long_time_readings'][i]) - 1) / (_time_readings['long_time_readings'][i][-1] - _time_readings['long_time_readings'][i][0]))
+            else:
+                _60_flow_lst.append(0)
+        _60_flow_rate = sum(_60_flow_lst) / len(_60_flow_lst)
+        if slave.name == 'DFM':
+            _60_flow_rate = _60_flow_rate * 60 * 0.1
+        elif slave.name == 'DFM_AOG':
+            _60_flow_rate = _60_flow_rate * 60 * 0.01
+        _readings = tuple([_sampling_time, round(_10_flow_rate,2), round(_60_flow_rate,2)])
+    except:
+        _readings = tuple([_sampling_time, 0, 0])
+        #print(_readings)
+    return _readings
 
 
-def ADAM_4024_comm(start, port, slave, wait_data, count_err, write_event, write_value):
-    #start = time.time()
-    #while not config.kb_event.isSet(): # it is written in the ReadingThreads.py
-    if not write_event.isSet():
-        collect_err = 0
-        try: # try to collect
-            slave.time_readings = time.time()-start
-            port.write(bytes.fromhex(slave.rtu)) #hex to binary(byte) 
-
-            time.sleep(config.time_out)
-
-            #print(port.inWaiting())
-            #print(port.read(wait_data).hex())
-            if port.inWaiting() >= wait_data: 
-                readings = port.read(wait_data).hex() # after reading, the buffer will be clean
-                crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
-                #print(readings)
-                #print(crc)
-                # check sta, func code, datalen, crc
-                if (readings[0:2] == slave.id) and (readings[2:4] == '03') and ((crc[-2:] + crc[:2]) == readings[-4:]):
-                    slave.lst_readings.append(readings)
-                    print(f'ADAM_collect done: read from slave_{slave.id}')
-                else:
-                    port.reset_input_buffer() # reset the buffer if no read
-                    collect_err += 1
-                    print('XX'*10 + f"ADAM_collect error: from slave_{slave.id}, err_{count_err[0] + collect_err} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
-            else: # if data len is less than the wait data
-                port.reset_input_buffer() # reset the buffer if no read
-                collect_err += 1
-                print('XX'*10 + f"ADAM_collect error: from slave_{slave.id}, err_{count_err[0] + collect_err} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
-        except Exception as e:
-            print('XX'*10 + f"ADAM_collect error: from slave_{slave.id}, err_{count_err[0] + collect_err} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
-        finally:
-            count_err[0] += collect_err
-
+@analyze_decker
+def Scale_data_analyze(start, device_port, slave, **kwargs):
+    _sampling_time = round(time.time()-start, 2)
+    _lst_readings = kwargs.get('_lst_readings')
+    _time_readings = kwargs.get('_time_readings')
+    _10_scale_lst = []
+    _10_scale_time = []
+    # print(_lst_readings['short_lst_readings'])
+    # print(_time_readings['short_time_readings'])
+    assert len(_lst_readings['short_lst_readings']) == len(_time_readings['short_time_readings'])
+    for i in range(0, len(_lst_readings['short_lst_readings'])):
+        _10_scale_lst.extend(_lst_readings['short_lst_readings'][i])
+        _10_scale_time.extend(_time_readings['short_time_readings'][i])
+    for i in _10_scale_lst: 
+        if -0.00001 < i < 0.00001:
+            _10_scale_lst.remove(i)
+            _10_scale_time.remove(i)
+    if _10_scale_lst:
+        _10_scale = (_10_scale_lst[0] - _10_scale_lst[-1]) / (_10_scale_time[-1] - _10_scale_time[0]) * 1000 * 10
     else:
-        set_err = 0
-        try: # try to set value
-            #print(write_value)
-            # TCHeader Writing, RTU func code 06, SV value site at '0000'
-            _SV = tohex(write_value*10)  # setting TCHeader value in hex
-            #print(TCHeader_SV)
-            _RTU_W = RTU(slave.id, '06', '0000', _SV) #md: subscription value and rtu 
-            #print(TCHeader_RTU_W.rtu)
+        _10_scale = 0
+    # print(_10_scale)
+    
+    _60_scale_lst = []
+    _60_scale_time = []
+    assert len(_lst_readings['long_lst_readings']) == len(_time_readings['long_time_readings'])
+    for i in range(0, len(_lst_readings['long_lst_readings'])):
+        _60_scale_lst.extend(_lst_readings['long_lst_readings'][i])
+        _60_scale_time.extend(_time_readings['long_time_readings'][i])
+    for i in _60_scale_lst: 
+        if -0.00001 < i < 0.00001:
+            _60_scale_lst.remove(i)
+            _60_scale_time.remove(i)
+    if _60_scale_lst:
+        _60_scale = (_60_scale_lst[0] - _60_scale_lst[-1]) / (_60_scale_time[-1] - _60_scale_time[0]) * 1000 * 60
+    else:
+        _60_scale = 0
+        
+    _readings = tuple([round(_sampling_time,2), round(_10_scale, 2), round(_60_scale, 2)])
+    return _readings
 
-            port.write(bytes.fromhex(_RTU_W.rtu)) #hex to binary(byte) #md: subscription value and rtu
-            time.sleep(config.time_out)
-            if port.inWaiting() >= 8: 
-                readings = port.read(8).hex() # after reading, the buffer will be clean
-                #print(readings)
-                crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
-                # check sta, func code, datalen, crc
-                if (readings[0:2] == slave.id) and (readings[2:4] == '06') and ((crc[-2:] + crc[:2]) == readings[-4:]):
-                    print(f'ADAM_set done: write {write_value} to slave_{slave.id}')
-                else:
-                    port.reset_input_buffer() # reset the buffer if no read
-                    set_err += 1
-                    print('XX'*10 + f"ADAM_set error: from slave_{slave.id}, err_{count_err[1] + set_err} at {round((time.time()-start),2)}s: crc validation failed" + 'XX'*10) 
-            else: # if data len is less than the wait data
-                port.reset_input_buffer() # reset the buffer if no read
-                set_err += 1
-                print('XX'*10 + f"ADAM_set error: from slave_{slave.id}, err_{count_err[1] + set_err} at {round((time.time()-start),2)}s: data len is less than the wait data" + 'XX'*10) 
-        except Exception as e:
-            print('XX'*10 + f"ADAM_set error: from slave_{slave.id}, err_{count_err[1] + set_err} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*10)
-        finally:
-            count_err[1] += set_err
-            write_event.clear()
+
+@analyze_decker
+def GA_data_analyze(start, device_port, slave, **kwargs):
+    _lst_readings = kwargs.get('_lst_readings')
+    _time_readings = kwargs.get('_time_readings')
+    #print(_lst_readings)
+    if _lst_readings and _time_readings:
+        _arr_readings = np.array(
+            [[int(readings[i:i+4],16)/100 if (int(readings[i:i+4],16)/100) <= 99.99 else 0 for i in range(8,20,4)] # CO, CO2, CH4
+            + [int(readings[24:28],16)/100] # H2
+            + [int(readings[-12:-8],16)/100] # N2
+            + [(lambda i: ((i[0]*256+i[1]+i[2])*256+i[3])/100)([int(readings[i:i+2],16) for i in range(-20,-12,2)])] # Heat
+            for readings in _lst_readings]
+            )
+        #print(_arr_readings)
+        _lst_readings = tuple(np.round(np.sum(_arr_readings, axis=0) / len(_lst_readings), 1))
+    else:
+        _lst_readings = tuple([0]*6)
+    _readings = tuple([round(_time_readings[-1],2)]) + _lst_readings
+    return _readings
             
-    return count_err
+
+@analyze_decker
+def TCHeader_analyze(start, device_port, slave, **kwargs):
+    _lst_readings = kwargs.get('_lst_readings')
+    _time_readings = kwargs.get('_time_readings')[-1]
+    _arr_readings = np.array(
+        [int(readings[-8:-4],16) # convert from hex to dec 
+        for readings in _lst_readings]
+        )
+    _lst_readings = tuple([np.sum(_arr_readings) / len(_lst_readings)])
+    _readings = tuple([round(_time_readings,2)]) + _lst_readings
+    return _readings
 
 
-def DFM_data_analyze(start, slave, server_DB):
-    count_err = 0
-    #start = time.time()
-    while not config.kb_event.isSet():
-        if not config.ticker.wait(config.sample_time_DFM): # for each sample_time, collect data
-            sampling_time = round(time.time()-start, 2)
-            try: 
-                time_readings = slave.time_readings
-                slave.time_readings = []
-                average_interval_lst = []
-                # calc average min flow rate by each interval 
-                for interval in range(30, 55, 5):
-                    flow_rate_interval_lst = []
-                    # for each interval, calculate the average flow rate
-                    for i in range(interval, len(time_readings), interval):
-                        # flow rate in [liter/s]
-                        # 0.1 liter / pulse
-                        flow_rate = 60 * 0.1 * (interval-1) / (time_readings[i-1] - time_readings[i-interval])
-                        flow_rate_interval_lst.append(round(flow_rate, 2)) 
-                    average_flow_rate_interval = round(sum(flow_rate_interval_lst) / len(flow_rate_interval_lst), 2)          
-                    average_interval_lst.append(average_flow_rate_interval)
-                    _average = round(sum(average_interval_lst) / len(average_interval_lst), 1)
-                readings = tuple([sampling_time, _average])
-                
-                # casting
-                #slave.readings.append(readings)
-                # 0x08:1f:DFM_flowrate
-                server_DB.readings[8] = int(readings[-1]*10)
-                # server_DB[0x06].setValues(fx=3, address=0x08, values=[int(readings[-1]*10)])
-                print(f'DFM_data_analyze done: {readings}')
-            except Exception as e:
-                count_err += 1
-                print('XX'*10 + f" {count_err} DFM_data_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
-            finally:
-                pass
-                '''
-                try:
+@analyze_decker
+def ADAM_SET_analyze(start, device_port, slave, **kwargs):
+    _lst_readings = kwargs.get('_lst_readings')
+    _time_readings = kwargs.get('_time_readings')[-1]
+    _arr_readings = np.array(
+        [[int(readings[6:-4][i:i+4],16)/(2**12)*20-10 for i in range(0,16,4)] # convert from hex to dec 
+        for readings in _lst_readings]
+        )
+    _lst_readings = tuple(np.sum(_arr_readings, 0) / len(_lst_readings))
+    _readings = tuple([round(_time_readings,2)]) + _lst_readings
+    return _readings
+
+
+@analyze_decker
+def MFC_analyze(start, device_port, slave, **kwargs):
+    _lst_readings = kwargs.get('_lst_readings')
+    _time_readings = kwargs.get('_time_readings')[-1]
+    _arr_readings = np.array([[float(i) for i in re.findall('\d+.\d+',readings)] for readings in _lst_readings], dtype=object)
+    #print(_arr_readings)
+    _lst_readings = tuple(np.sum(_arr_readings, 0) / len(_lst_readings))
+    _readings = tuple([round(_time_readings,2)]) + _lst_readings
+    return _readings
+
+def VOID(start, device_port, slave):
+    time.sleep(params.time_out)
+
+#------------------------------PID controller---------------------------------
+@kb_event
+def control(device_port, slave):
+    _update_parameter = False
+    for topic in slave.port_topics.sub_topics:
+        if topic in [f'{slave.name}_Kp', f'{slave.name}_Ki', f'{slave.name}_Kd', f'{slave.name}_MVmin',  f'{slave.name}_MVmax', f'{slave.name}_mode', f'{slave.name}_beta', f'{slave.name}_tstep', f'{slave.name}_kick']:
+            if device_port.sub_events[topic].is_set():
+                _update_parameter = True
+                device_port.sub_events[topic].clear()
             
-                    conn.execute(
-                        "INSERT INTO DFM(Time, FlowRate) VALUES (?,?);", 
-                        readings
-                        )
-                    
-                    pass
-                except Exception as e_71:
-                    print ("DFM_data_cast error: " + str(e7_1))
-                finally:
-                    print(f'DFM_data_cast done')
-                    ##barrier_cast.wait()
-                '''
-
-    print('kill DFM_data_analyze')
-    print(f'Final DFM_data_analyze: {count_err} errors occured')
-    #barrier_kill.wait()
-
-
-def Scale_data_analyze(start, slave, pub_Topic):
-    count_err = 0
-    while (not config.kb_event.isSet()) and (not config.ticker.wait(config.sample_time_Scale)):
-        lst_readings = slave.lst_readings
-        time_readings = slave.time_readings
-        #print(f'Scale_data_analyze: {lst_readings}')
-        slave.lst_readings = []
-        try:
-            if len(lst_readings) > 0:
-                #print(len(lst_readings))
-                lst_readings = [sum(i)/len(i) for i in lst_readings] # average for 1s' data
-                lst_readings = round((lst_readings[-1] - lst_readings[0]) / config.sample_time_Scale, 3) # average for 1min's data
-                readings = tuple([round(time_readings, 2), lst_readings])
-                
-                # casting
-                MQTT_config.pub_Topics[pub_Topic] = readings[-1]
-                ## to slave data list
-                slave.readings.append(readings)
-                print(f'Scale_data_analyze done: record {readings} from slave_{slave.id}')
-                #barrier_analyze.wait()
-            else:
-                print(f'Scale_data_analyze done: record () from slave_{slave.id}')
-        except Exception as e:
-            count_err += 1
-            print('XX'*10 + f" Scale_data_analyze error: from slave_{slave.id}, err_{count_err} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
-        finally:
-            pass
-            '''
-            try:
-                #barrier_cast.wait()
-                
-                conn.execute(
-                    "INSERT INTO Scale(Time, Weight) VALUES (?,?);", 
-                    readings
-                    )
-                
-                pass
-            except Exception as e8_1:
-                print ("Scale_data_cast error: " + str(e8_1))
-            finally:
-                print(f'Scale_data_cast done')
-            '''
-
-    print(f'kill Scale_data_analyze of slave_{slave.id}')
-    print(f'Final Scale_data_analyze: from slave_{slave.id}, {count_err} errors occured')
-    #barrier_kill.wait()
-
-
-def GA_data_analyze(start, slave, server_DB):
-    count_err = 0
-    while not config.kb_event.isSet():
-        if not config.ticker.wait(config.sample_time):
-            lst_readings = slave.lst_readings
-            time_readings = slave.time_readings
-            #print(f'GA_data_analyze: {lst_readings}')
-            slave.lst_readings = []
-            slave.time_readings = []
-            try:           
-                arr_readings = np.array(
-                    [[int(readings[i:i+4],16)/100 for i in range(8,20,4)] 
-                    + [int(readings[24:28],16)/100] 
-                    + [int(readings[-12:-8],16)/100] 
-                    + [(lambda i: ((i[0]*256+i[1]+i[2])*256+i[3])/100)([int(readings[i:i+2],16) for i in range(-20,-12,2)])] 
-                    for readings in lst_readings]
-                    )
-                #print(arr_readings)
-                lst_readings = tuple(np.round(np.sum(arr_readings, axis=0) / len(lst_readings), 1))
-                readings = tuple([round(time_readings[-1],2)]) + lst_readings
-                
-                # casting
-                #slave.readings.append(readings)
-                # 0x01:1f:CO, 0x02:1f:CO2, 0x03:1f:CH4, 0x04:1f:H2, 0x05:1f:N2, 0x06:1f:HEAT
-                server_DB.readings[1:7] = [int(i*10) for i in readings[1:]]
-                #server_DB[0x06].setValues(fx=3, address=0x01, values=[int(i*10) for i in readings[1:]])
-                print(f'GA_data_analyze done: {readings}')
-                #barrier_analyze.wait()
-            except Exception as e:
-                count_err += 1
-                print('XX'*10 + f" {count_err} GA_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
-            finally:
-                pass
-                '''
-                try:
-                    #barrier_cast.wait()
-                    conn.execute(
-                        "INSERT INTO GA(Time, CO, CO2, CH4, H2, N2, HEAT) VALUES (?,?,?,?,?,?,?);", 
-                        readings
-                        )
-                    pass
-                except Exception as e9_1:
-                    print ("GA_data_cast error: " + str(e9_1))
-                finally:
-                    print(f'GA_data_cast done')
-                '''
-
-    print('kill GA_data_analyze')
-    print(f'Final GA_data_analyze: {count_err} errors occured')
-    #barrier_kill.wait()
-
-
-def MFC_data_analyze(start, slave, server_DB):
-    count_err = 0
-    #conn = sqlite3.connect(db)
-    while not config.kb_event.isSet():
-        if not config.ticker.wait(config.sample_time):
-            lst_readings = slave.lst_readings
-            time_readings = slave.time_readings
-            slave.lst_readings = []
-            slave.time_readings = []
-            try:
-                arr_readings = np.array(
-                    [
-                        (lambda i: [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ +\-][\d.]{6}', i)])(readings) 
-                        for readings in lst_readings
-                    ]
-                    )
-                #print(arr_readings)
-                lst_readings = tuple(np.round(np.sum(arr_readings, axis=0) / len(lst_readings), 1))
-                readings = tuple(time_readings[-1:]) + lst_readings
-                
-                # CASTING
-                #slave.readings.append(readings)
-                # 0x00:1f:MFC_MassFlow
-                server_DB.readings[0] = int(readings[-2]*10)
-                #server_DB[0x06].setValues(fx=3, address=0x00, values=[int(readings[-2]*10),])
-                print(f'MFC_data_analyze done: {readings}')
-                #barrier_analyze.wait()
-            except Exception as e:
-                count_err += 1
-                print('XX'*10 + f" {count_err} MFC_data_analyze error at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
-            finally:
-                pass
-                '''
-                try:
-                    #barrier_cast.wait()
-                    conn.execute(
-                        "INSERT INTO MFC(Time, Pressure, Temper, VolFlow, MassFlow, Setpoint) VALUES (?,?,?,?,?,?);", 
-                        readings
-                        )
-                    conn.commit()
-                    pass
-                except Exception as e10_1:
-                    print ("MFC_data_cast error: " + str(e10_1))
-                finally:
-                    print(f'MFC_data_cast done')
-                '''
-
-    print('kill MFC_data_analyze')
-    print(f'Final MFC_data_analyze: {count_err} errors occured')
-    #barrier_kill.wait()
-
-
-def TCHeader_analyze(start, slave, pub_Topic):
-    count_err = 0
-    while (not config.kb_event.isSet()) and (not config.ticker.wait(config.sample_time)):
-        #print(slave.id, slave.time_readings, slave.lst_readings)
-        lst_readings = slave.lst_readings
-        time_readings = slave.time_readings
-        #print(slave.id, lst_readings)
-        slave.lst_readings = []
-        try:
-            if len(lst_readings) > 0:
-                arr_readings = np.array(
-                    [int(readings[-8:-4],16)/10 # convert from hex to dec 
-                    for readings in lst_readings]
-                    )
-                #print(slave.id, arr_readings)
-                #print(slave.id, time_readings)
-                lst_readings = tuple([np.round(np.sum(arr_readings) / len(lst_readings), 1)])
-                readings = tuple([round(time_readings,2)]) + lst_readings
-                #print(slave.id, readings)
-
-                # casting
-                MQTT_config.pub_Topics[pub_Topic] = readings[-1]
-                ## to slave data list
-                slave.readings.append(readings)
-                print(f'TCHeader_analyze done: record {readings} from slave_{slave.id}')
-                #barrier_analyze.wait()
-            else:
-                print(f'TCHeader_analyze done: record () from slave_{slave.id}')
-        except Exception as e:
-            count_err += 1
-            print('XX'*10 + f"TCHeader_analyze error: from slave_{slave.id}, err_{count_err} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
-        finally:
-            pass
-
-    print(f'kill TCHeader_analyze of slave_{slave.id}')
-    print(f'Final TCHeader_analyze: from slave_{slave.id}, {count_err} errors occured')
-    #barrier_kill.wait()
-
-
-def ADAM_4024_analyze(start, slave, pub_Topic):
-    count_err = 0
-    while (not config.kb_event.isSet()) and (not config.ticker.wait(config.sample_time)):
-        #print(slave.id, slave.time_readings, slave.lst_readings)
-        lst_readings = slave.lst_readings
-        time_readings = slave.time_readings
-        #print(slave.id, lst_readings)
-        slave.lst_readings = []
-        try:
-            if len(lst_readings) > 0:
-                print(lst_readings)
-                arr_readings = np.array(
-                    [int(readings[-8:-4],16)/(2**12)*20-10 # convert from hex to dec 
-                    for readings in lst_readings]
-                    )
-                #print(slave.id, arr_readings)
-                #print(slave.id, time_readings)
-                lst_readings = tuple([np.round(np.sum(arr_readings) / len(lst_readings), 1)])
-                readings = tuple([round(time_readings,2)]) + lst_readings
-                print(lst_readings)
-                print(slave.id, readings)
-
-                # casting
-                MQTT_config.pub_Topics[pub_Topic] = readings[-1]
-                ## to slave data list
-                slave.readings.append(readings)
-                print(f'ADAM_analyze done: record {readings} from slave_{slave.id}')
-                #barrier_analyze.wait()
-            else:
-                print(f'ADAM_analyze done: record () from slave_{slave.id}')
-        except Exception as e:
-            count_err += 1
-            print('XX'*10 + f"ADAM_analyze error: from slave_{slave.id}, err_{count_err} at {round((time.time()-start),2)}s: " + str(e) + 'XX'*5)
-        finally:
-            pass
-
-    print(f'kill ADAM_analyze of slave_{slave.id}')
-    print(f'Final ADAM_analyze: from slave_{slave.id}, {count_err} errors occured')
-    #barrier_kill.wait()
+    _sub_values = device_port.sub_values
+    Kp = _sub_values.get(f'{slave.name}_Kp').value
+    Ki = _sub_values.get(f'{slave.name}_Ki').value
+    Kd = _sub_values.get(f'{slave.name}_Kd').value
+    MVmin = _sub_values.get(f'{slave.name}_MVmin').value
+    MVmax = _sub_values.get(f'{slave.name}_MVmax').value
+    mode = _sub_values.get(f'{slave.name}_mode').value
+    SP = _sub_values.get(f'{slave.name}_SP').value
+    PV = _sub_values.get(f'{slave.name}_PV').value
+    MV = _sub_values.get(f'{slave.name}_setting').value
+    beta = _sub_values.get(f'{slave.name}_beta').value
+    kick = _sub_values.get(f'{slave.name}_kick').value
+    tstep = _sub_values.get(f'{slave.name}_tstep').value
+    if kick is None:
+        kick = 1
+    if tstep is None or tstep == 0:
+        tstep = 1
+    if _update_parameter:
+        slave.controller.update_paramater(Kp=Kp, Ki=Ki, Kd=Kd, MVmin=MVmin, MVmax=MVmax, mode=mode, beta=beta)
+    try:
+        #print(slave.name, tstep, SP, PV, MV, kick)
+        updates = slave.controller.update(tstep, SP, PV, MV, kick)
+        for idx, topic in enumerate(slave.port_topics.pub_topics):    
+            device_port.pub_values[topic].value = updates[idx]
+    except Exception as e:
+        logging.error(f'{e}')
+    # print(tstep)
+    time.sleep(tstep)
