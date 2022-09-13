@@ -243,5 +243,5 @@ class PID:
         D = self.Kd*(self._errorD0 - 2*self._errorD1 + self._errorD2)/tstep
         self._deltaMV =  P*kick_prop + I + D*kick_prop
         self.MV -= self._action*self._deltaMV
-        print(self.name, self.MV, P, I, D, self.Kp, self.Ki, self.Kd, self.kick, self.beta, self.tstep)
+        # print(self.name, self.MV, P, I, D, self.Kp, self.Ki, self.Kd, self.kick, self.beta, self.tstep)
         return self.MV, P, I, D

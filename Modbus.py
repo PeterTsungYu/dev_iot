@@ -9,7 +9,8 @@ import time
 import re
 from crccheck.crc import Crc16Modbus
 import logging
-import RPi.GPIO as GPIO
+# import RPi.GPIO as GPIO
+import pigpio
 
 
 #custom modules
@@ -34,8 +35,8 @@ logger.addHandler(ch)
 logger.addHandler(fh)
 #-----ADDA port setting----------------------------------------------------------------
 
-GPIO.setmode(GPIO.BCM) # for software PWM
-
+# GPIO.setmode(GPIO.BCM) # for software PWM
+PIG = pigpio.pi()
 
 #------------------------------Decker---------------------------------
 def kb_event(func):
@@ -94,7 +95,7 @@ def analyze_decker(func):
             if len(_time_readings['60_time_readings']) > 60: # aggregate lists for 60s in a list
                 _time_readings['60_time_readings'] = _time_readings['60_time_readings'][-60:]
             cond = len(_time_readings['10_time_readings'])
-            # print(cond)
+            # print(slave.name, _time_readings)
         elif 'PWM' in slave.name:
             cond = len(_time_readings)
             slave.time_readings = []
@@ -356,14 +357,14 @@ def PWM_comm(start, device_port, slave):
                 open_SV = device_port.sub_values[f'{slave.name}_open_SV']
                 duty = device_port.sub_values[f'{slave.name}_duty_SV']
                 f = device_port.sub_values[f'{slave.name}_f_SV']
-                print(open_SV, duty, f)
+                # print(slave.name, slave.id, open_SV, duty, f)
                 if open_SV:
-                    slave.GPIO_instance.start(duty) # start at initial duty
-                    slave.GPIO_instance.ChangeFrequency(f) # start at initial frequency
+                    PIG.set_PWM_dutycycle(slave.id, duty)
+                    PIG.set_PWM_frequency(slave.id, f)
                     print(f"open at duty:{duty}, f: {f}")
                 else:
-                    slave.GPIO_instance.stop()
-                    print('close')
+                    PIG.write(slave.id, 0)
+                    print(slave.name, 'close')
                 device_port.sub_events[topic].clear()
                 print('clear flag')
             except Exception as e:
@@ -372,6 +373,7 @@ def PWM_comm(start, device_port, slave):
                 logging.error(err_msg)
             finally:
                 logging.info(f"{slave.name}_set_err: {round((set_err[1] - set_err[0])/(set_err[1]+0.00000000000000001)*100, 2)}%")
+        time.sleep(params.sample_time)
 
 
 
@@ -405,31 +407,48 @@ def ADAM_READ_analyze(start, device_port, slave, **kwargs):
 @analyze_decker
 def DFM_data_analyze(start, device_port, slave, **kwargs):
     _time_readings = kwargs.get('_time_readings')
+    # print(slave.name, _time_readings)
     _sampling_time = round(time.time()-start, 2)
     _10_flow_lst = []
+    _10_temp = []
+    _60_flow_lst = []
+    _60_temp = []
     try:
         for i in range(len(_time_readings['10_time_readings'])):
+
+            # _10_temp.extend(_time_readings['10_time_readings'][i])
+            # if len(_10_temp) <= 1:
+            #     _10_flow_lst.append(0)
+            # else:
+            #     _10_flow_lst.append(len(_10_temp) / (_10_temp[-1] - _10_temp[0]))
+
             if i != [] and (len(_time_readings['10_time_readings'][i]) > 1):
                 _10_flow_lst.append((len(_time_readings['10_time_readings'][i]) - 1) / (_time_readings['10_time_readings'][i][-1] - _time_readings['10_time_readings'][i][0]))
             else:
                 _10_flow_lst.append(0)
         _10_flow_rate = sum(_10_flow_lst) / len(_10_flow_lst)
         if slave.name == 'DFM':
-            _10_flow_rate = _10_flow_rate * 10 * 0.1
+            _10_flow_rate = _10_flow_rate * 10 * 0.1 / 2
         elif slave.name == 'DFM_AOG':
-            _10_flow_rate = _10_flow_rate * 10 * 0.01
+            _10_flow_rate = _10_flow_rate * 10 * 0.01 / 2
 
-        _60_flow_lst = []
         for i in range(len(_time_readings['60_time_readings'])):
+
+            # _60_temp.extend(_time_readings['60_time_readings'][i])
+            # if len(_60_temp) <= 1:
+            #     _60_flow_lst.append(0)
+            # else:
+            #     _60_flow_lst.append(len(_60_temp) / (_60_temp[-1] - _60_temp[0]))
+
             if i != [] and (len(_time_readings['60_time_readings'][i]) > 1):
                 _60_flow_lst.append((len(_time_readings['60_time_readings'][i]) - 1) / (_time_readings['60_time_readings'][i][-1] - _time_readings['60_time_readings'][i][0]))
             else:
                 _60_flow_lst.append(0)
         _60_flow_rate = sum(_60_flow_lst) / len(_60_flow_lst)
         if slave.name == 'DFM':
-            _60_flow_rate = _60_flow_rate * 60 * 0.1
+            _60_flow_rate = _60_flow_rate * 60 * 0.1 / 2
         elif slave.name == 'DFM_AOG':
-            _60_flow_rate = _60_flow_rate * 60 * 0.01
+            _60_flow_rate = _60_flow_rate * 60 * 0.01 / 2
         _readings = tuple([_sampling_time, round(_10_flow_rate,2), round(_60_flow_rate,2)])
     except:
         _readings = tuple([_sampling_time, 0])

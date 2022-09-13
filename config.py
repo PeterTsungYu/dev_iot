@@ -1,7 +1,7 @@
 #python packages
 import threading
 import serial
-import RPi.GPIO as GPIO
+# import RPi.GPIO as GPIO
 from crccheck.crc import Crc16Modbus
 from datetime import datetime
 
@@ -48,7 +48,7 @@ evapid_id     = '18'
 # read High as 3.3V
 channel_DFM     = 24
 channel_DFM_AOG = 23
-GPIO.setmode(GPIO.BCM)
+# GPIO.setmode(GPIO.BCM)
 # read High as 3.3V
 GPIO_PWM_1      = 26 #GPIO 26 (PWM)
 GPIO_EVA_PWM    = 18
@@ -143,7 +143,6 @@ class Slave: # Create Slave data store
         self.readings = [] # for all data
         self.port_topics = port_topics
         self.kwargs = kwargs # dict of funcs
-        self.GPIO_instance = None
 
     def read_rtu(self, *_fields, wait_len):
         self.r_wait_len = wait_len
@@ -167,12 +166,13 @@ class Slave: # Create Slave data store
         elif len(_fields) == 1:
             if 'MFC' in self.name:
                 self.w_rtu = f'\r{self.id}S{_fields[0]}\r\r'
-    def PWM_instance(self, mode: str, frequency=1.0, duty=0):
+    def PWM_instance(self, mode: str, frequency=1, duty=0):
         if mode == 'software':
-            Modbus.GPIO.setup(self.id, Modbus.GPIO.OUT)
+            Modbus.PIG.set_mode(self.id, Modbus.pigpio.OUTPUT)
+            Modbus.PIG.set_PWM_range(self.id, 100)
             # print(self.id)
-            self.GPIO_instance = Modbus.GPIO.PWM(self.id, frequency)  # channel=12 frequency=50Hz (1 Hz up to few kiloHertz.)
-            self.GPIO_instance.start(duty)
+            Modbus.PIG.set_PWM_frequency(self.id, 10)
+            Modbus.PIG.set_PWM_dutycycle(self.id, 0)
 
 
     def control_constructor(self):
@@ -228,7 +228,7 @@ Scale_slave = Slave(
                     name = 'Scale',
                     idno=Scale_id,
                     port_topics=port_Topics(sub_topics=[
-                                              'Scale_byPython'  
+                                            #   'Scale_byPython'  
                                             ],
                                             pub_topics=[
                                                 '10_Scale', '60_Scale'
@@ -333,10 +333,10 @@ ADAM_SET_slave = Slave(
                         idno=ADAM_SET_id,
                         port_topics=port_Topics(
                                 sub_topics=[
-                                    'PCB_SET_SV', 'H2_MFC_SET_SV', 'RF_Pump_SET_SV', 'BR_Pump_SET_SV', 'Nozzle_Pump_SET_SV'#, Pump(ADAM_SET_SV1), Air_MFC(ADAM_SET_SV2), H2_MFC(ADAM_SET_SV3)
+                                    'PCB_SET_SV', 'H2_MFC_SET_SV', 'RF_Pump_SET_SV', 'BR_Pump_SET_SV', #'Nozzle_Pump_SET_SV'#, Pump(ADAM_SET_SV1), Air_MFC(ADAM_SET_SV2), H2_MFC(ADAM_SET_SV3)
                                 ],
                                 pub_topics=[
-                                    'PCB_SET_PV', 'H2_MFC_SET_PV', 'RF_Pump_SET_PV', 'BR_Pump_SET_PV','Nozzle_Pump_SET_PV'#, Pump(ADAM_SET_PV1), Air_MFC(ADAM_SET_PV2), H2_MFC(ADAM_SET_PV3)
+                                    'PCB_SET_PV', 'H2_MFC_SET_PV', 'RF_Pump_SET_PV', 'BR_Pump_SET_PV',#'Nozzle_Pump_SET_PV'#, Pump(ADAM_SET_PV1), Air_MFC(ADAM_SET_PV2), H2_MFC(ADAM_SET_PV3)
                                 ],
                                 err_topics=[
                                     'ADAM_SET_collect_err', 'ADAM_SET_set_err', 'ADAM_SET_analyze_err',
@@ -546,7 +546,8 @@ CatBedPID_slave = Slave(
                         )
 # CV_03: CatBed TC; MV: Fuel to BR
 ## CatBed_PV > CatBed_SP => BR_Fuel down => DirectAction=False
-CatBedPID_slave.control_constructor_testing(Kp=1, Ki=0.003, Kd=8, beta=0, kick=1, tstep=15, MVmax=750, MVmin=450)
+# CatBedPID_slave.control_constructor()
+CatBedPID_slave.control_constructor_testing(Kp=1.5, Ki=0.008, Kd=18, beta=0, kick=2, tstep=20, MVmax=750, MVmin=400)
 
 PCBPID_slave = Slave(
                         name='PCBPID',
@@ -570,7 +571,7 @@ PCBPID_slave = Slave(
                         )
 # CV_04: PCB %; MV: ratio of AOG
 ## PCBP_PV > PCBP_SP => AOG down => DirectAction=False
-PCBPID_slave.control_constructor_testing(Kp=5, Ki=4, Kd=15, beta=1, kick=1.5, tstep=1)
+PCBPID_slave.control_constructor_testing(Kp=5, Ki=2, Kd=15, beta=1, kick=1.5, tstep=2, MVmax=90, MVmin=0)
 
 PumpPID_slave = Slave(
                         name='PumpPID',
@@ -602,7 +603,7 @@ BurnerPID_slave = Slave(
                         port_topics=port_Topics(
                             sub_topics=[
                                 # 'BurnerPID_Kp', 'BurnerPID_Ki', 'BurnerPID_Kd', 
-                                'BurnerPID_MVmin',  'BurnerPID_MVmax', 'BurnerPID_PV', 'BurnerPID_SP', 'BurnerPID_mode', 'BurnerPID_setting', 
+                                'BurnerPID_MVmin', 'BurnerPID_MVmax', 'BurnerPID_PV', 'BurnerPID_SP', 'BurnerPID_mode', 'BurnerPID_setting', 
                                 # 'BurnerPID_beta', 'BurnerPID_tstep', 'BurnerPID_kick'
                             ],
                             pub_topics=[
@@ -618,8 +619,8 @@ BurnerPID_slave = Slave(
                         )
 # CV_06: burner temperture; MV: PCB SP
 ## burner_PV > burner_SP => PCB down => DirectAction=False
-
-BurnerPID_slave.control_constructor_testing(Kp=0.0003, Ki=0.000005, Kd=0.01, beta=0.1, kick=1.2, tstep=15, MVmax=0.5, MVmin=0.15)
+# BurnerPID_slave.control_constructor()
+BurnerPID_slave.control_constructor_testing(Kp=0.001, Ki=0.00002, Kd=0.005, beta=0.1, kick=1.3, tstep=12, MVmax=0.5, MVmin=0.15)
 
 EVAPID_slave = Slave(
                         name='EVAPID',
@@ -642,7 +643,7 @@ EVAPID_slave = Slave(
                         control_func=Modbus.control_testing,
                         )
 
-EVAPID_slave.control_constructor_testing(Kp=1, Ki=0.03, Kd=1, beta=1, kick=1, tstep=1)
+EVAPID_slave.control_constructor_testing(Kp=1, Ki=0.3, Kd=1, beta=1, kick=1, tstep=1)
 print('Slaves are all set')
 
 #-----Port setting----------------------------------------------------------------
