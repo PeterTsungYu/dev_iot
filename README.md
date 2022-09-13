@@ -173,14 +173,10 @@ We are going to add in your slaves.
 3. Edit your [slave_instances](https://github.com/PeterTsungYu/dev_iot/blob/6698671901cd63ed7120461a32db6666de7aecc7/config.py#L211).
 4. Place your slaves to [corresponding ports](https://github.com/PeterTsungYu/dev_iot/blob/6698671901cd63ed7120461a32db6666de7aecc7/config.py#L627).
 > For RPi, each slave is connected and wired to a specific USB port.
-
-> If it is a RS485 communication device, it might be wired to a RS485-RS232 adaptor, and then connected to a RS232-USB adaptor.
-
-> If it is a RS232 communication device, it might be connected to a RS232-USB adaptor.
-
+If it is a RS485 communication device, it might be wired to a RS485-RS232 adaptor, and then connected to a RS232-USB adaptor.
+If it is a RS232 communication device, it might be connected to a RS232-USB adaptor.
 >> The above-mentioned devices are connected with a Rpi via USB ports at the end.
-
-> If it is a GPIO-interfaced device, it might be wired to the GPIO on the RPi.
+If it is a GPIO-interfaced device, it might be wired to the GPIO on the RPi.
 
 5. Make sure that your port is connected correctly to the assigned port with the given name. 
 Edit the baudrate and other parameters to conform to the device's setting. 
