@@ -32,7 +32,7 @@ Take a look at this [NodeRed dashboard](https://github.com/PeterTsungYu/flows_Re
 | Visualization project | [:link:][https://github.com/PeterTsungYu/dev_eda]           |
 
 ## Quick Start
-Below instructions are employed in the environment as...
+The below instructions are employed in the environment as...
 - Linux-based or Linux system
 - Raspberry Pi board (Rpi 3B+ is used in this project)
 - Available USB ports (4 ports on Rpi 3B+)
@@ -110,7 +110,7 @@ SHOW GRANTS FOR <user>@<IP>;
 ```
 
 ### .env file
-You can find an example of an .env file inside the folder of .env_example.
+You can find an example of an .env file inside [the folder of .env_example](https://github.com/PeterTsungYu/dev_iot/tree/6698671901cd63ed7120461a32db6666de7aecc7/.env_example).
 ```shell
 touch .env 
 ```
@@ -129,15 +129,72 @@ host_vpn=''
 
 
 ### Assign names to the USB port on RPi
+```shell
+# list all usb devices and their symlinks
+ls -l /dev/ttyUSB*
 
+#display the name of USB and its port name 
+dmesg | grep ttyUSB
+```
+> You might find a usb port is indicated by "/dev/ttyUSB*".
+Use this name as the flag below.  
+The below example uses the name of /dev/ttyUSB0.
+
+```shell
+# display usb info
+## look up for the name of USB. ex. KERNELS=="1-1.4"
+## write down some unique identifiers
+udevadm info --name=/dev/ttyUSB0 --attribute-walk
+```
+> Find attributes of the usb based on the section of KERNELs.
+You might find a KERNELS, which it is assigned as "1-1.*".
+For example, KERNELS=="1-1.4", without further suffixes.
+
+> Once you locate the kernel, go ahead and paste the below snippet to the file named "10-usb-serial.rules".   
+'''
+KERNELS=="1-1.4", SUBSYSTEM=="tty", SYMLINK+="ttyUSB_Scale"
+'''
+
+```shell
+# Creating the file with the USB port name rules
+sudo nano /etc/udev/rules.d/10-usb-serial.rules
+
+# Loading the new rules
+sudo udevadm trigger
+```
+Once you have assigned a new name to your USB port. 
+You can edit the [USB_port_name variables](https://github.com/PeterTsungYu/dev_iot/blob/6698671901cd63ed7120461a32db6666de7aecc7/config.py#L19) in the config.py file.
 
 ### Create your slaves
+Stay in the config.py file. 
+We are going to add in your slaves.
+1. Give it an [slave's ID number](https://github.com/PeterTsungYu/dev_iot/blob/6698671901cd63ed7120461a32db6666de7aecc7/config.py#L27).
+2. If it is a GPIO setting, assign [a gpio pin number](https://github.com/PeterTsungYu/dev_iot/blob/6698671901cd63ed7120461a32db6666de7aecc7/config.py#L49).
+3. Edit your [slave_instances](https://github.com/PeterTsungYu/dev_iot/blob/6698671901cd63ed7120461a32db6666de7aecc7/config.py#L211).
+4. Place your slaves to [corresponding ports](https://github.com/PeterTsungYu/dev_iot/blob/6698671901cd63ed7120461a32db6666de7aecc7/config.py#L627).
+> For RPi, each slave is connected and wired to a specific USB port.
 
+> If it is a RS485 communication device, it might be wired to a RS485-RS232 adaptor, and then connected to a RS232-USB adaptor.
+
+> If it is a RS232 communication device, it might be connected to a RS232-USB adaptor.
+
+>> The above-mentioned devices are connected with a Rpi via USB ports at the end.
+
+> If it is a GPIO-interfaced device, it might be wired to the GPIO on the RPi.
+
+5. Make sure that your port is connected correctly to the assigned port with the given name. 
+Edit the baudrate and other parameters to conform to the device's setting. 
+
+6. Lastly, place your defined ports inside a variable called [list_ports](https://github.com/PeterTsungYu/dev_iot/blob/6698671901cd63ed7120461a32db6666de7aecc7/config.py#L695).
+If you don't want to apply one of the ports upon runtime, feel free to comment it out.
 
 ### Define your topics to be published / subscribed
-
+Stay in the config.py file. 
+We are going to edit the published and subscribed topics where you will locate them at [slave_instances](https://github.com/PeterTsungYu/dev_iot/blob/6698671901cd63ed7120461a32db6666de7aecc7/config.py#L211).
+> Note: Assign specific variable names without duplicates. These variable names will also be used in the NodeRed dashboard project.
 
 ### Execute Python script in shell
+With everything being employed, good luck for your ride!
 ```shell
 python3 Threads_rasp.py
 ```
@@ -149,7 +206,3 @@ python3 Threads_rasp.py
 
 #### If shut down gracefully
 ![dev_iot_img_2](https://i.imgur.com/PfAyyde.png)
-
-
-
-
