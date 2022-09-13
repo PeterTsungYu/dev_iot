@@ -33,7 +33,7 @@ Take a look at this [NodeRed dashboard](https://github.com/PeterTsungYu/flows_Re
 
 ## Quick Start
 The below instructions are employed in the environment as...
-- Linux-based or Linux system
+- Linux-based or Linux system with the Python3 installed 
 - Raspberry Pi board (Rpi 3B+ is used in this project)
 - Available USB ports (4 ports on Rpi 3B+)
 - Wifi or Intranet access
