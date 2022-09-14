@@ -46,7 +46,7 @@ git clone https://github.com/PeterTsungYu/dev_iot.git
 ### Install required packages
 ```shell
 cd dev_iot/
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 
 ### Install MQTT Eclipse
