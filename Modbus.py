@@ -432,7 +432,7 @@ def MFC_Comm(start, device_port, slave):
                 if (recur == True) and (re_set[0] < params.recur_try):
                     re_set[0] += 1
                     logging.debug(f're_set: {re_set[:]}')
-                    Modbus_Comm(start, device_port, slave)
+                    MFC_Comm(start, device_port, slave)
                 re_set[0] = 0
                 port.reset_input_buffer()
                 logging.critical(f"{slave.name}_set_err: {round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2)}%, reset_cover: {round(re_set[1]/(collect_err[0]+0.00000000000000001)*100, 2)}%")
