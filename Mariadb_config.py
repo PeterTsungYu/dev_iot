@@ -88,7 +88,7 @@ def multi_insert():
             conn.close()
         else:
             print(f"db held by a connection error. Trying to reconnect...")
-            pool, insertSchema = create_pool_and_table()
+            pool, insert_col, insertSchema = create_pool_and_table()
     if config.db_connection and pool:
         pool.close()
     print("close connection to MariaDB") 
