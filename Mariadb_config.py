@@ -4,9 +4,11 @@
 #python packages
 import os
 import sys
-import threading
+# import threading
+import multiprocessing
 import mariadb
 from dotenv import load_dotenv
+import time
 
 #custom modules
 import params
@@ -22,7 +24,7 @@ host_vpn = os.environ.get("host_vpn")
 #-------------------------mariadb conn--------------------------------------
 try:
     # Connect to MariaDB Platform
-    conn = mariadb.connect(
+    pool = mariadb.ConnectionPool(
         user=username,
         password=password,
         host=host_vpn,
@@ -31,6 +33,7 @@ try:
         autocommit=True
     )
 
+    conn = pool.get_connection()
     # Get Cursor for tx
     cur = conn.cursor()
 
@@ -57,33 +60,54 @@ try:
                     + ','.join(insert_col) \
                     + f') VALUES ({("?,"*len(insert_col))[:-1]})'
     #print(insertSchema)
-
-    def multi_insert(cur):
-        while not params.kb_event.isSet():
-            if not params.ticker.wait(params.sample_time):
-                try:
-                    cur.execute(
-                        insertSchema,
-                        #tuple(i for i in config.Setup_port.sub_values.values()) + # sub value
-                        #tuple(u for i in config.lst_ports for u in list(i.pub_values.values()) + list(i.sub_values.values())) # pub value
-                        tuple(config.NodeRed.get(_k) for _k in insert_col)
-                        )
-                    print(f"Successfully added entry to database. Last Inserted ID: {cur.lastrowid}")
-                except mariadb.Error as e:
-                    print(f"Error adding entry to database: {e}")
-
-    #-------------------------main--------------------------------------
-    try:
-        multi_insert = threading.Thread(
-            target=multi_insert,
-            args=(cur,),
-            )
-        multi_insert.start()
-    except mariadb.Error as e:
-        config.db_connection = False
-        print(f"Error multi_insert to MariaDB Platform: {e}")    
-
 except mariadb.Error as e:
     config.db_connection = False
     print(f"Error connecting to MariaDB Platform: {e}")
     #sys.exit(1)
+finally:
+    conn.close()
+    print("After table and scheme creation. Close connection to MariaDB")    
+
+
+    # def multi_insert(cur):
+def multi_insert():
+    while not params.kb_event.is_set():
+        time.sleep(params.comm_time)
+        conn = pool.get_connection()
+        cur = conn.cursor()
+            # if not params.ticker.wait(params.sample_time):
+        try:
+            cur.execute(
+                insertSchema,
+                #tuple(i for i in config.Setup_port.sub_values.values()) + # sub value
+                #tuple(u for i in config.lst_ports for u in list(i.pub_values.values()) + list(i.sub_values.values())) # pub value
+                tuple(config.NodeRed.get(_k) for _k in insert_col)
+                )
+            print(f"Successfully added entry to database. Last Inserted ID: {cur.lastrowid}")
+        except mariadb.Error as e:
+            config.db_connection = False
+            print(f"Error adding entry to database: {e}")
+        conn.close()
+    pool.close()
+    print("close connection to MariaDB") 
+    #-------------------------main--------------------------------------
+#     try:
+#         multi_insert = threading.Thread(
+#             target=multi_insert,
+#             args=(cur,),
+#             )
+#         multi_insert.start()
+#     except mariadb.Error as e:
+#         config.db_connection = False
+#         print(f"Error multi_insert to MariaDB Platform: {e}")    
+
+# except mariadb.Error as e:
+#     config.db_connection = False
+#     print(f"Error connecting to MariaDB Platform: {e}")
+#     #sys.exit(1)
+multi_insert_process = multiprocessing.Process(
+    name='multi_insert_process',
+    target=multi_insert,
+    args=(),
+    )
+#multi_insert.start()
