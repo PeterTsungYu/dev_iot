@@ -2,8 +2,10 @@
 
 #python packages
 import paho.mqtt.client as mqtt
-import threading
+# import threading
+import multiprocessing
 import json
+import time
 
 #custom modules
 import params
@@ -38,39 +40,45 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
         #print(msg.topic+ ": " + str(msg.payload) + f">>> {client_id}")
         resp = json.loads(msg.payload.decode('utf-8'))
         #print(resp)
-        if (msg.topic == 'NodeRed'):
-            print(f'{hostname} Receive topic: NodeRed')
-            _resp = {}
-            parse_nested_dicts(resp, _resp)
-            config.NodeRed = _resp
-            #print(config.NodeRed)
-        else:
-            #print(resp)
-            port = None
-            if (msg.topic == 'Set_bit'):
-                print(f'{hostname} Receive topic: Set_bit')
-                if config.port_path_dict.get('Setup_port_path'):
-                    port = config.Setup_port
-            elif (msg.topic == 'MFC_Set'):
-                print(f'{hostname} Receive topic: MFC_Set')
-                if config.port_path_dict.get('RS232_port_path'):
-                    port = config.RS232_port
-            elif (msg.topic == "PWM_Set"):
-                print(f'{hostname} Receive topic: PWM_Set')
-                port = config.GPIO_port
-            elif (msg.topic == 'PID_Set'):
-                print(f'{hostname} Receive topic: PID_Set')
-                # print(resp)
-                if config.port_path_dict.get('PID_port'):
-                    port = config.PID_port
-            if port:
+        try:
+            if (msg.topic == 'NodeRed'):
+                print(f'{hostname} Receive topic: NodeRed')
                 for key, value in resp.items():
-                    # print(key, value)
-                    if port.sub_values.get(key) != None:
-                        if port.sub_values[key] != float(value):
-                            port.sub_values[key] = float(value)
-                            port.sub_events[key].set()
-        
+                    if type(value) == dict:
+                        for k, v in resp[key].items():
+                            config.NodeRed[k] = v
+                    else:
+                        config.NodeRed[key] = value
+
+                # print(config.NodeRed)
+            else:
+                # print(resp)
+                port = None
+                if (msg.topic == 'Set_bit'):
+                    print(f'{hostname} Receive topic: Set_bit')
+                    if config.port_path_dict.get('Setup_port_path'):
+                        port = config.Setup_port
+                elif (msg.topic == 'MFC_Set'):
+                    print(f'{hostname} Receive topic: MFC_Set')
+                    if config.port_path_dict.get('RS232_port_path'):
+                        port = config.RS232_port
+                elif (msg.topic == "PWM_Set"):
+                    print(f'{hostname} Receive topic: PWM_Set')
+                    port = config.GPIO_port
+                elif (msg.topic == 'PID_Set'):
+                    print(f'{hostname} Receive topic: PID_Set')
+                    # print(resp)
+                    if config.port_path_dict.get('PID_port'):
+                        port = config.PID_port
+                if port:
+                    for key, value in resp.items():
+                        print(key, value)
+                        if port.sub_values.get(key) != None:
+                            if port.sub_values[key].value != float(value):
+                                port.sub_values[key].value = float(value)
+                                port.sub_events[key].set()
+        except Exception as e:
+            print(f"Error mqtt on_message: {e}")
     def on_publish(client, userdata, mid):
         print(mid)
 
@@ -84,31 +92,37 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
     return client
 
 
-def multi_pub(client):
-    while not params.kb_event.isSet():
-        if not params.ticker.wait(params.sample_time):
-            for device_port in config.lst_ports:
-                #print(device_port.name)
-                for _slave in device_port.slaves:
-                    payload = {}
-                    #print(_slave.name)
-                    for _topic in _slave.port_topics.pub_topics:
-                        payload[_topic] = device_port.pub_values[_topic]
-                    payload = json.dumps(payload)
-                    client.publish(topic=_slave.name, payload=payload, qos=0, retain=False)
+def multi_pub():
+    client_mqtt = connect_mqtt(client_id='client_mqtt' ,hostname='localhost', port=1883, keepalive=60,) 
+    client_mqtt.loop_start()
+    while not params.kb_event.is_set():
+        # if not params.ticker.wait(params.sample_time):
+        time.sleep(params.comm_time)
+        for device_port in config.lst_ports:
+            #print(device_port.name)
+            for _slave in device_port.slaves:
+                payload = {}
+                #print(_slave.name)
+                for _topic in _slave.port_topics.pub_topics:
+                    payload[_topic] = device_port.pub_values[_topic].value
+                payload = json.dumps(payload)
+                # print(f'pub_{payload}')
+                client_mqtt.publish(topic=_slave.name, payload=payload, qos=0, retain=False)
                     #print(f"pub {_slave.name}:{payload} succeed from {client._client_id} >>> localhost")
             # client.publish(topic='DFM_total', payload=config.GPIO_port.pub_values['DFM_RichGas'] + config.GPIO_port.pub_values['DFM_AOG'], qos=0, retain=False)
-            if config.db_connection == True:
-                client.publish(topic='DB_name', payload=config.db_time, qos=0, retain=False)
-            elif config.db_connection == False:
-                client.publish(topic='DB_name', payload='', qos=0, retain=False)
+        if config.db_table == True:
+            client_mqtt.publish(topic='DB_name', payload=config.db_time, qos=0, retain=False)
+        elif config.db_table == False:
+            client_mqtt.publish(topic='DB_name', payload='', qos=0, retain=False)
+    client_mqtt.loop_stop()
+    client_mqtt.disconnect()
+    print("close connection to MQTT broker")
 
 #-------------------------MQTT instance--------------------------------------
-client_0 = connect_mqtt(client_id='client_0' ,hostname='localhost', port=1883, keepalive=60,) 
-client_0.loop_start()
 
-multi_pub = threading.Thread(
+multi_pub_process = multiprocessing.Process(
+    name='multi_pub_mqtt',
     target=multi_pub,
-    args=(client_0,),
+    args=(),
     )
-multi_pub.start()
+# multi_pub.start()

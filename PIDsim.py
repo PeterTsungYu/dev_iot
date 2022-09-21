@@ -2,6 +2,7 @@
 #import numpy as np
 
 from numpy import True_
+import multiprocessing
 
 
 class PID:
@@ -10,8 +11,8 @@ class PID:
     def __init__(self, name=None):
         self.name = name
         self.SP = 0
-        self._SP_stepping = 0
-        self._SP_increment = 3
+        self.SP_stepping = 0
+        self.SP_increment = 3
         self.Kp = 0
         self.Ki = 0
         self.Kd = 0
@@ -22,12 +23,12 @@ class PID:
         self.DirectAction = False
         self.mode = False
         self._log = []
-        self._errorP0 = 0
-        self._errorP1 = 0
-        self._errorI0 = 0
-        self._errorD0 = 0
-        self._errorD1 = 0
-        self._errorD2 = 0
+        self.errorP0 = 0
+        self.errorP1 = 0
+        self.errorI0 = 0
+        self.errorD0 = 0
+        self.errorD1 = 0
+        self.errorD2 = 0
         
     def auto(self):
         """Change to automatic control mode. In automatic control mode the .update()
@@ -68,15 +69,27 @@ class PID:
     '''
 
     @property
+    def mode(self):
+        return self._mode.value
+        
+    @mode.setter
+    def mode(self,mode):
+        if mode:
+            self._mode = multiprocessing.Value('i', 1)
+        else:
+            self._mode = multiprocessing.Value('i', 0)
+
+
+    @property
     def beta(self):
         """beta is the setpoint weighting for proportional control where the proportional error
         is given by error_proportional = beta*SP - PV. The default value is one.
         """
-        return self._beta
+        return self._beta.value
         
     @beta.setter
     def beta(self,beta):
-        self._beta = max(0.0,min(1.0,beta))
+        self._beta = multiprocessing.Value('d', max(0.0,min(1.0,beta)))
         
     @property
     def DirectAction(self):
@@ -87,106 +100,195 @@ class PID:
         
         The default value is False.
         """
-        return self._DirectAction
+        return self._DirectAction.value
     
     @DirectAction.setter
     def DirectAction(self,DirectAction):
         if DirectAction:
-            self._DirectAction = True
-            self._action = +1.0
+            # self._DirectAction = True
+            # self._action = +1.0
+            self._DirectAction = multiprocessing.Value('i', 1)
+            self._action = multiprocessing.Value('i', 1)
         else:
-            self._DirectAction = False
-            self._action = -1.0
-    
+            # self._DirectAction = False
+            # self._action = -1.0
+            self._DirectAction = multiprocessing.Value('i', 0)
+            self._action = multiprocessing.Value('i', -1)
+
+    @property
+    def action(self):
+        return self._action.value
+
     @property
     def gamma(self):
         """gamma is the setpoint weighting for derivative control where the derivative error
         is given by gamma*SP - PV.  The default value is zero. 
         """
-        return self._gamma
+        return self._gamma.value
     
     @gamma.setter
     def gamma(self,gamma):
-        self._gamma = max(0.0,min(1.0,gamma))
-    
+        self._gamma = multiprocessing.Value('d', max(0.0,min(1.0,gamma)))
+
     @property
     def Kp(self):
         """Kp is the proportional control gain.
         """
-        return self._Kp
+        return self._Kp.value
     
     @Kp.setter
     def Kp(self,Kp):
-        self._Kp = Kp
+        self._Kp = multiprocessing.Value('d', Kp)
     
     @property
     def Ki(self):
         """Ki is the integral control gain.
         """
-        return self._Ki
+        return self._Ki.value
         
     @Ki.setter
     def Ki(self,Ki):
-        self._Ki = Ki
+        self._Ki = multiprocessing.Value('d', Ki)
     
     @property
     def Kd(self):
         """Kd is the derivative control gain.
         """
-        return self._Kd
+        return self._Kd.value
     
     @Kd.setter
     def Kd(self,Kd):
-        self._Kd = Kd
+        self._Kd = multiprocessing.Value('d', Kd)
         
     @property
     def MV(self):
         """MV is the manipulated (or PID outpout) variable. It is automatically
         restricted to the limits given in MVrange.
         """
-        return self._MV
+        return self._MV.value
     
     @MV.setter
     def MV(self,MV):
-        self._MV = max(self._MVmin,min(self._MVmax,MV))
+        self._MV = multiprocessing.Value('d', max(self.MVmin,min(self.MVmax,MV)))
         
     @property
     def MVmin(self):
-        return self._MVmin
+        return self._MVmin.value
     
     @MVmin.setter
     def MVmin(self, MVmin):
-        self._MVmin = MVmin
+        self._MVmin = multiprocessing.Value('d', MVmin)
 
     @property
     def MVmax(self):
-        return self._MVmax
+        return self._MVmax.value
     
     @MVmax.setter
     def MVmax(self, MVmax):
-        self._MVmax = MVmax
+        self._MVmax = multiprocessing.Value('d', MVmax)
 
     @property
     def SP(self):
         """SP is the setpoint for the measured process variable.
         """
-        return self._SP
+        return self._SP.value
     
     @SP.setter
     def SP(self,SP):
-        self._SP = SP
+        self._SP = multiprocessing.Value('d', SP)
         
     @property
     def PV(self):
         """PV is the measured process (or control) variable.
         """
-        return self._PV
+        return self._PV.value
     
     @PV.setter
     def PV(self,PV):
-        self._PV = PV
+        self._PV = multiprocessing.Value('d', PV)
 
-    def update_paramater(self, Kp=0, Ki=0, Kd=0, beta=0, gamma=0, MVmin=0, MVmax=0, kick=1, tstep=1, DirectAction=False, mode=False):
+    @property
+    def SP_stepping(self):
+        return self._SP_stepping.value
+    
+    @SP_stepping.setter
+    def SP_stepping(self,SP_stepping):
+        self._SP_stepping = multiprocessing.Value('d', SP_stepping)
+
+    @property
+    def SP_increment(self):
+        return self._SP_increment.value
+    
+    @SP_increment.setter
+    def SP_increment(self,SP_increment):
+        self._SP_increment = multiprocessing.Value('d', SP_increment)
+    
+    @property
+    def errorP0(self):
+        return self._errorP0.value
+    
+    @errorP0.setter
+    def errorP0(self,errorP0):
+        self._errorP0 = multiprocessing.Value('d', errorP0)
+
+    @property
+    def errorP1(self):
+        return self._errorP1.value
+    
+    @errorP1.setter
+    def errorP1(self,errorP1):
+        self._errorP1 = multiprocessing.Value('d', errorP1)
+
+    @property
+    def errorI0(self):
+        return self._errorI0.value
+    
+    @errorI0.setter
+    def errorI0(self,errorI0):
+        self._errorI0 = multiprocessing.Value('d', errorI0)
+
+    @property
+    def errorD0(self):
+        return self._errorD0.value
+    
+    @errorD0.setter
+    def errorD0(self,errorD0):
+        self._errorD0 = multiprocessing.Value('d', errorD0)
+
+    @property
+    def errorD1(self):
+        return self._errorD1.value
+    
+    @errorD1.setter
+    def errorD1(self,errorD1):
+        self._errorD1 = multiprocessing.Value('d', errorD1)
+
+    @property
+    def errorD2(self):
+        return self._errorD2.value
+    
+    @errorD2.setter
+    def errorD2(self,errorD2):
+        self._errorD2 = multiprocessing.Value('d', errorD2)
+
+    @property
+    def kick_prop(self):
+        return self._kick_prop.value
+    
+    @kick_prop.setter
+    def kick_prop(self,kick_prop):
+        self._kick_prop = multiprocessing.Value('d', kick_prop)
+    
+    @property
+    def tstep(self):
+        return self._tstep.value
+    
+    @tstep.setter
+    def tstep(self,tstep):
+        self._tstep = multiprocessing.Value('d', tstep)
+
+
+    def update_paramater(self, Kp=0, Ki=0, Kd=0, beta=0, gamma=0, MVmin=0, MVmax=0, kick=1, tstep=1, DirectAction=0, mode=0):
         self.Kp = Kp
         self.Ki = Ki
         self.Kd = Kd
@@ -199,7 +301,7 @@ class PID:
         self.DirectAction = DirectAction
         self.mode = mode
 
-    def update_paramater_testing(self, parameters, mode=False, gamma=0, DirectAction=False):
+    def update_paramater_testing(self, parameters, mode=0, gamma=0, DirectAction=0):
         self.Kp = parameters.get('Kp')
         self.Ki = parameters.get('Ki')
         self.Kd = parameters.get('Kd')
@@ -214,34 +316,35 @@ class PID:
 
     def update(self, tstep, SP, PV, MV, kick):
         self.SP = SP
-        kick_prop = 1
-        if self._SP_stepping < self.SP:
-            self._SP_stepping += self._SP_increment
-            kick_prop = kick
-            if self._SP_stepping > self.SP:
-                self._SP_stepping = self.SP
-                kick_prop = 1
-        elif self._SP_stepping > self.SP:
-            self._SP_stepping -= self._SP_increment
-            kick_prop = kick
-            if self._SP_stepping < self.SP:
-                self._SP_stepping = self.SP 
-                kick_prop = 1 
+        self.kick_prop = 1
+        if self.SP_stepping < self.SP:
+            self.SP_stepping += self.SP_increment
+            self.kick_prop = kick
+            if self.SP_stepping > self.SP:
+                self.SP_stepping = self.SP
+                self.kick_prop = 1
+        elif self.SP_stepping > self.SP:
+            self.SP_stepping -= self.SP_increment
+            self.kick_prop = kick
+            if self.SP_stepping < self.SP:
+                self.SP_stepping = self.SP 
+                self.kick_prop = 1 
+        self.tstep = tstep
         self.PV = PV
         self.MV = MV
-        if self.mode == False:
+        if self.mode == 0:
             # Setpoint tracking
-            self._SP_stepping = PV
-        self._errorP1 = self._errorP0
-        self._errorP0 = self.beta*self._SP_stepping - self.PV # setpoint weighting
-        self._errorI0 = self._SP_stepping - self.PV           
-        self._errorD2 = self._errorD1
-        self._errorD1 = self._errorD0
-        self._errorD0 = self.gamma*self._SP_stepping - self.PV # setpoint weighting
-        P = self.Kp*(self._errorP0 - self._errorP1)
-        I = self.Ki*tstep*self._errorI0
-        D = self.Kd*(self._errorD0 - 2*self._errorD1 + self._errorD2)/tstep
-        self._deltaMV =  P*kick_prop + I + D*kick_prop
-        self.MV -= self._action*self._deltaMV
+            self.SP_stepping = PV
+        self.errorP1 = self.errorP0
+        self.errorP0 = self.beta*self.SP_stepping - self.PV # setpoint weighting
+        self.errorI0 = self.SP_stepping - self.PV           
+        self.errorD2 = self.errorD1
+        self.errorD1 = self.errorD0
+        self.errorD0 = self.gamma*self.SP_stepping - self.PV # setpoint weighting
+        P = self.Kp*(self.errorP0 - self.errorP1)
+        I = self.Ki*tstep*self.errorI0
+        D = self.Kd*(self.errorD0 - 2*self.errorD1 + self.errorD2)/tstep
+        self.deltaMV =  P*self.kick_prop + I + D*self.kick_prop
+        self.MV -= self.action*self.deltaMV
         # print(self.name, self.MV, P, I, D, self.Kp, self.Ki, self.Kd, self.kick, self.beta, self.tstep)
         return self.MV, P, I, D

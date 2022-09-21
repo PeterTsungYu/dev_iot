@@ -1,9 +1,11 @@
 #python packages
-import threading
+# import threading
+import multiprocessing
+import functools
 import serial
-# import RPi.GPIO as GPIO
 from crccheck.crc import Crc16Modbus
 from datetime import datetime
+import time
 
 #custom modules
 import Modbus
@@ -12,7 +14,7 @@ import PIDsim
 
 #-----------------Database----------------------------------------------
 db_time = datetime.now().strftime('%Y_%m_%d_%H_%M_SE')
-db_connection = False
+db_table = False
 
 #-----------------Serial port and DeviceID------------------------------
 #_port_path = '/dev/ttyUSB'
@@ -48,15 +50,21 @@ evapid_id     = '18'
 # read High as 3.3V
 channel_DFM     = 24
 channel_DFM_AOG = 23
-# GPIO.setmode(GPIO.BCM)
-# read High as 3.3V
 GPIO_PWM_1      = 26 #GPIO 26 (PWM)
 GPIO_EVA_PWM    = 18
 #-----Cls----------------------------------------------------------------
-def tohex(value):
+# def tohex(value):
+def tohex_pad4(value):
     value = int(value)
     hex_value = hex(value)[2:]
     add_zeros = 4 - len(hex_value)
+    hex_value = add_zeros * '0' + hex_value
+    return hex_value
+
+def tohex_pad2(value):
+    value = int(value)
+    hex_value = hex(value)[2:]
+    add_zeros = 2 - len(hex_value)
     hex_value = add_zeros * '0' + hex_value
     return hex_value
 
@@ -73,58 +81,108 @@ class device_port:
         self.pub_values = {}
         self.err_values = {}
         self.recur_count = {}
-        self.thread_funcs = []
+        # self.thread_funcs = []
+        self.comm_ticker = multiprocessing.Event()
+        self.analyze_ticker = multiprocessing.Event()
 
         for _slave in slaves:
             for topic in _slave.port_topics.sub_topics:
                 self.sub_topics.append(topic)
-                self.sub_values[topic] = 0
-                self.sub_events[topic] = threading.Event()
+                self.sub_values[topic] = multiprocessing.Value('d', 0.0)
+                self.sub_events[topic] = multiprocessing.Event()
+                # self.sub_values[topic] = 0
+                # self.sub_events[topic] = threading.Event()
             for topic in _slave.port_topics.pub_topics:
                 self.pub_topics.append(topic)
-                self.pub_values[topic] = 0
+                self.pub_values[topic] = multiprocessing.Value('d', 0.0)
+                # self.pub_values[topic] = 0
             for topic in _slave.port_topics.err_topics:
                 self.err_topics.append(topic)
-                self.err_values[topic] = [0,0,0] #[err, click_throu, recur]
-                self.recur_count[topic] = [0]
+                self.err_values[topic] = multiprocessing.Array('i', 3) #[err, click_throu, correct]
+                self.recur_count[topic] = multiprocessing.Array('i', 2) #[one_call_recur, total_recur]
+                # self.err_values[topic] = [0,0,0] #[err, click_throu, recur]
+                # self.recur_count[topic] = [0]
     
-    def serial_funcs(self, start): 
-        def thread_func():
-            while not params.kb_event.isSet():
+    # def serial_funcs(self, start): 
+    def comm_funcs(self, start): 
+        # def thread_func():
+        self.comm_ticker.set()
+        def comm_process():
+            while not params.kb_event.is_set():
+                self.comm_ticker.wait()
+            # while not params.kb_event.isSet():
                 for slave in self.slaves:
                     if slave.kwargs.get('comm_func'):
                         slave.kwargs['comm_func'](start, self, slave)
-        
-        self.thread_funcs.append(threading.Thread(
-                                    name = f'{self.name}_comm',
-                                    target=thread_func, 
-                                    #args=(,)
-                                    )
-                                )
+                self.analyze_ticker.set()
+        # self.thread_funcs.append(threading.Thread(
+        #                             name = f'{self.name}_comm',
+        #                             target=thread_func, 
+        #                             #args=(,)
+        #                             )
+        #                         )
+        multiprocessing.Process(
+            name = f'{self.name}_comm',
+            target=comm_process, 
+            #args=(,)
+            ).start()
 
-    def parallel_funcs(self, start): 
+    # def parallel_funcs(self, start): 
+    def analyze_funcs(self, start): 
+        def analyze_process():
+            while not params.kb_event.is_set():
+                lst_analyze_funcs = []
+                for slave in self.slaves:
+                    if slave.kwargs.get('analyze_func'):
+                        # self.thread_funcs.append(
+                        #     threading.Thread(
+                        lst_analyze_funcs.append(
+                            multiprocessing.Process(
+                                name=f'{slave.name}_analyze',
+                                target=slave.kwargs['analyze_func'],
+                                args=(start, self, slave,)
+                            )
+                        )
+                time.sleep(params.sample_time)
+                self.comm_ticker.clear()
+                self.analyze_ticker.wait()
+                # t = time.time()
+                for process in lst_analyze_funcs:
+                    process.start()
+                for process in lst_analyze_funcs:
+                    process.join()
+                self.analyze_ticker.clear()
+                self.comm_ticker.set()
+        multiprocessing.Process(
+            name = f'{self.name}_analyze',
+            target=analyze_process, 
+            #args=(,)
+            ).start()
+            # elif slave.kwargs.get('control_func'):
+            #     self.thread_funcs.append(
+            #         threading.Thread(
+            #             name=f'{slave.name}_control',
+            #             target=slave.kwargs['control_func'],
+            #             args=(self, slave,)
+            #         )
+            #     )
+    
+    def control_funcs(self, start): 
+        #lst_control_funcs = []
         for slave in self.slaves:
-            if slave.kwargs.get('analyze_func'):
-                self.thread_funcs.append(
-                    threading.Thread(
-                        name=f'{slave.name}_analyze',
-                        target=slave.kwargs['analyze_func'],
-                        args=(start, self, slave,)
-                    )
-                )
-            elif slave.kwargs.get('control_func'):
-                self.thread_funcs.append(
-                    threading.Thread(
-                        name=f'{slave.name}_control',
-                        target=slave.kwargs['control_func'],
-                        args=(self, slave,)
-                    )
-                )
+            # if slave.name not in self.broken_slave_names:
+            if slave.kwargs.get('control_func'):
+                multiprocessing.Process(
+                    name=f'{slave.name}_control',
+                    target=slave.kwargs['control_func'],
+                    args=(self, slave,)
+                ).start()
 
 
 class port_Topics:
     def __init__(self, sub_topics, pub_topics, err_topics):
-        self.event = threading.Event()
+        # self.event = threading.Event()
+        self.event = multiprocessing.Event()
         self.sub_topics = sub_topics
         self.pub_topics = pub_topics
         self.err_topics = err_topics
@@ -133,14 +191,17 @@ class Slave: # Create Slave data store
     def __init__(self, name, idno, port_topics, **kwargs):
         self.name = name
         self.id = idno # id number of slave
-        self.lst_readings = [] # record readings
-        self.time_readings = [] if 'DFM' not in self.name else {'10_time_readings':[], '60_time_readings':[]} # record time
-        if 'Scale' in self.name:
-            self.scale_readings = {'10_lst_readings':[], '60_lst_readings':[]}
-            self.scale_time_readings = {'10_time_readings':[], '60_time_readings':[]}
-        else: # record readings for scale
-            pass
-        self.readings = [] # for all data
+        # self.lst_readings = [] # record readings
+        self.lst_readings = multiprocessing.Queue()
+        # self.time_readings = [] if 'DFM' not in self.name else {'10_time_readings':[], '60_time_readings':[]} # record time
+        self.time_readings = multiprocessing.Queue()
+        # if 'Scale' in self.name:
+        #     self.scale_readings = {'10_lst_readings':[], '60_lst_readings':[]}
+        #     self.scale_time_readings = {'10_time_readings':[], '60_time_readings':[]}
+        if self.name in ['ADAM_TC', 'ADAM_TC_02', 'Scale', 'DFM', 'DFM_AOG']:
+            self.size_lst_readings = {'short_lst_readings':params.manager.list(), 'long_lst_readings':params.manager.list()}
+            self.size_time_readings = {'short_time_readings':params.manager.list(), 'long_time_readings':params.manager.list()}
+        # self.readings = [] # for all data
         self.port_topics = port_topics
         self.kwargs = kwargs # dict of funcs
 
@@ -149,7 +210,9 @@ class Slave: # Create Slave data store
         # _fields[0]:data_site
         # _fields[1]:value / data_len
         if len(_fields) == 2:
-            data_struc = self.id + '03' + _fields[0] + _fields[1]
+            # data_struc = self.id + '03' + _fields[0] + _fields[1]
+            data_struc = tohex_pad2(self.id) + '03' + _fields[0] + _fields[1]
+            # print(data_struc)
             crc = Crc16Modbus.calchex(bytearray.fromhex(data_struc))
             self.r_rtu = data_struc + crc[-2:] + crc[:2]
         elif len(_fields) == 1:
@@ -159,8 +222,10 @@ class Slave: # Create Slave data store
         # _fields[0]:data_site
         # _fields[1]:value / data_len
         if len(_fields) == 2:
-            _value = tohex(_fields[1])
-            data_struc = self.id + '06' + _fields[0] + _value
+            # _value = tohex(_fields[1])
+            _value = tohex_pad4(_fields[1])
+            # data_struc = self.id + '06' + _fields[0] + _value
+            data_struc = tohex_pad2(self.id) + '06' + _fields[0] + _value
             crc = Crc16Modbus.calchex(bytearray.fromhex(data_struc))
             self.w_rtu = data_struc + crc[-2:] + crc[:2]
         elif len(_fields) == 1:
@@ -440,23 +505,23 @@ H2_MFC_slave = Slave(
 H2_MFC_slave.read_rtu(f'\r{H2_MFC_id}\r\r', wait_len=49)
 H2_MFC_slave.w_wait_len = 49
 
-PWM01_slave = Slave(
-                    name='PWM01',
-                    idno=GPIO_PWM_1, #GPIO
-                    port_topics=port_Topics(
-                                sub_topics=[
-                                    'PWM01_open_SV', 'PWM01_f_SV', 'PWM01_duty_SV'
-                                ],
-                                pub_topics=[
-                                ],
-                                err_topics=[
-                                    'PWM01_collect_err', 'PWM01_set_err', 'PWM01_analyze_err'
-                                ]
-                                ),
-                    comm_func=Modbus.PWM_comm,
-                    #analyze_func=Modbus.,
-                    )
-PWM01_slave.PWM_instance('software')
+# PWM01_slave = Slave(
+#                     name='PWM01',
+#                     idno=GPIO_PWM_1, #GPIO
+#                     port_topics=port_Topics(
+#                                 sub_topics=[
+#                                     'PWM01_open_SV', 'PWM01_f_SV', 'PWM01_duty_SV'
+#                                 ],
+#                                 pub_topics=[
+#                                 ],
+#                                 err_topics=[
+#                                     'PWM01_collect_err', 'PWM01_set_err', 'PWM01_analyze_err'
+#                                 ]
+#                                 ),
+#                     comm_func=Modbus.PWM_comm,
+#                     #analyze_func=Modbus.,
+#                     )
+# PWM01_slave.PWM_instance('software')
 
 EVA_PWM_slave = Slave(
                     name='EVA_PWM',
@@ -468,7 +533,7 @@ EVA_PWM_slave = Slave(
                                 pub_topics=[
                                 ],
                                 err_topics=[
-                                    'EVA_PWM_collect_err', 'EVA_PWM_set_err', 'EVA_PWM_analyze_err'
+                                    'EVA_PWM_set_err',
                                 ]
                                 ),
                     comm_func=Modbus.PWM_comm,
@@ -498,7 +563,7 @@ LambdaPID_slave = Slave(
                         )
 #CV_01: Lambda value; MV: Air
 ## lambda_PV > lambda_SP => Air down => DirectAction=False
-LambdaPID_slave.control_constructor_testing(Kp=0.8, Ki=0.3, Kd=0.5, beta=1, kick=1.5, tstep=3)
+LambdaPID_slave.control_constructor_testing(Kp=0.8, Ki=0.3, Kd=0.5, beta=1, kick=1.5, tstep=3, MVmax=150, MVmin=40)
 
 CurrentPID_slave = Slave(
                         name='CurrentPID',
@@ -522,16 +587,16 @@ CurrentPID_slave = Slave(
                         )
 # CV_02: SetCurrent; MV: RF_Pump flow rate
 ## current_PV > current_SP => RF_Pump down => DirectAction=False
-CurrentPID_slave.control_constructor_testing(Kp=0.01, Ki=0.0005, Kd=0.01, beta=1, kick=10, tstep=5, MVmax=5, MVmin=0.17)
+CurrentPID_slave.control_constructor_testing(Kp=0.008, Ki=0.001, Kd=0.08, beta=1, kick=1.2, tstep=10, MVmax=5, MVmin=0.17)
 
 CatBedPID_slave = Slave(
                         name='CatBedPID',
                         idno=catbedpid_id, 
                         port_topics=port_Topics(
                             sub_topics=[
-                                # 'CatBedPID_Kp', 'CatBedPID_Ki', 'CatBedPID_Kd', 
+                                'CatBedPID_Kp', 'CatBedPID_Ki', 'CatBedPID_Kd', 
                                 'CatBedPID_MVmin',  'CatBedPID_MVmax', 'CatBedPID_PV', 'CatBedPID_SP', 'CatBedPID_mode', 'CatBedPID_setting', 
-                                # 'CatBedPID_beta', 'CatBedPID_tstep', 'CatBedPID_kick'
+                                'CatBedPID_beta', 'CatBedPID_tstep', 'CatBedPID_kick'
                             ],
                             pub_topics=[
                                 'CatBedPID_MV', 'CatBedPID_P', 'CatBedPID_I', 'CatBedPID_D'
@@ -542,12 +607,12 @@ CatBedPID_slave = Slave(
                             ),
                         #comm_func=Modbus.,
                         #analyze_func=Modbus.,
-                        control_func=Modbus.control_testing,
+                        control_func=Modbus.control,
                         )
 # CV_03: CatBed TC; MV: Fuel to BR
 ## CatBed_PV > CatBed_SP => BR_Fuel down => DirectAction=False
-# CatBedPID_slave.control_constructor()
-CatBedPID_slave.control_constructor_testing(Kp=1.5, Ki=0.008, Kd=18, beta=0, kick=2, tstep=20, MVmax=750, MVmin=400)
+CatBedPID_slave.control_constructor()
+# CatBedPID_slave.control_constructor_testing(Kp=1.5, Ki=0.002, Kd=50, beta=0, kick=2, tstep=60, MVmax=750, MVmin=400)
 
 PCBPID_slave = Slave(
                         name='PCBPID',
@@ -571,7 +636,7 @@ PCBPID_slave = Slave(
                         )
 # CV_04: PCB %; MV: ratio of AOG
 ## PCBP_PV > PCBP_SP => AOG down => DirectAction=False
-PCBPID_slave.control_constructor_testing(Kp=5, Ki=2, Kd=15, beta=1, kick=1.5, tstep=2, MVmax=90, MVmin=0)
+PCBPID_slave.control_constructor_testing(Kp=5, Ki=2, Kd=5, beta=1, kick=1.5, tstep=1, MVmax=90, MVmin=0)
 
 PumpPID_slave = Slave(
                         name='PumpPID',
@@ -602,9 +667,9 @@ BurnerPID_slave = Slave(
                         idno=burnerPID_id, 
                         port_topics=port_Topics(
                             sub_topics=[
-                                # 'BurnerPID_Kp', 'BurnerPID_Ki', 'BurnerPID_Kd', 
+                                'BurnerPID_Kp', 'BurnerPID_Ki', 'BurnerPID_Kd', 
                                 'BurnerPID_MVmin', 'BurnerPID_MVmax', 'BurnerPID_PV', 'BurnerPID_SP', 'BurnerPID_mode', 'BurnerPID_setting', 
-                                # 'BurnerPID_beta', 'BurnerPID_tstep', 'BurnerPID_kick'
+                                'BurnerPID_beta', 'BurnerPID_tstep', 'BurnerPID_kick'
                             ],
                             pub_topics=[
                                 'BurnerPID_MV', 'BurnerPID_P', 'BurnerPID_I', 'BurnerPID_D'
@@ -615,12 +680,12 @@ BurnerPID_slave = Slave(
                             ),
                         #comm_func=Modbus.,
                         #analyze_func=Modbus.,
-                        control_func=Modbus.control_testing,
+                        control_func=Modbus.control,
                         )
 # CV_06: burner temperture; MV: PCB SP
 ## burner_PV > burner_SP => PCB down => DirectAction=False
-# BurnerPID_slave.control_constructor()
-BurnerPID_slave.control_constructor_testing(Kp=0.001, Ki=0.00002, Kd=0.005, beta=0.1, kick=1.3, tstep=12, MVmax=0.5, MVmin=0.15)
+BurnerPID_slave.control_constructor()
+# BurnerPID_slave.control_constructor_testing(Kp=0.001, Ki=0.0002, Kd=0.005, beta=0.1, kick=1.3, tstep=12, MVmax=0.5, MVmin=0.15)
 
 EVAPID_slave = Slave(
                         name='EVAPID',
@@ -643,7 +708,7 @@ EVAPID_slave = Slave(
                         control_func=Modbus.control_testing,
                         )
 
-EVAPID_slave.control_constructor_testing(Kp=1, Ki=0.3, Kd=1, beta=1, kick=1, tstep=1)
+EVAPID_slave.control_constructor_testing(Kp=1, Ki=0.3, Kd=1, beta=1, kick=1, tstep=1, MVmax=100, MVmin=60)
 print('Slaves are all set')
 
 #-----Port setting----------------------------------------------------------------
@@ -656,8 +721,8 @@ Scale_port = device_port(Scale_slave,
                                             parity='N'),
                         )
 
-RS232_port = device_port(GA_slave,
-                        Air_MFC_slave,
+RS232_port = device_port(Air_MFC_slave,
+                        GA_slave,
                         #H2_MFC_slave,
                         name='RS232_port',
                         port=serial.Serial(port=port_path_dict['RS232_port_path'],
@@ -685,7 +750,7 @@ Setup_port = device_port(
 
 GPIO_port = device_port(DFM_slave,
                         DFM_AOG_slave,
-                        PWM01_slave,
+                        # PWM01_slave,
                         EVA_PWM_slave,
                         name='GPIO_port',
                         port='GPIO',
@@ -713,6 +778,7 @@ lst_ports = [
             PID_port,
             ]
 
-NodeRed = {}
+# NodeRed = {}
+NodeRed = params.manager.dict()
 
 print('Ports are all set')
