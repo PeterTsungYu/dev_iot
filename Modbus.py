@@ -16,20 +16,20 @@ import params
 
 #------------------------------Logger---------------------------------
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
-# logger.setLevel(logging.CRITICAL)
+# logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.CRITICAL)
 formatter = logging.Formatter(
 	'[%(levelname)s %(asctime)s %(module)s:%(lineno)d] %(message)s',
 	datefmt='%Y%m%d %H:%M:%S')
 
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
-# ch.setLevel(logging.CRITICAL)
+# ch.setLevel(logging.DEBUG)
+ch.setLevel(logging.CRITICAL)
 ch.setFormatter(formatter)
 
 fh = logging.FileHandler(filename='platform.log', mode='w')
-fh.setLevel(logging.DEBUG)
-# fh.setLevel(logging.CRITICAL)
+# fh.setLevel(logging.DEBUG)
+fh.setLevel(logging.CRITICAL)
 fh.setFormatter(formatter)
 
 logger.addHandler(ch)
@@ -594,7 +594,7 @@ def ADAM_TC_analyze(start, device_port, slave, **kwargs):
     else:
         _last = tuple([round(_time[-1],2)]) + tuple([0]*8)
         _5_rates = tuple([0]*8)
-    _readings = _last + _5_rates[0:2]  
+    _readings = _last + _5_rates[0:-1]  
     return _readings
 
 
@@ -791,11 +791,11 @@ def H2_MFC_analyze(start, device_port, slave, **kwargs):
     return _readings
 
 #------------------------------PID controller---------------------------------
-# @kb_event
+@kb_event
 def control(device_port, slave):
     _update_parameter = False
     for topic in slave.port_topics.sub_topics:
-        if topic in [f'{slave.name}_Kp', f'{slave.name}_Ki', f'{slave.name}_Kd', f'{slave.name}_MVmin',  f'{slave.name}_MVmax', f'{slave.name}_mode', f'{slave.name}_beta', f'{slave.name}_tstep', f'{slave.name}_kick']:
+        if topic in [f'{slave.name}_Kp', f'{slave.name}_Ki', f'{slave.name}_Kd', f'{slave.name}_MVmin',  f'{slave.name}_MVmax', f'{slave.name}_mode', f'{slave.name}_beta', f'{slave.name}_tstep', f'{slave.name}_kick', f'{slave.name}_SP_range', f'{slave.name}_SP_increment']:
             if device_port.sub_events[topic].is_set():
                 _update_parameter = True
                 device_port.sub_events[topic].clear()
@@ -813,12 +813,19 @@ def control(device_port, slave):
     beta = _sub_values.get(f'{slave.name}_beta').value
     kick = _sub_values.get(f'{slave.name}_kick').value
     tstep = _sub_values.get(f'{slave.name}_tstep').value
-    if kick is None:
+    SP_range = _sub_values.get(f'{slave.name}_SP_range').value
+    SP_increment = _sub_values.get(f'{slave.name}_SP_increment')
+
+    if _sub_values.get(f'{slave.name}_SP_range') is None:
+        SP_range = 0
+    if _sub_values.get(f'{slave.name}_SP_increment') is None:
+        SP_increment = 3
+    if kick is None or kick == 0:
         kick = 1
     if tstep is None or tstep == 0:
         tstep = 1
     if _update_parameter:
-        slave.controller.update_paramater(Kp=Kp, Ki=Ki, Kd=Kd, MVmin=MVmin, MVmax=MVmax, mode=mode, beta=beta, kick=kick, tstep=tstep)
+        slave.controller.update_paramater(Kp=Kp, Ki=Ki, Kd=Kd, MVmin=MVmin, MVmax=MVmax, mode=mode, beta=beta, kick=kick, tstep=tstep, SP_range=SP_range)
 
     # update manipulated variable
     # print('here')
@@ -834,33 +841,39 @@ def control(device_port, slave):
     time.sleep(tstep)
 
 @kb_event
-def control_testing(device_port, slave):
+def control_fixed(device_port, slave):
     _update_parameter = False
     _sub_values = device_port.sub_values
+    MVmax = slave.controller.MVmax
+    MVmin = slave.controller.MVmin
     for topic in slave.port_topics.sub_topics:
         if topic in [f'{slave.name}_MVmin',  f'{slave.name}_MVmax', f'{slave.name}_mode']:
             if device_port.sub_events[topic].is_set():
                 _update_parameter = True
-                slave.parameters['MVmin'] = _sub_values.get(f'{slave.name}_MVmin').value
-                slave.parameters['MVmax'] = _sub_values.get(f'{slave.name}_MVmax').value
-                print('event is set')
+                MVmax = _sub_values.get(f'{slave.name}_MVmin').value
+                MVmin = _sub_values.get(f'{slave.name}_MVmax').value
                 device_port.sub_events[topic].clear()
-
-    # print(slave.name, slave.parameters)
+                
     mode = _sub_values.get(f'{slave.name}_mode').value
     SP = _sub_values.get(f'{slave.name}_SP').value
     PV = _sub_values.get(f'{slave.name}_PV').value
     MV = _sub_values.get(f'{slave.name}_setting').value
 
-    print(slave.name, slave.parameters)
-    # print(slave.name, mode, SP, PV, MV)
+    Kp = slave.controller.Kp
+    Ki = slave.controller.Ki
+    Kd = slave.controller.Kd
+    beta = slave.controller.beta
+    kick = slave.controller.kick
+    tstep = slave.controller.tstep
+    SP_range = slave.controller.SP_range
+    SP_increment = slave.controller.SP_increment
+    # print(slave.name, 'Kp: ', Kp, 'Ki: ', Ki, 'Kd: ', Kd, 'beta: ', beta, 'kick: ', kick, 'tstep: ', tstep, 'SP_range: ', SP_range, 'SP_increment: ', SP_increment, 'MVmin: ', MVmin, 'MVmax: ', MVmax)
     if _update_parameter:
-        slave.controller.update_paramater_testing(slave.parameters, mode=mode)
+        slave.controller.update_paramater(Kp=Kp, Ki=Ki, Kd=Kd, MVmin=MVmin, MVmax=MVmax, mode=mode, beta=beta, kick=kick, tstep=tstep, SP_range=SP_range, SP_increment=SP_increment)
     try:
-        # print(slave.name, slave.parameters['tstep'], SP, PV, MV, slave.parameters['kick'])
-        updates = slave.controller.update(slave.parameters['tstep'], SP, PV, MV, slave.parameters['kick'])
+        updates = slave.controller.update(tstep, SP, PV, MV, kick)
         for idx, topic in enumerate(slave.port_topics.pub_topics):
             device_port.pub_values[topic].value = updates[idx]
     except Exception as e:
         logging.error(f'{e} by {slave.name}')
-    time.sleep(slave.parameters['tstep'])
+    time.sleep(tstep)

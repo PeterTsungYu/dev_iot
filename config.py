@@ -243,10 +243,9 @@ class Slave: # Create Slave data store
     def control_constructor(self):
         self.controller = PIDsim.PID(name=f'{self.name}_controller')
 
-    def control_constructor_testing(self, **kwargs):
+    def control_constructor_fixed(self, Kp, Ki, Kd, beta, kick, tstep, MVmax, MVmin, SP_range, SP_increment):
         self.controller = PIDsim.PID(name=f'{self.name}_controller')
-        self.parameters = kwargs
-        self.controller.update_paramater_testing(kwargs)
+        self.controller.update_paramater(Kp, Ki, Kd, beta, kick, tstep, MVmax, MVmin, SP_range, SP_increment)
 #-------------------------RTU & Slave--------------------------------------
 # ADAM_TC
 # RTU func code 03, PV value site starts at '0000', data_len is 8 ('0008')
@@ -256,7 +255,9 @@ ADAM_TC_slave = Slave(
                     port_topics=port_Topics(sub_topics=[],
                                             pub_topics=[
                                                 'TC12', 'Exhaust_gas', 'TC9', 'TC10', # # TC7(ADAM_TC_0), TC8(ADAM_TC_1), TC9(ADAM_TC_2), TC10(ADAM_TC_3) 
-                                                'TC11', 'TC6', 'Header_EVA_PV', 'RAD_Out' # TC11(ADAM_TC_4), EVA_out(ADAM_TC_5), RAD_in(ADAM_TC_6), RAD_out(ADAM_TC_7)
+                                                'TC11', 'TC6', 'Header_EVA_PV', 'RAD_Out', # TC11(ADAM_TC_4), EVA_out(ADAM_TC_5), RAD_in(ADAM_TC_6), RAD_out(ADAM_TC_7)
+                                                'TC12_rate', 'Exhaust_gas_rate', 'TC9_rate', 'TC10_rate', 
+                                                'TC11_rate', 'TC6_rate', 'Header_EVA_PV_rate', 'RAD_Out_rate' 
                                             ],
                                             err_topics=[
                                                 'ADAM_TC_collect_err', 'ADAM_TC_analyze_err',
@@ -559,11 +560,11 @@ LambdaPID_slave = Slave(
                             ),
                         #comm_func=Modbus.,
                         #analyze_func=Modbus.,
-                        control_func=Modbus.control_testing,
+                        control_func=Modbus.control_fixed,
                         )
 #CV_01: Lambda value; MV: Air
 ## lambda_PV > lambda_SP => Air down => DirectAction=False
-LambdaPID_slave.control_constructor_testing(Kp=0.8, Ki=0.3, Kd=0.5, beta=1, kick=1.5, tstep=3, MVmax=150, MVmin=40)
+LambdaPID_slave.control_constructor_fixed(Kp=0.8, Ki=0.3, Kd=0.5, beta=1, kick=1.5, tstep=3, MVmax=180, MVmin=20, SP_range=0, SP_increment=3)
 
 CurrentPID_slave = Slave(
                         name='CurrentPID',
@@ -583,11 +584,11 @@ CurrentPID_slave = Slave(
                             ),
                         #comm_func=Modbus.,
                         #analyze_func=Modbus.,
-                        control_func=Modbus.control_testing,
+                        control_func=Modbus.control_fixed,
                         )
 # CV_02: SetCurrent; MV: RF_Pump flow rate
 ## current_PV > current_SP => RF_Pump down => DirectAction=False
-CurrentPID_slave.control_constructor_testing(Kp=0.008, Ki=0.001, Kd=0.08, beta=1, kick=1.2, tstep=10, MVmax=5, MVmin=0.17)
+CurrentPID_slave.control_constructor_fixed(Kp=0.008, Ki=0.001, Kd=0.08, beta=1, kick=1.2, tstep=10, MVmax=5, MVmin=0.17, SP_range=0, SP_increment=0.3)
 
 CatBedPID_slave = Slave(
                         name='CatBedPID',
@@ -595,7 +596,7 @@ CatBedPID_slave = Slave(
                         port_topics=port_Topics(
                             sub_topics=[
                                 'CatBedPID_Kp', 'CatBedPID_Ki', 'CatBedPID_Kd', 
-                                'CatBedPID_MVmin',  'CatBedPID_MVmax', 'CatBedPID_PV', 'CatBedPID_SP', 'CatBedPID_mode', 'CatBedPID_setting', 
+                                'CatBedPID_MVmin',  'CatBedPID_MVmax', 'CatBedPID_PV', 'CatBedPID_SP', 'CatBedPID_mode', 'CatBedPID_setting', 'CatBedPID_SP_range',
                                 'CatBedPID_beta', 'CatBedPID_tstep', 'CatBedPID_kick'
                             ],
                             pub_topics=[
@@ -612,7 +613,7 @@ CatBedPID_slave = Slave(
 # CV_03: CatBed TC; MV: Fuel to BR
 ## CatBed_PV > CatBed_SP => BR_Fuel down => DirectAction=False
 CatBedPID_slave.control_constructor()
-# CatBedPID_slave.control_constructor_testing(Kp=1.5, Ki=0.002, Kd=50, beta=0, kick=2, tstep=60, MVmax=750, MVmin=400)
+# CatBedPID_slave.control_constructor_fixed(Kp=1.5, Ki=0.01, Kd=60, beta=0.5, kick=2, tstep=45, MVmax=750, MVmin=400, SP_range=2, SP_increment=3)
 
 PCBPID_slave = Slave(
                         name='PCBPID',
@@ -632,11 +633,11 @@ PCBPID_slave = Slave(
                             ),
                         #comm_func=Modbus.,
                         #analyze_func=Modbus.,
-                        control_func=Modbus.control_testing,
+                        control_func=Modbus.control_fixed,
                         )
 # CV_04: PCB %; MV: ratio of AOG
 ## PCBP_PV > PCBP_SP => AOG down => DirectAction=False
-PCBPID_slave.control_constructor_testing(Kp=5, Ki=2, Kd=5, beta=1, kick=1.5, tstep=1, MVmax=90, MVmin=0)
+PCBPID_slave.control_constructor_fixed(Kp=5, Ki=2, Kd=5, beta=1, kick=1.5, tstep=1, MVmax=90, MVmin=0, SP_range=0, SP_increment=3)
 
 PumpPID_slave = Slave(
                         name='PumpPID',
@@ -667,9 +668,9 @@ BurnerPID_slave = Slave(
                         idno=burnerPID_id, 
                         port_topics=port_Topics(
                             sub_topics=[
-                                'BurnerPID_Kp', 'BurnerPID_Ki', 'BurnerPID_Kd', 
+                                # 'BurnerPID_Kp', 'BurnerPID_Ki', 'BurnerPID_Kd', 
                                 'BurnerPID_MVmin', 'BurnerPID_MVmax', 'BurnerPID_PV', 'BurnerPID_SP', 'BurnerPID_mode', 'BurnerPID_setting', 
-                                'BurnerPID_beta', 'BurnerPID_tstep', 'BurnerPID_kick'
+                                # 'BurnerPID_beta', 'BurnerPID_tstep', 'BurnerPID_kick'
                             ],
                             pub_topics=[
                                 'BurnerPID_MV', 'BurnerPID_P', 'BurnerPID_I', 'BurnerPID_D'
@@ -680,12 +681,12 @@ BurnerPID_slave = Slave(
                             ),
                         #comm_func=Modbus.,
                         #analyze_func=Modbus.,
-                        control_func=Modbus.control,
+                        control_func=Modbus.control_fixed,
                         )
 # CV_06: burner temperture; MV: PCB SP
 ## burner_PV > burner_SP => PCB down => DirectAction=False
-BurnerPID_slave.control_constructor()
-# BurnerPID_slave.control_constructor_testing(Kp=0.001, Ki=0.0002, Kd=0.005, beta=0.1, kick=1.3, tstep=12, MVmax=0.5, MVmin=0.15)
+# BurnerPID_slave.control_constructor()
+BurnerPID_slave.control_constructor_fixed(Kp=0.0003, Ki=0.000003, Kd=0.001, beta=0.5, kick=4, tstep=5, MVmax=0.5, MVmin=0.15, SP_range=0, SP_increment=3)
 
 EVAPID_slave = Slave(
                         name='EVAPID',
@@ -705,10 +706,10 @@ EVAPID_slave = Slave(
                             ),
                         #comm_func=Modbus.,
                         #analyze_func=Modbus.,
-                        control_func=Modbus.control_testing,
+                        control_func=Modbus.control_fixed,
                         )
 
-EVAPID_slave.control_constructor_testing(Kp=1, Ki=0.3, Kd=1, beta=1, kick=1, tstep=1, MVmax=100, MVmin=60)
+EVAPID_slave.control_constructor_fixed(Kp=1, Ki=0.3, Kd=1, beta=1, kick=1, tstep=1, MVmax=100, MVmin=80, SP_range=0, SP_increment=3)
 print('Slaves are all set')
 
 #-----Port setting----------------------------------------------------------------

@@ -94,5 +94,5 @@ if response == 0:
 multi_insert_process = multiprocessing.Process(
     name='multi_insert_process',
     target=multi_insert,
-    args=(pool),
+    args=(pool,),
     )
