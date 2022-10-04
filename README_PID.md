@@ -8,7 +8,7 @@ Hence, some PID controllers are coupled and some are presented in a cascade cont
 #### PID loops
 ![pid_img_0](https://i.imgur.com/rHLQgGv.png)
 
-Besides some basic parameters like Kp, Ki, and kd, other parameters are introduced to have a more comprehensive control strategy. In this PID control framework, you could adjust the following parameters.
+Besides some basic parameters like Kp, Ki, and kd, other parameters are introduced to have a more comprehensive control strategy. In this PID control framework, you could adjust the following parameters. (You could locate these parameters in the code file, [PIDsim.py](https://github.com/PeterTsungYu/dev_iot/blob/dev/PIDsim.py).)
 - Setpoint (SP)
 - Minimum Manipulated Value (MVmin)
 - Maximum Manipulated Value (MVmax)
@@ -19,8 +19,15 @@ Besides some basic parameters like Kp, Ki, and kd, other parameters are introduc
 - Derivative setpoint weight (gamma)
 - Direction of Gain (DirectAction)
 - Auto or manual (mode) 
+- Response time (tstep)
 - Increment of each step (SP_increment)
 - Margin of steady-state (SP_range)
 - Magnitude of responding kick (kick)
-- Response time (tstep)
+
 > If manual mode is on, the setpoint tracking is also activated to make SP tracks PV along the time.
+
+## Examples
+![pid_img_1](https://i.imgur.com/rvOjZq2.gif)
+![pid_img_2](https://i.imgur.com/a2os7RM.gif)
+
+
