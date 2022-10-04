@@ -130,7 +130,7 @@ There are different processes occurring in this project. Hence, the response tim
 The response times should be tuned based on the different processes to address the time delays or lags.
 
 ## Examples
-### valve controller 
+### Valve controller 
 A proportional valve is applied in this project. 
 The valve is used to distribute a gas flow into two branches.
 The ratio of the two separated gas flows is then controlled.
