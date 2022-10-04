@@ -38,21 +38,75 @@ There are 6 and more controllers running in a single Rpi with a quad-core proces
 ### Setpoint tracking
 If manual mode is on, the setpoint tracking is also activated to make SP tracks PV along the time.
 #### [Snippet](https://github.com/PeterTsungYu/dev_iot/blob/faaae0b20436e31ef187fba7f2436a747c19b041/PIDsim.py#L304)
-```
+```python
 if self.mode == 0:
     # Setpoint tracking
     self.SP_stepping = PV
 ```
 
 ### Setpoint weighting
-To prevent sudden changes, two weights are introduced to proportional gain and derivative gain.
+To prevent impacts of sudden setpoint changes or slips from a steady state, two weights are introduced to proportional gain and derivative gain.
 Typically, they are values ranging between 0~1 depending on each process.
+
 - Proportional setpoint weight (beta)
+```python
+self.errorP1 = self.errorP0
+self.errorP0 = self.beta*self.SP_stepping - self.PV # setpoint weighting
+```
+
 - Derivative setpoint weight (gamma)
+```python
+self.errorD2 = self.errorD1
+self.errorD1 = self.errorD0
+self.errorD0 = self.gamma*self.SP_stepping - self.PV # setpoint weighting
+```
+
 > There is no weighting on integral gain since one of the purposes of the integral gain is to subside to a steady state.
 
-### Manipulate proportional kicks during step changes 
+### Step increment
+To reduce the impact of a sudden change on setpoints, a step increment parameter is introduced to generate a sequence of gradual setpoints.
+For example, a current setpoint, 30, is set to a new setpoint, 70.
+There is a 40 points difference.
+If a step increment parameter, let's say 7, is given, then a sequence of gradual setpoints is set by steps.
+In this example, they are 37, 44, 51, 58, 65, and 70.
 
+```python
+if self.SP_stepping < self.SP:
+    self.SP_stepping += self.SP_increment
+    if self.SP_stepping > self.SP:
+        self.SP_stepping = self.SP
+elif self.SP_stepping > self.SP:
+    self.SP_stepping -= self.SP_increment
+    if self.SP_stepping < self.SP:
+        self.SP_stepping = self.SP 
+```
+
+### Manipulate proportional kicks during step changes 
+There are times user would like to have kicks in manipulated values (MV) during step changes.
+Thus, kick_prop is introduced. 
+It happens during the step changes.
+
+```python
+self.kick_prop = 1
+if self.SP_stepping < self.SP:
+    self.SP_stepping += self.SP_increment
+    self.kick_prop = kick
+    if self.SP_stepping > self.SP:
+        self.SP_stepping = self.SP
+        self.kick_prop = 1
+elif self.SP_stepping > self.SP:
+    self.SP_stepping -= self.SP_increment
+    self.kick_prop = kick
+    if self.SP_stepping < self.SP:
+        self.SP_stepping = self.SP 
+        self.kick_prop = 1 
+
+...
+
+self.deltaMV =  P*self.kick_prop + I + D*self.kick_prop
+```
+
+> if kick_prop stays as 1, then it is the same equation as the setpoint weighting.
 
 
 ## Examples
