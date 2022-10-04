@@ -125,6 +125,10 @@ else:
     self.MV -= self.action*self.deltaMV
 ```
 
+### Response time
+There are different processes occurring in this project. Hence, the response time for each controller might be influenced by others.
+The response times should be tuned based on the different processes to address the time delays or lags.
+
 ## Examples
 ![pid_img_2](https://i.imgur.com/rvOjZq2.gif)
 ![pid_img_3](https://i.imgur.com/a2os7RM.gif)
