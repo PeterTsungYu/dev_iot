@@ -21,8 +21,8 @@ Besides some basic parameters like Kp, Ki, and kd, other parameters are introduc
 - Auto or manual (mode) 
 - Response time (tstep)
 - Increment of each step (SP_increment)
-- Margin of steady-state (SP_range)
-- Magnitude of responding kick (kick)
+- Margin of steady state (SP_range)
+- Magnitude of kicks (kick_prop)
 
 > If manual mode is on, the setpoint tracking is also activated to make SP tracks PV along the time.
 
@@ -45,7 +45,7 @@ if self.mode == 0:
 ```
 
 ### Setpoint weighting
-To prevent impacts of sudden setpoint changes or slips from a steady state, two weights are introduced to proportional gain and derivative gain.
+To prevent impact of sudden setpoint changes or slips from a steady state, two weights are applied to proportional gain and derivative gain.
 Typically, they are values ranging between 0~1 depending on each process.
 
 - Proportional setpoint weight (beta)
@@ -65,6 +65,7 @@ self.errorD0 = self.gamma*self.SP_stepping - self.PV # setpoint weighting
 
 ### Step increment
 To reduce the impact of a sudden change on setpoints, a step increment parameter is introduced to generate a sequence of gradual setpoints.
+
 For example, a current setpoint, 30, is set to a new setpoint, 70.
 There is a 40 points difference.
 If a step increment parameter, let's say 7, is given, then a sequence of gradual setpoints is set by steps.
@@ -82,9 +83,10 @@ elif self.SP_stepping > self.SP:
 ```
 
 ### Manipulate proportional kicks during step changes 
-There are times user would like to have kicks in manipulated values (MV) during step changes.
-Thus, kick_prop is introduced. 
-It happens during the step changes.
+There are times users would like to have kicks in manipulated values (MV) during step changes.
+Thus, the kick_prop is introduced. It happens during the step changes so that users could have several kicks along the steps, which increases the impact of the kicks on the process.
+
+As the setpoint weighting, the kick_props are applied to proportional gain and derivative gain.
 
 ```python
 self.kick_prop = 1
@@ -108,6 +110,20 @@ self.deltaMV =  P*self.kick_prop + I + D*self.kick_prop
 
 > if kick_prop stays as 1, then it is the same equation as the setpoint weighting.
 
+### Margin of steady state
+If a setpoint is restricted to a specific value within an unsteady process, one might experience a choppy control voyage.
+Chances are a swinging state within a range is qualified as a steady state. 
+
+Thus, the SP_range is applied to a conditional statement for a possible change on the MV.
+If the PV is within a given range, then the MV is held as the previous.
+Otherwise, the MV will be updated to a new value.
+
+```python
+if abs(self.SP_stepping - PV) <= self.SP_range:
+    self.MV = MV
+else:
+    self.MV -= self.action*self.deltaMV
+```
 
 ## Examples
 ![pid_img_2](https://i.imgur.com/rvOjZq2.gif)
