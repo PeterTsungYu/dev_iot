@@ -5,6 +5,8 @@ Before using this repository, it is recommended to take a look at [Chapter 4.0 P
 This repo allows you to have a PID-based control strategy over your connected devices.
 The main purpose of this project is to reach steady-states of coupled processes.
 Hence, some PID controllers are coupled and some are presented in a cascade control loop. 
+#### PID loops
+![pid_img_0](https://i.imgur.com/rHLQgGv.png)
 
 Besides some basic parameters like Kp, Ki, and kd, other parameters are introduced to have a more comprehensive control strategy. In this PID control framework, you could adjust the following parameters.
 - Setpoint (SP)
