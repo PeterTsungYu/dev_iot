@@ -344,7 +344,7 @@ class PID:
         D = self.Kd*(self.errorD0 - 2*self.errorD1 + self.errorD2)/tstep
         self.deltaMV =  P*self.kick_prop + I + D*self.kick_prop
         if abs(self.SP_stepping - PV) <= self.SP_range:
-            self.MV = MV
+            self.MV = self.MV
         else:
             self.MV -= self.action*self.deltaMV
         # print(self.name, self.MV, P, I, D, self.Kp, self.Ki, self.Kd, self.kick, self.beta, self.tstep)

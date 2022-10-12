@@ -572,8 +572,8 @@ CurrentPID_slave = Slave(
                         port_topics=port_Topics(
                             sub_topics=[
                                 # 'CurrentPID_Kp', 'CurrentPID_Ki', 'CurrentPID_Kd', 
-                                'CurrentPID_MVmin', 'CurrentPID_MVmax', 'CurrentPID_PV', 'CurrentPID_SP', 'CurrentPID_mode', 'CurrentPID_setting', 
-                                # 'CurrentPID_beta', 'CurrentPID_tstep', 'CurrentPID_kick',
+                                'CurrentPID_MVmin', 'CurrentPID_MVmax', 'CurrentPID_PV', 'CurrentPID_SP', 'CurrentPID_mode', 'CurrentPID_setting',
+                                # 'CurrentPID_beta', 'CurrentPID_tstep', 'CurrentPID_kick', 'CurrentPID_SP_range', 'CurrentPID_SP_increment',
                             ],
                             pub_topics=[
                                 'CurrentPID_MV', 'CurrentPID_P', 'CurrentPID_I', 'CurrentPID_D'
@@ -596,7 +596,7 @@ CatBedPID_slave = Slave(
                         port_topics=port_Topics(
                             sub_topics=[
                                 'CatBedPID_Kp', 'CatBedPID_Ki', 'CatBedPID_Kd', 
-                                'CatBedPID_MVmin',  'CatBedPID_MVmax', 'CatBedPID_PV', 'CatBedPID_SP', 'CatBedPID_mode', 'CatBedPID_setting', 'CatBedPID_SP_range',
+                                'CatBedPID_MVmin',  'CatBedPID_MVmax', 'CatBedPID_PV', 'CatBedPID_SP', 'CatBedPID_mode', 'CatBedPID_setting', 'CatBedPID_SP_range', 'CatBedPID_SP_increment',
                                 'CatBedPID_beta', 'CatBedPID_tstep', 'CatBedPID_kick'
                             ],
                             pub_topics=[

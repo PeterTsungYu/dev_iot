@@ -618,7 +618,8 @@ def ADAM_READ_analyze(start, device_port, slave, **kwargs):
 @analyze_decker
 def DFM_data_analyze(start, device_port, slave, **kwargs):
     _time_readings = kwargs.get('_time_readings')
-    # print(slave.name, _time_readings)
+    # print(slave.name, _time_readings['short_time_readings'])
+    # print(slave.name, _time_readings['long_time_readings'])
     _sampling_time = round(time.time()-start, 2)
     _10_flow_lst = []
     _10_temp = []
@@ -814,7 +815,7 @@ def control(device_port, slave):
     kick = _sub_values.get(f'{slave.name}_kick').value
     tstep = _sub_values.get(f'{slave.name}_tstep').value
     SP_range = _sub_values.get(f'{slave.name}_SP_range').value
-    SP_increment = _sub_values.get(f'{slave.name}_SP_increment')
+    SP_increment = _sub_values.get(f'{slave.name}_SP_increment').value
 
     if _sub_values.get(f'{slave.name}_SP_range') is None:
         SP_range = 0
@@ -825,7 +826,7 @@ def control(device_port, slave):
     if tstep is None or tstep == 0:
         tstep = 1
     if _update_parameter:
-        slave.controller.update_paramater(Kp=Kp, Ki=Ki, Kd=Kd, MVmin=MVmin, MVmax=MVmax, mode=mode, beta=beta, kick=kick, tstep=tstep, SP_range=SP_range)
+        slave.controller.update_paramater(Kp=Kp, Ki=Ki, Kd=Kd, MVmin=MVmin, MVmax=MVmax, mode=mode, beta=beta, kick=kick, tstep=tstep, SP_range=SP_range, SP_increment=SP_increment)
 
     # update manipulated variable
     # print('here')
@@ -850,8 +851,8 @@ def control_fixed(device_port, slave):
         if topic in [f'{slave.name}_MVmin',  f'{slave.name}_MVmax', f'{slave.name}_mode']:
             if device_port.sub_events[topic].is_set():
                 _update_parameter = True
-                MVmax = _sub_values.get(f'{slave.name}_MVmin').value
-                MVmin = _sub_values.get(f'{slave.name}_MVmax').value
+                MVmax = _sub_values.get(f'{slave.name}_MVmax').value
+                MVmin = _sub_values.get(f'{slave.name}_MVmin').value
                 device_port.sub_events[topic].clear()
                 
     mode = _sub_values.get(f'{slave.name}_mode').value
