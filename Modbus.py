@@ -110,7 +110,7 @@ def analyze_decker(func):
                 ## to slave data list
                 #slave.readings.append(_readings)
                 analyze_err[2] += 1
-                logging.critical(f"{slave.name}_analyze done: record {_readings}")
+                logging.debug(f"{slave.name}_analyze done: record {_readings}")
             elif (device_port.name == 'GPIO_port') and (cond == 0):
                 _readings = tuple([_time_readings, 0])
                 # casting
@@ -122,32 +122,34 @@ def analyze_decker(func):
                 ## to slave data list
                 #slave.readings.append(_readings)
                 analyze_err[2] += 1
-                logging.critical(f"{slave.name}_analyze done: record {_readings}")
+                logging.debug(f"{slave.name}_analyze done: record {_readings}")
             else:
                 analyze_err[0] += 1
                 logging.warning(f"{slave.name}_analyze record nothing")
         except Exception as e:
             analyze_err[0] += 1
-            logging.critical(f"{slave.name}_analyze_err_{analyze_err[:]} at {round((time.time()-start),2)}s: " + str(e))
+            logging.debug(f"{slave.name}_analyze_err_{analyze_err[:]} at {round((time.time()-start),2)}s: " + str(e))
         finally:
-            logging.critical(f"{slave.name}_analyze_err: {round(analyze_err[2]/(analyze_err[1] + 0.00000000000000001)*100, 2)}%, analyze_err_{analyze_err[:]}")
+            logging.debug(f"{slave.name}_analyze_err: {round(analyze_err[2]/(analyze_err[1] + 0.00000000000000001)*100, 2)}%, analyze_err_{analyze_err[:]}")
     return wrapper
 
 #------------------------------Collect and Analyze func---------------------------------
 def Scale_data_collect(start, device_port, slave):
     port = device_port.port
     collect_err = device_port.err_values[f'{slave.name}_collect_err']
+    analyze_switch = False
     try:
         collect_err[1] += 1
-        time.sleep(params.time_out) # wait for the data input to the buffer
+        time.sleep(slave.timeout) # wait for the data input to the buffer
         if port.inWaiting() > slave.r_wait_len:
             readings = port.read(port.inWaiting()).decode('utf-8')
             readings = [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ \-][ .\d]{7}', readings)]
             slave.time_readings.put(time.time()-start)
             slave.lst_readings.put(readings)
             collect_err[2] += 1
-            logging.info(f'Read {readings} from slave_{slave.name}')
+            logging.debug(f'Read {readings} from slave_{slave.name}')
             port.reset_input_buffer() # reset the buffer after each reading process
+            analyze_switch = True
         else: # if data len is no data
             collect_err[0] += 1
             err_msg = f"{slave.name}_collect_err_{collect_err[:]} at {round((time.time()-start),2)}s: data len is no wait data"
@@ -157,10 +159,13 @@ def Scale_data_collect(start, device_port, slave):
         err_msg = f"{slave.name}_collect_err_{collect_err[:]} at {round((time.time()-start),2)}s: " + str(e)
         logging.error(err_msg)
     finally:
-        logging.critical(f"{slave.name}_collect_err: {round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2)}%, collect_err_{collect_err[:]}")
+        logging.debug(f"{slave.name}_collect_err: {round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2)}%, collect_err_{collect_err[:]}")
         # if (collect_err[1] >= params.exempt_try) and (round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
         #     if slave.name not in device_port.broken_slave_names:
         #         device_port.broken_slave_names.append(slave.name)
+        if analyze_switch:
+            if slave.kwargs.get('analyze_func'):
+                slave.kwargs['analyze_func'](start, device_port, slave)
 
 
 def Modbus_Comm(start, device_port, slave):    
@@ -169,13 +174,14 @@ def Modbus_Comm(start, device_port, slave):
     set_err = device_port.err_values.get(f'{slave.name}_set_err')
     re_collect = device_port.recur_count.get(f'{slave.name}_collect_err')
     re_set = device_port.recur_count.get(f'{slave.name}_set_err')
+    analyze_switch = False
     try: # try to collect
         recur = False
         collect_err[1] += 1
         #logging.error(slave.r_rtu)
         # logging.debug(bytes.fromhex(slave.r_rtu))
         port.write(bytes.fromhex(slave.r_rtu)) #hex to binary(byte) 
-        time.sleep(params.time_out)
+        time.sleep(slave.timeout)
         #logging.debug(port.inWaiting())
         _data_len = port.inWaiting()
         if _data_len >= slave.r_wait_len: 
@@ -184,7 +190,8 @@ def Modbus_Comm(start, device_port, slave):
             if slave.name == 'GA':
                 slave.time_readings.put(time.time()-start)
                 slave.lst_readings.put(readings)
-                logging.info(f'Read from slave_{slave.name}')
+                logging.debug(f'Read from slave_{slave.name}')
+                analyze_switch = True
             else:    
                 re = hex(int(slave.id))[2:].zfill(2) + '03' + hex(slave.r_wait_len-5)[2:].zfill(2)
                 #logging.debug(readings.index(re))
@@ -198,7 +205,8 @@ def Modbus_Comm(start, device_port, slave):
                         slave.time_readings.put(time.time()-start)
                         slave.lst_readings.put(readings)
                         collect_err[2] += 1
-                        logging.info(f'Read from slave_{slave.name}')
+                        logging.debug(f'Read from slave_{slave.name}')
+                        analyze_switch = True
                     else:
                         recur = True
                         collect_err[0] += 1
@@ -234,10 +242,13 @@ def Modbus_Comm(start, device_port, slave):
             Modbus_Comm(start, device_port, slave)
         re_collect[0] = 0
         port.reset_input_buffer()
-        logging.critical(f"{slave.name}_collect_err: {round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2)}%, recollect_cover: {round(re_collect[1]/(collect_err[0]+0.00000000000000001)*100, 2)}%")
+        logging.debug(f"{slave.name}_collect_err: {round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2)}%, recollect_cover: {round(re_collect[1]/(collect_err[0]+0.00000000000000001)*100, 2)}%")
         # if (collect_err[1] >= params.exempt_try) and (round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
         #     if slave.name not in device_port.broken_slave_names:
         #         device_port.broken_slave_names.append(slave.name)
+        if analyze_switch:
+            if slave.kwargs.get('analyze_func'):
+                slave.kwargs['analyze_func'](start, device_port, slave)
 
     w_data_site=0
     for topic in slave.port_topics.sub_topics:
@@ -249,7 +260,7 @@ def Modbus_Comm(start, device_port, slave):
                 set_err[1] += 1
                 slave.write_rtu(f"{w_data_site:0>4}", device_port.sub_values[topic].value)
                 port.write(bytes.fromhex(slave.w_rtu)) #hex to binary(byte) 
-                time.sleep(params.time_out)
+                time.sleep(slave.timeout)
                 _data_len = port.inWaiting()
                 if _data_len >= slave.w_wait_len:
                     readings = port.read(_data_len).hex() # after reading, the buffer will be clean
@@ -265,7 +276,6 @@ def Modbus_Comm(start, device_port, slave):
                             set_err[2] += 1
                             device_port.sub_events[topic].clear()
                             logging.debug(f'write: {readings}')
-                            logging.info(f'Read from slave_{slave.name}')
                         else:
                             recur = True
                             set_err[0] += 1
@@ -300,7 +310,7 @@ def Modbus_Comm(start, device_port, slave):
                     Modbus_Comm(start, device_port, slave)
                 re_set[0] = 0
                 port.reset_input_buffer()
-                logging.critical(f"{slave.name}_set_err: {round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2)}%, reset_cover: {round(re_set[1]/(collect_err[0]+0.00000000000000001)*100, 2)}%")
+                logging.debug(f"{slave.name}_set_err: {round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2)}%, reset_cover: {round(re_set[1]/(collect_err[0]+0.00000000000000001)*100, 2)}%")
                 w_data_site += 1
                 # if (set_err[1] >= params.exempt_try) and (round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
                 #     if slave.name not in device_port.broken_slave_names:
@@ -315,13 +325,14 @@ def MFC_Comm(start, device_port, slave):
     set_err = device_port.err_values.get(f'{slave.name}_set_err')
     re_collect = device_port.recur_count.get(f'{slave.name}_collect_err')
     re_set = device_port.recur_count.get(f'{slave.name}_set_err')
+    analyze_switch = False
     try: # try to collect
         recur = False
         collect_err[1] += 1
         #logging.debug(slave.r_rtu)
         #logging.debug(bytes(slave.r_rtu, 'ASCII'))
         port.write(bytes(slave.r_rtu, 'ASCII')) #ASCII to byte
-        time.sleep(params.time_out)
+        time.sleep(slave.timeout)
         #logging.debug(port.inWaiting())
         _data_len = port.inWaiting()
         if _data_len >= slave.r_wait_len: 
@@ -337,7 +348,8 @@ def MFC_Comm(start, device_port, slave):
                     slave.time_readings.put(time.time()-start)
                     slave.lst_readings.put(readings)
                     collect_err[2] += 1
-                    logging.info(f'Read from slave_{slave.name}')
+                    logging.debug(f'Read from slave_{slave.name}')
+                    analyze_switch = True
                 else:
                     recur = True
                     collect_err[0] += 1
@@ -372,10 +384,13 @@ def MFC_Comm(start, device_port, slave):
             MFC_Comm(start, device_port, slave)
         re_collect[0] = 0
         port.reset_input_buffer()
-        logging.critical(f"{slave.name}_collect_err: {round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2)}%, recollect_cover: {round(re_collect[1]/(collect_err[0]+0.00000000000000001)*100, 2)}%")
+        logging.debug(f"{slave.name}_collect_err: {round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2)}%, recollect_cover: {round(re_collect[1]/(collect_err[0]+0.00000000000000001)*100, 2)}%")
         # if (collect_err[1] >= params.exempt_try) and (round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
         #     if slave.name not in device_port.broken_slave_names:
         #         device_port.broken_slave_names.append(slave.name)
+        if analyze_switch:
+            if slave.kwargs.get('analyze_func'):
+                slave.kwargs['analyze_func'](start, device_port, slave)
 
     w_data_site=0
     for topic in slave.port_topics.sub_topics:
@@ -388,7 +403,7 @@ def MFC_Comm(start, device_port, slave):
                 slave.write_rtu(device_port.sub_values[topic].value)
                 #logging.debug(slave.w_rtu)
                 port.write(bytes(slave.w_rtu, 'ASCII')) 
-                time.sleep(params.time_out)
+                time.sleep(slave.timeout)
                 _data_len = port.inWaiting()
                 #logging.debug(_data_len)
                 if _data_len >= slave.w_wait_len:
@@ -401,7 +416,6 @@ def MFC_Comm(start, device_port, slave):
                             set_err[2] += 1
                             device_port.sub_events[topic].clear()
                             logging.debug(f'write: {readings}')
-                            logging.info(f'Read from slave_{slave.name}')
                         else:
                             recur = True
                             set_err[0] += 1
@@ -435,7 +449,7 @@ def MFC_Comm(start, device_port, slave):
                     MFC_Comm(start, device_port, slave)
                 re_set[0] = 0
                 port.reset_input_buffer()
-                logging.critical(f"{slave.name}_set_err: {round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2)}%, reset_cover: {round(re_set[1]/(collect_err[0]+0.00000000000000001)*100, 2)}%")
+                logging.debug(f"{slave.name}_set_err: {round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2)}%, reset_cover: {round(re_set[1]/(collect_err[0]+0.00000000000000001)*100, 2)}%")
                 w_data_site += 1
                 # if (set_err[1] >= params.exempt_try) and (round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
                 #     if slave.name not in device_port.broken_slave_names:
@@ -619,7 +633,7 @@ def MFC_analyze(start, device_port, slave, **kwargs):
     return _readings
 
 def VOID(start, device_port, slave):
-    time.sleep(params.time_out)
+    time.sleep(slave.timeout)
 
 #------------------------------PID controller---------------------------------
 @kb_event
