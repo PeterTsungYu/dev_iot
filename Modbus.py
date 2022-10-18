@@ -672,4 +672,10 @@ def control(device_port, slave):
     except Exception as e:
         logging.error(f'{e}')
     # print(tstep)
-    time.sleep(tstep)
+    
+    for i in range(tstep):
+        time.sleep(1)
+        for topic in slave.port_topics.sub_topics:
+            if topic in [f'{slave.name}_mode', f'{slave.name}_SP']:
+                if device_port.sub_events[topic].is_set():
+                    break
