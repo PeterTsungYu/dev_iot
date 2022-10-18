@@ -99,16 +99,16 @@ class device_port:
                 self.recur_count[topic] = multiprocessing.Array('i', 2) #[one_call_recur, total_recur]
     
     def comm_funcs(self, start): 
-        self.comm_ticker.set()
+        #self.comm_ticker.set()
         def comm_process():
             while not params.kb_event.is_set():
                 #b =  time.time()
-                self.comm_ticker.wait()
+                #self.comm_ticker.wait()
                 for slave in self.slaves:
                     # if slave.name not in self.broken_slave_names:
                     if slave.kwargs.get('comm_func'):
                         slave.kwargs['comm_func'](start, self, slave)
-                self.analyze_ticker.set()
+                #self.analyze_ticker.set()
                         # print(slave.name)
                 #print(time.time() - b)
         multiprocessing.Process(
@@ -131,7 +131,7 @@ class device_port:
                                 args=(start, self, slave,)
                             )
                         )
-                time.sleep(params.sample_time)
+                time.sleep(1)
                 self.comm_ticker.clear()
                 self.analyze_ticker.wait()
                 # t = time.time()
@@ -167,7 +167,7 @@ class port_Topics:
         self.err_topics = err_topics
 
 class Slave: # Create Slave data store 
-    def __init__(self, name, idno, port_topics, **kwargs):
+    def __init__(self, name, idno, port_topics, timeout=0, **kwargs):
         self.name = name
         self.id = idno # id number of slave
         self.lst_readings = multiprocessing.Queue()
@@ -179,6 +179,7 @@ class Slave: # Create Slave data store
         #self.readings = [] # for all data
         self.port_topics = port_topics
         self.kwargs = kwargs # dict of funcs
+        self.timeout = timeout
 
     def read_rtu(self, *_fields, wait_len):
         self.r_wait_len = wait_len
@@ -225,6 +226,7 @@ ADAM_TC_slave = Slave(
                                                 'ADAM_TC_collect_err', 'ADAM_TC_analyze_err',
                                             ]
                                             ),
+                    timeout = 0.02,
                     comm_func=Modbus.Modbus_Comm,
                     analyze_func=Modbus.ADAM_TC_analyze
                     )
@@ -245,6 +247,7 @@ ADAM_TC_02_slave = Slave(
                                                 'ADAM_TC_02_collect_err', 'ADAM_TC_02_analyze_err',
                                             ]
                                             ),
+                    timeout = 0.02,
                     comm_func=Modbus.Modbus_Comm,
                     analyze_func=Modbus.ADAM_TC_analyze
                     )
@@ -265,6 +268,7 @@ GA_slave = Slave(
                                             'GA_collect_err', 'GA_analyze_err',
                                         ]
                                         ),
+                timeout = 0.1,
                 comm_func=Modbus.Modbus_Comm,
                 analyze_func=Modbus.GA_data_analyze
                 )
@@ -282,6 +286,7 @@ Scale_slave = Slave(
                                                 'Scale_collect_err', 'Scale_analyze_err',
                                             ]
                                             ),
+                    timeout = 0.1,
                     comm_func=Modbus.Scale_data_collect,
                     analyze_func=Modbus.Scale_data_analyze
                     )
@@ -304,6 +309,7 @@ Header_EVA_slave = Slave(
                                     'Header_EVA_collect_err', 'Header_EVA_set_err', 'Header_EVA_analyze_err',
                                 ]
                                 ),
+                        timeout = 0.02,
                         comm_func=Modbus.Modbus_Comm,
                         analyze_func=Modbus.TCHeader_analyze
                         )
@@ -324,6 +330,7 @@ Header_EVA_SET_slave = Slave(
                                     'Header_EVA_SET_collect_err', 'Header_EVA_SET_set_err', 'Header_EVA_SET_analyze_err',
                                 ]
                                 ),
+                        timeout = 0.02,
                         comm_func=Modbus.Modbus_Comm,
                         analyze_func=Modbus.TCHeader_analyze
                         )
@@ -343,6 +350,7 @@ Header_BR_slave = Slave(
                                     'Header_BR_collect_err', 'Header_BR_set_err', 'Header_BR_analyze_err',
                                 ]
                                 ),
+                        timeout = 0.02,
                         comm_func=Modbus.Modbus_Comm,
                         analyze_func=Modbus.TCHeader_analyze
                         )
@@ -363,6 +371,7 @@ Header_BR_SET_slave = Slave(
                                     'Header_BR_SET_collect_err', 'Header_BR_SET_set_err', 'Header_BR_SET_analyze_err',
                                 ]
                                 ),
+                        timeout = 0.02,
                         comm_func=Modbus.Modbus_Comm,
                         analyze_func=Modbus.TCHeader_analyze
                         )
@@ -387,6 +396,7 @@ ADAM_SET_slave = Slave(
                                     'ADAM_SET_collect_err', 'ADAM_SET_set_err', 'ADAM_SET_analyze_err',
                                 ]
                                 ),
+                        timeout = 0.02,
                         comm_func=Modbus.Modbus_Comm,
                         analyze_func=Modbus.ADAM_SET_analyze
                     )
@@ -407,6 +417,7 @@ ADAM_READ_slave = Slave(
                                     'ADAM_READ_collect_err', 'ADAM_READ_analyze_err',
                                 ]
                                 ),
+                        timeout = 0.02,
                         comm_func=Modbus.Modbus_Comm,
                         analyze_func=Modbus.ADAM_READ_analyze
                         )
@@ -425,6 +436,7 @@ DFM_slave = Slave(
                                     'DFM_collect_err', 'DFM_analyze_err', 
                                 ]
                                 ),
+                timeout = 0.1,
                 # comm_func=Modbus.VOID,
                 analyze_func=Modbus.DFM_data_analyze
                 )
@@ -441,6 +453,7 @@ DFM_AOG_slave = Slave(
                                     'DFM_AOG_collect_err', 'DFM_AOG_analyze_err'
                                 ]
                                 ),
+                    timeout = 0.1,
                     # comm_func=Modbus.VOID,
                     analyze_func=Modbus.DFM_data_analyze
                     )
@@ -459,6 +472,7 @@ Air_MFC_slave = Slave(
                                     'Air_MFC_collect_err', 'Air_MFC_set_err', 'Air_MFC_analyze_err'
                                 ]
                                 ),
+                    timeout = 0.1,
                     comm_func=Modbus.MFC_Comm,
                     analyze_func=Modbus.MFC_analyze,
                     )
@@ -479,6 +493,7 @@ H2_MFC_slave = Slave(
                                     'H2_MFC_collect_err', 'H2_MFC_set_err', 'H2_MFC_analyze_err'
                                 ]
                                 ),
+                    timeout = 0.1,
                     comm_func=Modbus.MFC_Comm,
                     analyze_func=Modbus.MFC_analyze,
                     )
@@ -497,6 +512,7 @@ WatchDog_slave = Slave(
                                 err_topics=[
                                 ]
                                 ),
+                    timeout = 0.1,
                     # comm_func=Modbus.VOID,
                     # analyze_func=Modbus.VOID,
                     )
@@ -698,8 +714,8 @@ lst_ports = [
             # RS232_port, 
             Setup_port,
             GPIO_port,
-            WatchDog_port,
-            PID_port
+            # WatchDog_port,
+            # PID_port
             ]
 
 NodeRed = params.manager.dict()

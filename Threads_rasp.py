@@ -56,7 +56,7 @@ except Exception as ex:
 try:
     for device_port in config.lst_ports: 
         device_port.comm_funcs(start)
-        device_port.analyze_funcs(start)
+        #device_port.analyze_funcs(start)
         device_port.control_funcs(start)
     
     MQTT_config.multi_pub_process.start()
@@ -79,7 +79,7 @@ except Exception as ex:
 try:
     while not params.kb_event.is_set():
         print("=="*10 + f'Elapsed time: {round((time.time()-start),2)}' + "=="*10)
-        time.sleep(params.sample_time)
+        time.sleep(1)
     print([i.name for i in multiprocessing.active_children()])
     active_managers = [i for i in multiprocessing.active_children() if 'SyncManager' in i.name]
     for process in multiprocessing.active_children():
