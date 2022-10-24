@@ -399,10 +399,10 @@ ADAM_SET_slave = Slave(
                         idno=ADAM_SET_id,
                         port_topics=port_Topics(
                                 sub_topics=[
-                                    'PCB_SET_SV', 'H2_MFC_SET_SV', 'RF_Pump_SET_SV', 'BR_Pump_SET_SV', #'Nozzle_Pump_SET_SV'#, Pump(ADAM_SET_SV1), Air_MFC(ADAM_SET_SV2), H2_MFC(ADAM_SET_SV3)
+                                    'PCB_SET_SV', 'W_Pump_SET_SV', 'RF_Pump_SET_SV', 'BR_Pump_SET_SV', #'Nozzle_Pump_SET_SV'#, Pump(ADAM_SET_SV1), Air_MFC(ADAM_SET_SV2), H2_MFC(ADAM_SET_SV3)
                                 ],
                                 pub_topics=[
-                                    'PCB_SET_PV', 'H2_MFC_SET_PV', 'RF_Pump_SET_PV', 'BR_Pump_SET_PV',#'Nozzle_Pump_SET_PV'#, Pump(ADAM_SET_PV1), Air_MFC(ADAM_SET_PV2), H2_MFC(ADAM_SET_PV3)
+                                    'PCB_SET_PV', 'W_Pump_SET_PV', 'RF_Pump_SET_PV', 'BR_Pump_SET_PV',#'Nozzle_Pump_SET_PV'#, Pump(ADAM_SET_PV1), Air_MFC(ADAM_SET_PV2), H2_MFC(ADAM_SET_PV3)
                                 ],
                                 err_topics=[
                                     'ADAM_SET_collect_err', 'ADAM_SET_set_err', 'ADAM_SET_analyze_err',
@@ -588,7 +588,7 @@ CurrentPID_slave = Slave(
                         )
 # CV_02: SetCurrent; MV: RF_Pump flow rate
 ## current_PV > current_SP => RF_Pump down => DirectAction=False
-CurrentPID_slave.control_constructor_fixed(Kp=0.008, Ki=0.001, Kd=0.08, beta=1, kick=1.2, tstep=10, MVmax=5, MVmin=0.17, SP_range=0, SP_increment=0.3)
+CurrentPID_slave.control_constructor_fixed(Kp=0.008, Ki=0.001, Kd=0.08, beta=1, kick=1.2, tstep=10, MVmax=5, MVmin=0.17, SP_range=0, SP_increment=0.1)
 
 CatBedPID_slave = Slave(
                         name='CatBedPID',
@@ -613,7 +613,7 @@ CatBedPID_slave = Slave(
 # CV_03: CatBed TC; MV: Fuel to BR
 ## CatBed_PV > CatBed_SP => BR_Fuel down => DirectAction=False
 CatBedPID_slave.control_constructor()
-# CatBedPID_slave.control_constructor_fixed(Kp=1.5, Ki=0.01, Kd=60, beta=0.5, kick=2, tstep=45, MVmax=750, MVmin=400, SP_range=2, SP_increment=3)
+# CatBedPID_slave.control_constructor_fixed(Kp=0.1, Ki=0.01, Kd=0.5, beta=1, kick=20, tstep=45, MVmax=750, MVmin=400, SP_range=2, SP_increment=5)
 
 PCBPID_slave = Slave(
                         name='PCBPID',
