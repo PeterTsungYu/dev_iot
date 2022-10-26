@@ -44,7 +44,8 @@ catbedpid_id  = '14'
 pcbpid_id     = '15'
 pumppid_id    = '16'
 ADAM_TC_02_id = '17'
-
+burnerPID_id  = '18'
+evapid_id     = '19'
 
 #-----GPIO port setting----------------------------------------------------------------
 ## DFM
@@ -208,7 +209,9 @@ class Slave: # Create Slave data store
     def control_constructor(self):
         self.controller = PIDsim.PID(name=f'{self.name}_controller')
     
-
+    def control_constructor_fixed(self, Kp, Ki, Kd, beta, kick, tstep, MVmax, MVmin, SP_range, SP_increment):
+        self.controller = PIDsim.PID(name=f'{self.name}_controller')
+        self.controller.update_paramater(Kp, Ki, Kd, beta, kick, tstep, MVmax, MVmin, SP_range, SP_increment)
 #-------------------------RTU & Slave--------------------------------------
 # ADAM_TC
 # RTU func code 03, PV value site starts at '0000', data_len is 8 ('0008')
@@ -524,7 +527,7 @@ LambdaPID_slave = Slave(
                             sub_topics=[
                                 'LambdaPID_Kp', 'LambdaPID_Ki', 'LambdaPID_Kd', 'LambdaPID_MVmin', 'LambdaPID_MVmax',
                                 'LambdaPID_PV', 'LambdaPID_SP', 'LambdaPID_mode', 'LambdaPID_setting', 'LambdaPID_beta',
-                                'LambdaPID_tstep', 'LambdaPID_kick',
+                                'LambdaPID_tstep', 'LambdaPID_kick', 'LambdaPID_woke',
                             ],
                             pub_topics=[
                                 'LambdaPID_MV', 'LambdaPID_P', 'LambdaPID_I', 'LambdaPID_D'
@@ -548,7 +551,7 @@ CurrentPID_slave = Slave(
                             sub_topics=[
                                 'CurrentPID_Kp', 'CurrentPID_Ki', 'CurrentPID_Kd', 'CurrentPID_MVmin', 'CurrentPID_MVmax',
                                 'CurrentPID_PV', 'CurrentPID_SP', 'CurrentPID_mode', 'CurrentPID_setting', 'CurrentPID_beta',
-                                'CurrentPID_tstep', 'CurrentPID_kick',
+                                'CurrentPID_tstep', 'CurrentPID_kick', 'CurrentPID_woke',
                             ],
                             pub_topics=[
                                 'CurrentPID_MV', 'CurrentPID_P', 'CurrentPID_I', 'CurrentPID_D'
@@ -572,7 +575,7 @@ CatBedPID_slave = Slave(
                             sub_topics=[
                                 'CatBedPID_Kp', 'CatBedPID_Ki', 'CatBedPID_Kd', 'CatBedPID_MVmin',  'CatBedPID_MVmax', 
                                 'CatBedPID_PV', 'CatBedPID_SP', 'CatBedPID_mode', 'CatBedPID_setting', 'CatBedPID_beta',
-                                'CatBedPID_tstep', 'CatBedPID_kick'
+                                'CatBedPID_tstep', 'CatBedPID_kick', 'CatBedPID_woke',
                             ],
                             pub_topics=[
                                 'CatBedPID_MV', 'CatBedPID_P', 'CatBedPID_I', 'CatBedPID_D'
@@ -596,7 +599,7 @@ PCBPID_slave = Slave(
                             sub_topics=[
                                 'PCBPID_Kp', 'PCBPID_Ki', 'PCBPID_Kd', 'PCBPID_MVmin',  'PCBPID_MVmax', 
                                 'PCBPID_PV', 'PCBPID_SP', 'PCBPID_mode', 'PCBPID_setting', 'PCBPID_beta',
-                                'PCBPID_tstep', 'PCBPID_kick'
+                                'PCBPID_tstep', 'PCBPID_kick', 'PCBPID_woke',
                             ],
                             pub_topics=[
                                 'PCBPID_MV', 'PCBPID_P', 'PCBPID_I', 'PCBPID_D'
@@ -620,7 +623,7 @@ PumpPID_slave = Slave(
                             sub_topics=[
                                 'PumpPID_Kp', 'PumpPID_Ki', 'PumpPID_Kd', 'PumpPID_MVmin',  'PumpPID_MVmax', 
                                 'PumpPID_PV', 'PumpPID_SP', 'PumpPID_mode', 'PumpPID_setting', 'PumpPID_beta',
-                                'PumpPID_tstep', 'PumpPID_kick'
+                                'PumpPID_tstep', 'PumpPID_kick', 'PumpPID_woke',
                             ],
                             pub_topics=[
                                 'PumpPID_MV', 'PumpPID_P', 'PumpPID_I', 'PumpPID_D'
@@ -637,6 +640,53 @@ PumpPID_slave = Slave(
 ## PumpP_PV > PumpP_SP => RF_fuel down => DirectAction=False
 PumpPID_slave.control_constructor()
 
+BurnerPID_slave = Slave(
+                        name='BurnerPID',
+                        idno=burnerPID_id, 
+                        port_topics=port_Topics(
+                            sub_topics=[
+                                # 'BurnerPID_Kp', 'BurnerPID_Ki', 'BurnerPID_Kd', 
+                                'BurnerPID_MVmin', 'BurnerPID_MVmax', 'BurnerPID_PV', 'BurnerPID_SP', 'BurnerPID_mode', 'BurnerPID_setting', 'BurnerPID_woke', 
+                                # 'BurnerPID_beta', 'BurnerPID_tstep', 'BurnerPID_kick'
+                            ],
+                            pub_topics=[
+                                'BurnerPID_MV', 'BurnerPID_P', 'BurnerPID_I', 'BurnerPID_D'
+                            ],
+                            err_topics=[
+                                'BurnerPID_collect_err', 'BurnerPID_set_err', 'BurnerPID_analyze_err'
+                            ]
+                            ),
+                        #comm_func=Modbus.,
+                        #analyze_func=Modbus.,
+                        control_func=Modbus.control_fixed,
+                        )
+# CV_06: burner temperture; MV: PCB SP
+## burner_PV > burner_SP => PCB down => DirectAction=False
+# BurnerPID_slave.control_constructor()
+BurnerPID_slave.control_constructor_fixed(Kp=0.0003, Ki=0.000003, Kd=0.001, beta=0.5, kick=4, tstep=5, MVmax=0.5, MVmin=0.15, SP_range=0, SP_increment=3)
+
+EVAPID_slave = Slave(
+                        name='EVAPID',
+                        idno=evapid_id, 
+                        port_topics=port_Topics(
+                            sub_topics=[
+                                # 'EVAPID_Kp', 'EVAPID_Ki', 'EVAPID_Kd', 
+                                'EVAPID_MVmin',  'EVAPID_MVmax', 'EVAPID_PV', 'EVAPID_SP', 'EVAPID_mode', 'EVAPID_setting', 'EVAPID_woke',
+                                # 'EVAPID_beta', 'EVAPID_tstep', 'EVAPID_kick'
+                            ],
+                            pub_topics=[
+                                'EVAPID_MV', 'EVAPID_P', 'EVAPID_I', 'EVAPID_D'
+                            ],
+                            err_topics=[
+                                'EVAPID_collect_err', 'EVAPID_set_err', 'EVAPID_analyze_err'
+                            ]
+                            ),
+                        #comm_func=Modbus.,
+                        #analyze_func=Modbus.,
+                        control_func=Modbus.control_fixed,
+                        )
+
+EVAPID_slave.control_constructor_fixed(Kp=1, Ki=0.3, Kd=1, beta=1, kick=1, tstep=1, MVmax=100, MVmin=80, SP_range=0, SP_increment=3)
 
 print('Slaves are all set')
 

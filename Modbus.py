@@ -640,7 +640,7 @@ def VOID(start, device_port, slave):
 def control(device_port, slave):
     _update_parameter = False
     for topic in slave.port_topics.sub_topics:
-        if topic in [f'{slave.name}_Kp', f'{slave.name}_Ki', f'{slave.name}_Kd', f'{slave.name}_MVmin',  f'{slave.name}_MVmax', f'{slave.name}_mode', f'{slave.name}_beta', f'{slave.name}_tstep', f'{slave.name}_kick']:
+        if topic in [f'{slave.name}_Kp', f'{slave.name}_Ki', f'{slave.name}_Kd', f'{slave.name}_MVmin',  f'{slave.name}_MVmax', f'{slave.name}_mode', f'{slave.name}_beta', f'{slave.name}_tstep', f'{slave.name}_kick', f'{slave.name}_SP_range', f'{slave.name}_SP_increment']:
             if device_port.sub_events[topic].is_set():
                 _update_parameter = True
                 device_port.sub_events[topic].clear()
@@ -658,24 +658,97 @@ def control(device_port, slave):
     beta = _sub_values.get(f'{slave.name}_beta').value
     kick = _sub_values.get(f'{slave.name}_kick').value
     tstep = _sub_values.get(f'{slave.name}_tstep').value
-    if kick is None:
+    SP_range = _sub_values.get(f'{slave.name}_SP_range').value
+    SP_increment = _sub_values.get(f'{slave.name}_SP_increment').value
+
+    if _sub_values.get(f'{slave.name}_SP_range') is None:
+        SP_range = 0
+    if _sub_values.get(f'{slave.name}_SP_increment') is None:
+        SP_increment = 3
+    if kick is None or kick == 0:
         kick = 1
     if tstep is None or tstep == 0:
         tstep = 1
     if _update_parameter:
-        slave.controller.update_paramater(Kp=Kp, Ki=Ki, Kd=Kd, MVmin=MVmin, MVmax=MVmax, mode=mode, beta=beta)
+        slave.controller.update_paramater(Kp=Kp, Ki=Ki, Kd=Kd, MVmin=MVmin, MVmax=MVmax, mode=mode, beta=beta, kick=kick, tstep=tstep, SP_range=SP_range, SP_increment=SP_increment)
+
+    # update manipulated variable
+    # print('here')
+    # print(slave.controller.Kp, slave.controller.Ki, slave.controller.Kd, slave.controller.mode)
+    # print(slave.name, SP, PV, MV) 
     try:
-        #print(slave.name, tstep, SP, PV, MV, kick)
         updates = slave.controller.update(tstep, SP, PV, MV, kick)
+        #print(updates)
         for idx, topic in enumerate(slave.port_topics.pub_topics):    
             device_port.pub_values[topic].value = updates[idx]
     except Exception as e:
         logging.error(f'{e}')
-    # print(tstep)
-    
-    for i in range(tstep):
+    # time.sleep(tstep)
+
+    for i in range(int(tstep)):
         time.sleep(1)
-        for topic in slave.port_topics.sub_topics:
-            if topic in [f'{slave.name}_mode', f'{slave.name}_SP']:
-                if device_port.sub_events[topic].is_set():
-                    break
+        if 'Current' in slave.name or 'CatBed' in slave.name:
+            if device_port.sub_values[f'{slave.name}_mode'].value:
+                if device_port.sub_events[f'{slave.name}_SP'].is_set():
+                    for u in device_port.sub_topics:
+                        if 'woke' in u:
+                            device_port.sub_events[u].set()
+                            print(slave.name, 'havesomeset')
+                    device_port.sub_events[f'{slave.name}_SP'].clear()
+        if device_port.sub_events[f'{slave.name}_woke'].is_set():
+            device_port.sub_events[f'{slave.name}_woke'].clear()
+            print(slave.name, 'wake')
+            break
+
+@kb_event
+def control_fixed(device_port, slave):
+    _update_parameter = False
+    _sub_values = device_port.sub_values
+    MVmax = slave.controller.MVmax
+    MVmin = slave.controller.MVmin
+    for topic in slave.port_topics.sub_topics:
+        if topic in [f'{slave.name}_MVmin',  f'{slave.name}_MVmax', f'{slave.name}_mode']:
+            if device_port.sub_events[topic].is_set():
+                _update_parameter = True
+                MVmax = _sub_values.get(f'{slave.name}_MVmax').value
+                MVmin = _sub_values.get(f'{slave.name}_MVmin').value
+                device_port.sub_events[topic].clear()
+                
+    mode = _sub_values.get(f'{slave.name}_mode').value
+    SP = _sub_values.get(f'{slave.name}_SP').value
+    PV = _sub_values.get(f'{slave.name}_PV').value
+    MV = _sub_values.get(f'{slave.name}_setting').value
+
+    Kp = slave.controller.Kp
+    Ki = slave.controller.Ki
+    Kd = slave.controller.Kd
+    beta = slave.controller.beta
+    kick = slave.controller.kick
+    tstep = slave.controller.tstep
+    SP_range = slave.controller.SP_range
+    SP_increment = slave.controller.SP_increment
+    # print(slave.name, 'Kp: ', Kp, 'Ki: ', Ki, 'Kd: ', Kd, 'beta: ', beta, 'kick: ', kick, 'tstep: ', tstep, 'SP_range: ', SP_range, 'SP_increment: ', SP_increment, 'MVmin: ', MVmin, 'MVmax: ', MVmax)
+    if _update_parameter:
+        slave.controller.update_paramater(Kp=Kp, Ki=Ki, Kd=Kd, MVmin=MVmin, MVmax=MVmax, mode=mode, beta=beta, kick=kick, tstep=tstep, SP_range=SP_range, SP_increment=SP_increment)
+    try:
+        updates = slave.controller.update(tstep, SP, PV, MV, kick)
+        for idx, topic in enumerate(slave.port_topics.pub_topics):
+            device_port.pub_values[topic].value = updates[idx]
+    except Exception as e:
+        logging.error(f'{e} by {slave.name}')
+    # time.sleep(tstep)
+    
+    for i in range(int(tstep)):
+        time.sleep(1)
+        if 'Current' in slave.name or 'CatBed' in slave.name:
+            if device_port.sub_values[f'{slave.name}_mode'].value:
+                if device_port.sub_events[f'{slave.name}_SP'].is_set():
+                    for u in device_port.sub_topics:
+                        if 'woke' in u:
+                            device_port.sub_events[u].set()
+                            print(slave.name, 'havesomeset')
+                    device_port.sub_events[f'{slave.name}_SP'].clear()
+        if device_port.sub_events[f'{slave.name}_woke'].is_set():
+            device_port.sub_events[f'{slave.name}_woke'].clear()
+            print(slave.name, 'wake')
+            break
