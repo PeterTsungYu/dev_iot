@@ -548,7 +548,7 @@ LambdaPID_slave = Slave(
                         port_topics=port_Topics(
                             sub_topics=[
                                 # 'LambdaPID_Kp', 'LambdaPID_Ki', 'LambdaPID_Kd', 
-                                'LambdaPID_MVmin', 'LambdaPID_MVmax', 'LambdaPID_PV', 'LambdaPID_SP', 'LambdaPID_mode', 'LambdaPID_setting', 
+                                'LambdaPID_MVmin', 'LambdaPID_MVmax', 'LambdaPID_PV', 'LambdaPID_SP', 'LambdaPID_mode', 'LambdaPID_setting', 'LambdaPID_woke',
                                 # 'LambdaPID_beta','LambdaPID_tstep', 'LambdaPID_kick',
                             ],
                             pub_topics=[
@@ -572,7 +572,7 @@ CurrentPID_slave = Slave(
                         port_topics=port_Topics(
                             sub_topics=[
                                 # 'CurrentPID_Kp', 'CurrentPID_Ki', 'CurrentPID_Kd', 
-                                'CurrentPID_MVmin', 'CurrentPID_MVmax', 'CurrentPID_PV', 'CurrentPID_SP', 'CurrentPID_mode', 'CurrentPID_setting',
+                                'CurrentPID_MVmin', 'CurrentPID_MVmax', 'CurrentPID_PV', 'CurrentPID_SP', 'CurrentPID_mode', 'CurrentPID_setting', 'CurrentPID_woke',
                                 # 'CurrentPID_beta', 'CurrentPID_tstep', 'CurrentPID_kick', 'CurrentPID_SP_range', 'CurrentPID_SP_increment',
                             ],
                             pub_topics=[
@@ -596,7 +596,7 @@ CatBedPID_slave = Slave(
                         port_topics=port_Topics(
                             sub_topics=[
                                 'CatBedPID_Kp', 'CatBedPID_Ki', 'CatBedPID_Kd', 
-                                'CatBedPID_MVmin',  'CatBedPID_MVmax', 'CatBedPID_PV', 'CatBedPID_SP', 'CatBedPID_mode', 'CatBedPID_setting', 'CatBedPID_SP_range', 'CatBedPID_SP_increment',
+                                'CatBedPID_MVmin',  'CatBedPID_MVmax', 'CatBedPID_PV', 'CatBedPID_SP', 'CatBedPID_mode', 'CatBedPID_setting', 'CatBedPID_woke', 'CatBedPID_SP_range', 'CatBedPID_SP_increment', 
                                 'CatBedPID_beta', 'CatBedPID_tstep', 'CatBedPID_kick'
                             ],
                             pub_topics=[
@@ -621,7 +621,7 @@ PCBPID_slave = Slave(
                         port_topics=port_Topics(
                             sub_topics=[
                                 # 'PCBPID_Kp', 'PCBPID_Ki', 'PCBPID_Kd', 
-                                'PCBPID_MVmin',  'PCBPID_MVmax', 'PCBPID_PV', 'PCBPID_SP', 'PCBPID_mode', 'PCBPID_setting', 
+                                'PCBPID_MVmin',  'PCBPID_MVmax', 'PCBPID_PV', 'PCBPID_SP', 'PCBPID_mode', 'PCBPID_setting', 'PCBPID_woke',
                                 # 'PCBPID_beta', 'PCBPID_tstep', 'PCBPID_kick'
                             ],
                             pub_topics=[
@@ -645,7 +645,7 @@ PumpPID_slave = Slave(
                         port_topics=port_Topics(
                             sub_topics=[
                                 'PumpPID_Kp', 'PumpPID_Ki', 'PumpPID_Kd', 'PumpPID_MVmin',  'PumpPID_MVmax', 
-                                'PumpPID_PV', 'PumpPID_SP', 'PumpPID_mode', 'PumpPID_setting', 'PumpPID_beta',
+                                'PumpPID_PV', 'PumpPID_SP', 'PumpPID_mode', 'PumpPID_setting', 'PumpPID_woke', 'PumpPID_beta',
                                 'PumpPID_step', 'PumpPID_kick'
                             ],
                             pub_topics=[
@@ -669,7 +669,7 @@ BurnerPID_slave = Slave(
                         port_topics=port_Topics(
                             sub_topics=[
                                 # 'BurnerPID_Kp', 'BurnerPID_Ki', 'BurnerPID_Kd', 
-                                'BurnerPID_MVmin', 'BurnerPID_MVmax', 'BurnerPID_PV', 'BurnerPID_SP', 'BurnerPID_mode', 'BurnerPID_setting', 
+                                'BurnerPID_MVmin', 'BurnerPID_MVmax', 'BurnerPID_PV', 'BurnerPID_SP', 'BurnerPID_mode', 'BurnerPID_setting', 'BurnerPID_woke', 
                                 # 'BurnerPID_beta', 'BurnerPID_tstep', 'BurnerPID_kick'
                             ],
                             pub_topics=[
@@ -694,7 +694,7 @@ EVAPID_slave = Slave(
                         port_topics=port_Topics(
                             sub_topics=[
                                 # 'EVAPID_Kp', 'EVAPID_Ki', 'EVAPID_Kd', 
-                                'EVAPID_MVmin',  'EVAPID_MVmax', 'EVAPID_PV', 'EVAPID_SP', 'EVAPID_mode', 'EVAPID_setting', 
+                                'EVAPID_MVmin',  'EVAPID_MVmax', 'EVAPID_PV', 'EVAPID_SP', 'EVAPID_mode', 'EVAPID_setting', 'EVAPID_woke',
                                 # 'EVAPID_beta', 'EVAPID_tstep', 'EVAPID_kick'
                             ],
                             pub_topics=[

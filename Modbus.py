@@ -839,7 +839,22 @@ def control(device_port, slave):
             device_port.pub_values[topic].value = updates[idx]
     except Exception as e:
         logging.error(f'{e}')
-    time.sleep(tstep)
+    # time.sleep(tstep)
+
+    for i in range(int(tstep)):
+        time.sleep(1)
+        if 'Current' in slave.name or 'CatBed' in slave.name:
+            if device_port.sub_values[f'{slave.name}_mode'].value:
+                if device_port.sub_events[f'{slave.name}_SP'].is_set():
+                    for u in device_port.sub_topics:
+                        if 'woke' in u:
+                            device_port.sub_events[u].set()
+                            print(slave.name, 'havesomeset')
+                    device_port.sub_events[f'{slave.name}_SP'].clear()
+        if device_port.sub_events[f'{slave.name}_woke'].is_set():
+            device_port.sub_events[f'{slave.name}_woke'].clear()
+            print(slave.name, 'wake')
+            break
 
 @kb_event
 def control_fixed(device_port, slave):
@@ -877,4 +892,19 @@ def control_fixed(device_port, slave):
             device_port.pub_values[topic].value = updates[idx]
     except Exception as e:
         logging.error(f'{e} by {slave.name}')
-    time.sleep(tstep)
+    # time.sleep(tstep)
+    
+    for i in range(int(tstep)):
+        time.sleep(1)
+        if 'Current' in slave.name or 'CatBed' in slave.name:
+            if device_port.sub_values[f'{slave.name}_mode'].value:
+                if device_port.sub_events[f'{slave.name}_SP'].is_set():
+                    for u in device_port.sub_topics:
+                        if 'woke' in u:
+                            device_port.sub_events[u].set()
+                            print(slave.name, 'havesomeset')
+                    device_port.sub_events[f'{slave.name}_SP'].clear()
+        if device_port.sub_events[f'{slave.name}_woke'].is_set():
+            device_port.sub_events[f'{slave.name}_woke'].clear()
+            print(slave.name, 'wake')
+            break
