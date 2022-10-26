@@ -205,7 +205,7 @@ class Slave: # Create Slave data store
             Modbus.PIG.set_mode(self.id, Modbus.pigpio.OUTPUT)
             # dutycycle:= 0-range (range defaults to 255).
             ## dutyrange set to 100
-            Modbus.PIG.set_PWM_range(self.id, 100) 
+            Modbus.PIG.set_PWM_range(self.id, 10000) 
             # Each GPIO can be independently set to one of 18 different PWM frequencies.
             ## 8000  4000  2000 1600 1000  800  500  400  320
             ## 250   200   160  100   80   50   40   20   10
@@ -370,10 +370,10 @@ ADAM_SET_slave = Slave(
                         idno=ADAM_SET_id,
                         port_topics=port_Topics(
                                 sub_topics=[
-                                    'KNF_SET_SV', 'SOL_1_SET_SV', 'TOM_SET_SV',# 'SOL_2_SET_SV' # PCB(ADAM_SET_SV0), Pump(ADAM_SET_SV1), Air_MFC(ADAM_SET_SV2), H2_MFC(ADAM_SET_SV3)
+                                    'TOM_SET_SV', 'SOL_1_SET_SV', 'KNF_SET_SV',# 'SOL_2_SET_SV' # PCB(ADAM_SET_SV0), Pump(ADAM_SET_SV1), Air_MFC(ADAM_SET_SV2), H2_MFC(ADAM_SET_SV3)
                                 ],
                                 pub_topics=[
-                                    'KNF_SET_PV', 'SOL_1_SET_PV', 'TOM_SET_PV',# 'SOL_2_SET_SV', # PCB(ADAM_SET_PV0), Pump(ADAM_SET_PV1), Air_MFC(ADAM_SET_PV2), H2_MFC(ADAM_SET_PV3)
+                                    'TOM_SET_PV', 'SOL_1_SET_PV', 'KNF_SET_PV',# 'SOL_2_SET_SV', # PCB(ADAM_SET_PV0), Pump(ADAM_SET_PV1), Air_MFC(ADAM_SET_PV2), H2_MFC(ADAM_SET_PV3)
                                 ],
                                 err_topics=[
                                     'ADAM_SET_collect_err', 'ADAM_SET_set_err', 'ADAM_SET_analyze_err',
@@ -393,7 +393,7 @@ ADAM_READ_slave = Slave(
                         port_topics=port_Topics(
                                 sub_topics=[],
                                 pub_topics=[
-                                    'SMC_0_PV', 'SMC_1_PV', 'ADAM_READ_PV2', 'ADAM_READ_PV3', 'ADAM_READ_PV4', 'ADAM_P_BR', 'ADAM_P_SR', 'ADAM_P_ACC' # ADAM_READ_PV0 (SMC), ADAM_READ_PV1 (SMC), ADAM_READ_PV2, ADAM_READ_PV3, ADAM_READ_PV4(pump), ADAM_READ_PV5(Air_MFC), ADAM_READ_PV6(H2_MFC), ADAM_READ_PV7
+                                     'SMC_0_PV', 'SMC_1_PV', 'ADAM_READ_PV2', 'ADAM_READ_PV3', 'ADAM_READ_PV4','ADAM_P_BR', 'ADAM_P_EVA', 'ADAM_P_ACC' # ADAM_READ_PV0 (SMC), ADAM_READ_PV1 (SMC), ADAM_READ_PV2, ADAM_READ_PV3, ADAM_READ_PV4(pump), ADAM_READ_PV5(Air_MFC), ADAM_READ_PV6(H2_MFC), ADAM_READ_PV7
                                 ],
                                 err_topics=[
                                     'ADAM_READ_collect_err', 'ADAM_READ_analyze_err',
@@ -762,8 +762,8 @@ lst_ports = [
             # MFC_port,
             Scale_port, 
             # RS232_port, 
-            # Setup_port,
-            # GPIO_port,
+            Setup_port,
+            GPIO_port,
             # WatchDog_port,
             # PID_port
             ]
