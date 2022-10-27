@@ -15,17 +15,17 @@ import params
 
 #------------------------------Logger---------------------------------
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.ERROR)
 formatter = logging.Formatter(
 	'[%(levelname)s %(asctime)s %(module)s:%(lineno)d] %(message)s',
 	datefmt='%Y%m%d %H:%M:%S')
 
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+ch.setLevel(logging.ERROR)
 ch.setFormatter(formatter)
 
 fh = logging.FileHandler(filename='platform.log', mode='w')
-fh.setLevel(logging.DEBUG)
+fh.setLevel(logging.ERROR)
 fh.setFormatter(formatter)
 
 logger.addHandler(ch)
@@ -61,7 +61,6 @@ def analyze_decker(func):
         _lst_readings = list(iter(slave.lst_readings.get, None))
         _time_readings = list(iter(slave.time_readings.get, None))
         if slave.name in ['Scale']:
-            #print(slave.name, _lst_readings)
             _size_lst = slave.size_lst_readings
             _size_time = slave.size_time_readings
             _size_lst['short_lst_readings'].append(_lst_readings)
@@ -77,7 +76,7 @@ def analyze_decker(func):
             _lst_readings = _size_lst
             _time_readings = _size_time
             cond = len(_lst_readings['short_lst_readings'])
-        elif slave.name in ['ADAM_TC']:
+        elif 'ADAM_TC' in slave.name:
             _size_lst = slave.size_lst_readings
             _size_time = slave.size_time_readings
             _size_lst['short_lst_readings'].append(_lst_readings)
@@ -119,7 +118,7 @@ def analyze_decker(func):
                 ## to slave data list
                 #slave.readings.append(_readings)
                 analyze_err[2] += 1
-                logging.critical(f"{slave.name}_analyze done: record {_readings}")
+                logging.debug(f"{slave.name}_analyze done: record {_readings}")
             elif (device_port.name == 'GPIO_port') and (cond == 0):
                 _readings = tuple([_time_readings, 0])
                 # casting
@@ -131,32 +130,34 @@ def analyze_decker(func):
                 ## to slave data list
                 #slave.readings.append(_readings)
                 analyze_err[2] += 1
-                logging.critical(f"{slave.name}_analyze done: record {_readings}")
+                logging.debug(f"{slave.name}_analyze done: record {_readings}")
             else:
                 analyze_err[0] += 1
                 logging.warning(f"{slave.name}_analyze record nothing")
         except Exception as e:
             analyze_err[0] += 1
-            logging.critical(f"{slave.name}_analyze_err_{analyze_err[:]} at {round((time.time()-start),2)}s: " + str(e))
+            logging.debug(f"{slave.name}_analyze_err_{analyze_err[:]} at {round((time.time()-start),2)}s: " + str(e))
         finally:
-            logging.critical(f"{slave.name}_analyze_err: {round(analyze_err[2]/(analyze_err[1] + 0.00000000000000001)*100, 2)}%, analyze_err_{analyze_err[:]}")
+            logging.debug(f"{slave.name}_analyze_err: {round(analyze_err[2]/(analyze_err[1] + 0.00000000000000001)*100, 2)}%, analyze_err_{analyze_err[:]}")
     return wrapper
 
 #------------------------------Collect and Analyze func---------------------------------
 def Scale_data_collect(start, device_port, slave):
     port = device_port.port
     collect_err = device_port.err_values[f'{slave.name}_collect_err']
+    analyze_switch = False
     try:
         collect_err[1] += 1
-        time.sleep(params.time_out) # wait for the data input to the buffer
+        time.sleep(slave.timeout) # wait for the data input to the buffer
         if port.inWaiting() > slave.r_wait_len:
             readings = port.read(port.inWaiting()).decode('utf-8')
-            readings = [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ \-][ .\d]{7}', readings)][-1]
+            readings = [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ \-][ .\d]{7}', readings)]
             slave.time_readings.put(time.time()-start)
             slave.lst_readings.put(readings)
             collect_err[2] += 1
-            logging.info(f'Read {readings} from slave_{slave.name}')
+            logging.debug(f'Read {readings} from slave_{slave.name}')
             port.reset_input_buffer() # reset the buffer after each reading process
+            analyze_switch = True
         else: # if data len is no data
             collect_err[0] += 1
             err_msg = f"{slave.name}_collect_err_{collect_err[:]} at {round((time.time()-start),2)}s: data len is no wait data"
@@ -166,10 +167,13 @@ def Scale_data_collect(start, device_port, slave):
         err_msg = f"{slave.name}_collect_err_{collect_err[:]} at {round((time.time()-start),2)}s: " + str(e)
         logging.error(err_msg)
     finally:
-        logging.critical(f"{slave.name}_collect_err: {round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2)}%, collect_err_{collect_err[:]}")
+        logging.debug(f"{slave.name}_collect_err: {round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2)}%, collect_err_{collect_err[:]}")
         # if (collect_err[1] >= params.exempt_try) and (round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
         #     if slave.name not in device_port.broken_slave_names:
         #         device_port.broken_slave_names.append(slave.name)
+        if analyze_switch:
+            if slave.kwargs.get('analyze_func'):
+                slave.kwargs['analyze_func'](start, device_port, slave)
 
 def Relay_comm(start, device_port, slave):
     port = device_port.port
@@ -202,26 +206,28 @@ def Relay_comm(start, device_port, slave):
 
 def Modbus_Comm(start, device_port, slave):    
     port = device_port.port
-    collect_err = device_port.err_values.get(f'{slave.name}_collect_err')    
+    collect_err = device_port.err_values.get(f'{slave.name}_collect_err')
     set_err = device_port.err_values.get(f'{slave.name}_set_err')
     re_collect = device_port.recur_count.get(f'{slave.name}_collect_err')
     re_set = device_port.recur_count.get(f'{slave.name}_set_err')
+    analyze_switch = False
     try: # try to collect
         recur = False
         collect_err[1] += 1
-        logging.debug(slave.r_rtu)
-        #logging.debug(bytes.fromhex(slave.r_rtu))
+        #logging.error(slave.r_rtu)
+        # logging.debug(bytes.fromhex(slave.r_rtu))
         port.write(bytes.fromhex(slave.r_rtu)) #hex to binary(byte) 
-        time.sleep(params.time_out)
-        logging.debug(port.inWaiting())
+        time.sleep(slave.timeout)
+        #logging.debug(port.inWaiting())
         _data_len = port.inWaiting()
         if _data_len >= slave.r_wait_len: 
             readings = port.read(_data_len).hex() # after reading, the buffer will be clean        
-            logging.debug(readings)
+            #logging.debug(readings)
             if slave.name == 'GA':
                 slave.time_readings.put(time.time()-start)
                 slave.lst_readings.put(readings)
-                logging.info(f'Read from slave_{slave.name}')
+                logging.debug(f'Read from slave_{slave.name}')
+                analyze_switch = True
             else:    
                 re = hex(int(slave.id))[2:].zfill(2) + '03' + hex(slave.r_wait_len-5)[2:].zfill(2)
                 #logging.debug(readings.index(re))
@@ -235,7 +241,8 @@ def Modbus_Comm(start, device_port, slave):
                         slave.time_readings.put(time.time()-start)
                         slave.lst_readings.put(readings)
                         collect_err[2] += 1
-                        logging.info(f'Read from slave_{slave.name}')
+                        logging.debug(f'Read from slave_{slave.name}')
+                        analyze_switch = True
                     else:
                         recur = True
                         collect_err[0] += 1
@@ -271,41 +278,40 @@ def Modbus_Comm(start, device_port, slave):
             Modbus_Comm(start, device_port, slave)
         re_collect[0] = 0
         port.reset_input_buffer()
-        logging.critical(f"{slave.name}_collect_err: {round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2)}%, recollect_cover: {round(re_collect[1]/(collect_err[0]+0.00000000000000001)*100, 2)}%")
+        logging.debug(f"{slave.name}_collect_err: {round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2)}%, recollect_cover: {round(re_collect[1]/(collect_err[0]+0.00000000000000001)*100, 2)}%")
         # if (collect_err[1] >= params.exempt_try) and (round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
         #     if slave.name not in device_port.broken_slave_names:
         #         device_port.broken_slave_names.append(slave.name)
+        if analyze_switch:
+            if slave.kwargs.get('analyze_func'):
+                slave.kwargs['analyze_func'](start, device_port, slave)
 
     w_data_site=0
     for topic in slave.port_topics.sub_topics:
-        logging.critical((slave.name, topic))
+        #logging.critical((slave.name, topic))
         if device_port.sub_events[topic].is_set():
-            logging.critical(device_port.sub_values[topic])
+            #logging.critical(device_port.sub_values[topic])
             try: # try to set value
                 recur = False
                 set_err[1] += 1
                 slave.write_rtu(f"{w_data_site:0>4}", device_port.sub_values[topic].value)
-                print(device_port.sub_values[topic].value)
-                print(slave.w_rtu)
                 port.write(bytes.fromhex(slave.w_rtu)) #hex to binary(byte) 
-                time.sleep(params.time_out)
+                time.sleep(slave.timeout)
                 _data_len = port.inWaiting()
-                print(_data_len)
                 if _data_len >= slave.w_wait_len:
                     readings = port.read(_data_len).hex() # after reading, the buffer will be clean
-                    logging.critical(readings)
+                    #logging.critical(readings)
                     re = hex(int(slave.id))[2:].zfill(2) + '06' + f"{w_data_site:0>4}"
                     #logging.critical(re)
                     if re in readings:
                         readings = readings[readings.index(re):(readings.index(re)+slave.w_wait_len*2)]
-                        logging.critical(readings)
+                        #logging.critical(readings)
                         crc = Crc16Modbus.calchex(bytearray.fromhex(readings[:-4]))
                         # check sta, func code, datalen, crc
                         if (crc[-2:] + crc[:2]) == readings[-4:]:
                             set_err[2] += 1
                             device_port.sub_events[topic].clear()
                             logging.debug(f'write: {readings}')
-                            logging.info(f'Read from slave_{slave.name}')
                         else:
                             recur = True
                             set_err[0] += 1
@@ -340,7 +346,7 @@ def Modbus_Comm(start, device_port, slave):
                     Modbus_Comm(start, device_port, slave)
                 re_set[0] = 0
                 port.reset_input_buffer()
-                logging.critical(f"{slave.name}_set_err: {round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2)}%, reset_cover: {round(re_set[1]/(collect_err[0]+0.00000000000000001)*100, 2)}%")
+                logging.debug(f"{slave.name}_set_err: {round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2)}%, reset_cover: {round(re_set[1]/(collect_err[0]+0.00000000000000001)*100, 2)}%")
                 w_data_site += 1
                 # if (set_err[1] >= params.exempt_try) and (round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
                 #     if slave.name not in device_port.broken_slave_names:
@@ -355,13 +361,14 @@ def MFC_Comm(start, device_port, slave):
     set_err = device_port.err_values.get(f'{slave.name}_set_err')
     re_collect = device_port.recur_count.get(f'{slave.name}_collect_err')
     re_set = device_port.recur_count.get(f'{slave.name}_set_err')
+    analyze_switch = False
     try: # try to collect
         recur = False
         collect_err[1] += 1
         #logging.debug(slave.r_rtu)
         #logging.debug(bytes(slave.r_rtu, 'ASCII'))
         port.write(bytes(slave.r_rtu, 'ASCII')) #ASCII to byte
-        time.sleep(params.time_out)
+        time.sleep(slave.timeout)
         #logging.debug(port.inWaiting())
         _data_len = port.inWaiting()
         if _data_len >= slave.r_wait_len: 
@@ -377,7 +384,8 @@ def MFC_Comm(start, device_port, slave):
                     slave.time_readings.put(time.time()-start)
                     slave.lst_readings.put(readings)
                     collect_err[2] += 1
-                    logging.info(f'Read from slave_{slave.name}')
+                    logging.debug(f'Read from slave_{slave.name}')
+                    analyze_switch = True
                 else:
                     recur = True
                     collect_err[0] += 1
@@ -412,10 +420,13 @@ def MFC_Comm(start, device_port, slave):
             MFC_Comm(start, device_port, slave)
         re_collect[0] = 0
         port.reset_input_buffer()
-        logging.critical(f"{slave.name}_collect_err: {round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2)}%, recollect_cover: {round(re_collect[1]/(collect_err[0]+0.00000000000000001)*100, 2)}%")
+        logging.debug(f"{slave.name}_collect_err: {round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2)}%, recollect_cover: {round(re_collect[1]/(collect_err[0]+0.00000000000000001)*100, 2)}%")
         # if (collect_err[1] >= params.exempt_try) and (round(collect_err[2]/(collect_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
         #     if slave.name not in device_port.broken_slave_names:
         #         device_port.broken_slave_names.append(slave.name)
+        if analyze_switch:
+            if slave.kwargs.get('analyze_func'):
+                slave.kwargs['analyze_func'](start, device_port, slave)
 
     w_data_site=0
     for topic in slave.port_topics.sub_topics:
@@ -428,7 +439,7 @@ def MFC_Comm(start, device_port, slave):
                 slave.write_rtu(device_port.sub_values[topic].value)
                 #logging.debug(slave.w_rtu)
                 port.write(bytes(slave.w_rtu, 'ASCII')) 
-                time.sleep(params.time_out)
+                time.sleep(slave.timeout)
                 _data_len = port.inWaiting()
                 #logging.debug(_data_len)
                 if _data_len >= slave.w_wait_len:
@@ -441,7 +452,6 @@ def MFC_Comm(start, device_port, slave):
                             set_err[2] += 1
                             device_port.sub_events[topic].clear()
                             logging.debug(f'write: {readings}')
-                            logging.info(f'Read from slave_{slave.name}')
                         else:
                             recur = True
                             set_err[0] += 1
@@ -472,10 +482,10 @@ def MFC_Comm(start, device_port, slave):
                 if (recur == True) and (re_set[0] < params.recur_try):
                     re_set[0] += 1
                     logging.debug(f're_set: {re_set[:]}')
-                    Modbus_Comm(start, device_port, slave)
+                    MFC_Comm(start, device_port, slave)
                 re_set[0] = 0
                 port.reset_input_buffer()
-                logging.critical(f"{slave.name}_set_err: {round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2)}%, reset_cover: {round(re_set[1]/(collect_err[0]+0.00000000000000001)*100, 2)}%")
+                logging.debug(f"{slave.name}_set_err: {round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2)}%, reset_cover: {round(re_set[1]/(collect_err[0]+0.00000000000000001)*100, 2)}%")
                 w_data_site += 1
                 # if (set_err[1] >= params.exempt_try) and (round(set_err[2]/(set_err[1]+0.00000000000000001)*100, 2) <= params.exempt_threshold):
                 #     if slave.name not in device_port.broken_slave_names:
@@ -727,13 +737,14 @@ def MFC_analyze(start, device_port, slave, **kwargs):
     return _readings
 
 def VOID(start, device_port, slave):
-    time.sleep(params.time_out)
+    time.sleep(slave.timeout)
 
 #------------------------------PID controller---------------------------------
+@kb_event
 def control(device_port, slave):
     _update_parameter = False
     for topic in slave.port_topics.sub_topics:
-        if topic in [f'{slave.name}_Kp', f'{slave.name}_Ki', f'{slave.name}_Kd', f'{slave.name}_MVmin',  f'{slave.name}_MVmax', f'{slave.name}_mode', f'{slave.name}_beta', f'{slave.name}_tstep', f'{slave.name}_kick']:
+        if topic in [f'{slave.name}_Kp', f'{slave.name}_Ki', f'{slave.name}_Kd', f'{slave.name}_MVmin',  f'{slave.name}_MVmax', f'{slave.name}_mode', f'{slave.name}_beta', f'{slave.name}_tstep', f'{slave.name}_kick', f'{slave.name}_SP_range', f'{slave.name}_SP_increment']:
             if device_port.sub_events[topic].is_set():
                 _update_parameter = True
                 device_port.sub_events[topic].clear()
@@ -751,16 +762,97 @@ def control(device_port, slave):
     beta = _sub_values.get(f'{slave.name}_beta').value
     kick = _sub_values.get(f'{slave.name}_kick').value
     tstep = _sub_values.get(f'{slave.name}_tstep').value
-    if kick is None:
+    SP_range = _sub_values.get(f'{slave.name}_SP_range').value
+    SP_increment = _sub_values.get(f'{slave.name}_SP_increment').value
+
+    if _sub_values.get(f'{slave.name}_SP_range') is None:
+        SP_range = 0
+    if _sub_values.get(f'{slave.name}_SP_increment') is None:
+        SP_increment = 3
+    if kick is None or kick == 0:
         kick = 1
-    if tstep is None:
+    if tstep is None or tstep == 0:
         tstep = 1
     if _update_parameter:
-        slave.controller.update_paramater(Kp=Kp, Ki=Ki, Kd=Kd, MVmin=MVmin, MVmax=MVmax, mode=mode, beta=beta)
+        slave.controller.update_paramater(Kp=Kp, Ki=Ki, Kd=Kd, MVmin=MVmin, MVmax=MVmax, mode=mode, beta=beta, kick=kick, tstep=tstep, SP_range=SP_range, SP_increment=SP_increment)
+
+    # update manipulated variable
+    # print('here')
+    # print(slave.controller.Kp, slave.controller.Ki, slave.controller.Kd, slave.controller.mode)
+    # print(slave.name, SP, PV, MV) 
     try:
         updates = slave.controller.update(tstep, SP, PV, MV, kick)
+        #print(updates)
         for idx, topic in enumerate(slave.port_topics.pub_topics):    
             device_port.pub_values[topic].value = updates[idx]
     except Exception as e:
         logging.error(f'{e}')
-    time.sleep(tstep)
+    # time.sleep(tstep)
+    
+    for i in range(int(tstep)):
+        time.sleep(1)
+        if 'Current' in slave.name or 'CatBed' in slave.name:
+            if device_port.sub_values[f'{slave.name}_mode'].value:
+                if device_port.sub_events[f'{slave.name}_SP'].is_set():
+                    for u in device_port.sub_topics:
+                        if 'woke' in u:
+                            device_port.sub_events[u].set()
+                            print(slave.name, 'havesomeset')
+                    device_port.sub_events[f'{slave.name}_SP'].clear()
+        if device_port.sub_events[f'{slave.name}_woke'].is_set():
+            device_port.sub_events[f'{slave.name}_woke'].clear()
+            print(slave.name, 'wake')
+            break
+
+@kb_event
+def control_fixed(device_port, slave):
+    _update_parameter = False
+    _sub_values = device_port.sub_values
+    MVmax = slave.controller.MVmax
+    MVmin = slave.controller.MVmin
+    for topic in slave.port_topics.sub_topics:
+        if topic in [f'{slave.name}_MVmin',  f'{slave.name}_MVmax', f'{slave.name}_mode']:
+            if device_port.sub_events[topic].is_set():
+                _update_parameter = True
+                MVmax = _sub_values.get(f'{slave.name}_MVmax').value
+                MVmin = _sub_values.get(f'{slave.name}_MVmin').value
+                device_port.sub_events[topic].clear()
+                
+    mode = _sub_values.get(f'{slave.name}_mode').value
+    SP = _sub_values.get(f'{slave.name}_SP').value
+    PV = _sub_values.get(f'{slave.name}_PV').value
+    MV = _sub_values.get(f'{slave.name}_setting').value
+
+    Kp = slave.controller.Kp
+    Ki = slave.controller.Ki
+    Kd = slave.controller.Kd
+    beta = slave.controller.beta
+    kick = slave.controller.kick
+    tstep = slave.controller.tstep
+    SP_range = slave.controller.SP_range
+    SP_increment = slave.controller.SP_increment
+    # print(slave.name, 'Kp: ', Kp, 'Ki: ', Ki, 'Kd: ', Kd, 'beta: ', beta, 'kick: ', kick, 'tstep: ', tstep, 'SP_range: ', SP_range, 'SP_increment: ', SP_increment, 'MVmin: ', MVmin, 'MVmax: ', MVmax)
+    if _update_parameter:
+        slave.controller.update_paramater(Kp=Kp, Ki=Ki, Kd=Kd, MVmin=MVmin, MVmax=MVmax, mode=mode, beta=beta, kick=kick, tstep=tstep, SP_range=SP_range, SP_increment=SP_increment)
+    try:
+        updates = slave.controller.update(tstep, SP, PV, MV, kick)
+        for idx, topic in enumerate(slave.port_topics.pub_topics):
+            device_port.pub_values[topic].value = updates[idx]
+    except Exception as e:
+        logging.error(f'{e} by {slave.name}')
+    # time.sleep(tstep)
+    
+    for i in range(int(tstep)):
+        time.sleep(1)
+        if 'Current' in slave.name or 'CatBed' in slave.name:
+            if device_port.sub_values[f'{slave.name}_mode'].value:
+                if device_port.sub_events[f'{slave.name}_SP'].is_set():
+                    for u in device_port.sub_topics:
+                        if 'woke' in u:
+                            device_port.sub_events[u].set()
+                            print(slave.name, 'havesomeset')
+                    device_port.sub_events[f'{slave.name}_SP'].clear()
+        if device_port.sub_events[f'{slave.name}_woke'].is_set():
+            device_port.sub_events[f'{slave.name}_woke'].clear()
+            print(slave.name, 'wake')
+            break

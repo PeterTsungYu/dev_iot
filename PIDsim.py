@@ -12,6 +12,9 @@ class PID:
         self.name = name
         self._log = []
         self.SP = 0.0
+        self.SP_stepping = 0.0
+        self.SP_increment = 3.0
+        self.SP_range = 0.0
         self.Kp = 0.0
         self.Ki = 0.0
         self.Kd = 0.0
@@ -21,8 +24,6 @@ class PID:
         self.MVmax = 0.0
         self.DirectAction = 0
         self.mode = 0
-        self.SP_stepping = 0.0
-        self.SP_increment = 1.0
         self.errorP0 = 0.0
         self.errorP1 = 0.0
         self.errorI0 = 0.0
@@ -100,6 +101,10 @@ class PID:
             self._action = multiprocessing.Value('i', -1)
     
     @property
+    def action(self):
+        return self._action.value
+
+    @property
     def gamma(self):
         """gamma is the setpoint weighting for derivative control where the derivative error
         is given by gamma*SP - PV.  The default value is zero. 
@@ -176,7 +181,15 @@ class PID:
     @SP.setter
     def SP(self,SP):
         self._SP = multiprocessing.Value('d', SP)
-        
+
+    @property
+    def SP_range(self):
+        return self._SP_range.value
+    
+    @SP_range.setter
+    def SP_range(self,SP_range):
+        self._SP_range = multiprocessing.Value('d', SP_range)
+
     @property
     def PV(self):
         """PV is the measured process (or control) variable.
@@ -268,7 +281,7 @@ class PID:
         self._tstep = multiprocessing.Value('d', tstep)
 
 
-    def update_paramater(self, Kp=0, Ki=0, Kd=0, beta=0, gamma=0, MVmin=0, MVmax=0, DirectAction=0, mode=0):
+    def update_paramater(self, Kp=0, Ki=0, Kd=0, beta=0, kick=1, tstep=1, MVmax=0, MVmin=0, SP_range=0, SP_increment=3, gamma=0, DirectAction=0, mode=0, ):
         self.Kp = Kp
         self.Ki = Ki
         self.Kd = Kd
@@ -276,8 +289,12 @@ class PID:
         self.MVmax = MVmax
         self.beta = beta
         self.gamma = gamma
+        self.kick = kick
+        self.tstep = tstep
         self.DirectAction = DirectAction
         self.mode = mode
+        self.SP_range = SP_range
+        self.SP_increment = SP_increment
 
     def update(self, tstep, SP, PV, MV, kick):
         self.SP = SP
@@ -300,7 +317,6 @@ class PID:
         if self.mode == 0:
             # Setpoint tracking
             self.SP_stepping = PV
-
         self.errorP1 = self.errorP0
         self.errorP0 = self.beta*self.SP_stepping - self.PV # setpoint weighting
         self.errorI0 = self.SP_stepping - self.PV            
@@ -310,7 +326,10 @@ class PID:
         P = self.Kp*(self.errorP0 - self.errorP1)
         I = self.Ki*self.tstep*self.errorI0
         D = self.Kd*(self.errorD0 - 2*self.errorD1 + self.errorD2)/self.tstep
-        
-        self.MV -= self._action*(P*self.kick_prop + I + D*self.kick_prop)
-        
+        self.deltaMV = P*self.kick_prop + I + D*self.kick_prop
+        if abs(self.SP_stepping - PV) <= self.SP_range:
+            self.MV = self.MV
+        else:
+            self.MV -= self.action*self.deltaMV
+        # print(self.MV, P, I, D)
         return self.MV, P, I, D

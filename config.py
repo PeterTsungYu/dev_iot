@@ -44,7 +44,8 @@ catbedpid_id  = '14'
 pcbpid_id     = '15'
 pumppid_id    = '16'
 GA_id         = '17' # ReformerTP GA for monitoring gas conc. @ RS232_port_path
-
+burnerPID_id  = '18'
+evapid_id     = '19'
 #-----GPIO port setting----------------------------------------------------------------
 ## DFM
 # read High as 3.3V
@@ -63,7 +64,12 @@ def tohex(value):
     add_zeros = 4 - len(hex_value)
     hex_value = add_zeros * '0' + hex_value
     return hex_value
-
+def tohex_pad2(value):
+    value = int(value)
+    hex_value = hex(value)[2:]
+    add_zeros = 2 - len(hex_value)
+    hex_value = add_zeros * '0' + hex_value
+    return hex_value
 class device_port:
     def __init__(self, *slaves, name, port):
         self.slaves = slaves # lst of slaves
@@ -128,7 +134,7 @@ class device_port:
                                 args=(start, self, slave,)
                             )
                         )
-                time.sleep(params.sample_time)
+                time.sleep(1)
                 self.comm_ticker.clear()
                 self.analyze_ticker.wait()
                 # t = time.time()
@@ -164,24 +170,27 @@ class port_Topics:
         self.err_topics = err_topics
 
 class Slave: # Create Slave data store 
-    def __init__(self, name, idno, port_topics, **kwargs):
+    def __init__(self, name, idno, port_topics, timeout=0, **kwargs):
         self.name = name
         self.id = idno # id number of slave
         self.lst_readings = multiprocessing.Queue()
         self.time_readings = multiprocessing.Queue()
-        if self.name in ['ADAM_TC', 'Scale', 'DFM', 'DFM_AOG']:
+        if self.name in ['ADAM_TC', 'ADAM_TC_02', 'Scale', 'DFM', 'DFM_AOG']:
             self.size_lst_readings = {'short_lst_readings':params.manager.list(), 'long_lst_readings':params.manager.list()}
             self.size_time_readings = {'short_time_readings':params.manager.list(), 'long_time_readings':params.manager.list()}
+
         #self.readings = [] # for all data
         self.port_topics = port_topics
         self.kwargs = kwargs # dict of funcs
+        self.timeout = timeout
 
     def read_rtu(self, *_fields, wait_len):
         self.r_wait_len = wait_len
         # _fields[0]:data_site
         # _fields[1]:value / data_len
         if len(_fields) == 2:
-            data_struc = self.id + '03' + _fields[0] + _fields[1]
+            data_struc = tohex_pad2(self.id) + '03' + _fields[0] + _fields[1]
+            # print(data_struc)
             crc = Crc16Modbus.calchex(bytearray.fromhex(data_struc))
             self.r_rtu = data_struc + crc[-2:] + crc[:2]
         elif len(_fields) == 1:
@@ -191,8 +200,8 @@ class Slave: # Create Slave data store
         # _fields[0]:data_site
         # _fields[1]:value / data_len
         if len(_fields) == 2:
-            _value = tohex(_fields[1])
-            data_struc = self.id + '06' + _fields[0] + _value
+            _value = tohex_pad4(_fields[1])
+            data_struc = tohex_pad2(self.id) + '06' + _fields[0] + _value
             crc = Crc16Modbus.calchex(bytearray.fromhex(data_struc))
             self.w_rtu = data_struc + crc[-2:] + crc[:2]
         elif len(_fields) == 1:
@@ -219,7 +228,9 @@ class Slave: # Create Slave data store
     def control_constructor(self):
         self.controller = PIDsim.PID(name=f'{self.name}_controller')
     
-
+    def control_constructor_fixed(self, Kp, Ki, Kd, beta, kick, tstep, MVmax, MVmin, SP_range, SP_increment):
+        self.controller = PIDsim.PID(name=f'{self.name}_controller')
+        self.controller.update_paramater(Kp, Ki, Kd, beta, kick, tstep, MVmax, MVmin, SP_range, SP_increment)
 #-------------------------RTU & Slave--------------------------------------
 # ADAM_TC
 # RTU func code 03, PV value site starts at '0000', data_len is 8 ('0008')
@@ -229,19 +240,41 @@ ADAM_TC_slave = Slave(
                     port_topics=port_Topics(sub_topics=[
                                             ],
                                             pub_topics=[
-                                                'TC7', 'TC8', 'TC9', 'TC10', 
-                                                'TC11', 'EVA_out', 'RAD_in', 'RAD_out',
+                                                'BR', 'SR_front', 'SR_mid', 'SR_end', 
+                                                'flue_gas', 'RAD_in', 'RAD_out', 'TC_7'
                                                 'BN_rate', 'SR_rate',
                                             ],
                                             err_topics=[
                                                 'ADAM_TC_collect_err', 'ADAM_TC_analyze_err',
                                             ]
                                             ),
+                    timeout = 0.02,
                     comm_func=Modbus.Modbus_Comm,
                     analyze_func=Modbus.ADAM_TC_analyze
                     )
 ADAM_TC_slave.read_rtu('0000', '0008', wait_len=21)
 ADAM_TC_slave.w_wait_len = 8
+
+
+ADAM_TC_02_slave = Slave(
+                    name = 'ADAM_TC_02',
+                    idno=ADAM_TC_02_id,
+                    port_topics=port_Topics(sub_topics=[
+                                            ],
+                                            pub_topics=[
+                                                'EVA_out', 'EVA_inside', 'TC_02_2', 'TC_02_3',
+                                                'TC_02_4', 'TC_02_5', 'TC_02_6', 'TC_02_7', 
+                                            ],
+                                            err_topics=[
+                                                'ADAM_TC_02_collect_err', 'ADAM_TC_02_analyze_err',
+                                            ]
+                                            ),
+                    timeout = 0.02,
+                    comm_func=Modbus.Modbus_Comm,
+                    analyze_func=Modbus.ADAM_TC_analyze
+                    )
+ADAM_TC_02_slave.read_rtu('0000', '0008', wait_len=21)
+ADAM_TC_02_slave.w_wait_len = 8
 
 # GA slave
 GA_slave = Slave(
@@ -257,6 +290,7 @@ GA_slave = Slave(
                                             'GA_collect_err', 'GA_analyze_err',
                                         ]
                                         ),
+                timeout = 0.1,
                 comm_func=Modbus.Modbus_Comm,
                 analyze_func=Modbus.GA_data_analyze
                 )
@@ -274,6 +308,7 @@ Scale_slave = Slave(
                                                 'Scale_collect_err', 'Scale_analyze_err',
                                             ]
                                             ),
+                    timeout = 0.1,
                     comm_func=Modbus.Scale_data_collect,
                     analyze_func=Modbus.Scale_data_analyze
                     )
@@ -296,6 +331,7 @@ Header_EVA_slave = Slave(
                                     'Header_EVA_collect_err', 'Header_EVA_set_err', 'Header_EVA_analyze_err',
                                 ]
                                 ),
+                        timeout = 0.02,
                         comm_func=Modbus.Modbus_Comm,
                         analyze_func=Modbus.TCHeader_analyze
                         )
@@ -316,6 +352,7 @@ Header_EVA_SET_slave = Slave(
                                     'Header_EVA_SET_collect_err', 'Header_EVA_SET_set_err', 'Header_EVA_SET_analyze_err',
                                 ]
                                 ),
+                        timeout = 0.02,
                         comm_func=Modbus.Modbus_Comm,
                         analyze_func=Modbus.TCHeader_analyze
                         )
@@ -335,6 +372,7 @@ Header_BR_slave = Slave(
                                     'Header_BR_collect_err', 'Header_BR_set_err', 'Header_BR_analyze_err',
                                 ]
                                 ),
+                        timeout = 0.02,
                         comm_func=Modbus.Modbus_Comm,
                         analyze_func=Modbus.TCHeader_analyze
                         )
@@ -355,6 +393,7 @@ Header_BR_SET_slave = Slave(
                                     'Header_BR_SET_collect_err', 'Header_BR_SET_set_err', 'Header_BR_SET_analyze_err',
                                 ]
                                 ),
+                        timeout = 0.02,
                         comm_func=Modbus.Modbus_Comm,
                         analyze_func=Modbus.TCHeader_analyze
                         )
@@ -379,6 +418,7 @@ ADAM_SET_slave = Slave(
                                     'ADAM_SET_collect_err', 'ADAM_SET_set_err', 'ADAM_SET_analyze_err',
                                 ]
                                 ),
+                        timeout = 0.02,
                         comm_func=Modbus.Modbus_Comm,
                         analyze_func=Modbus.ADAM_SET_analyze
                     )
@@ -393,12 +433,13 @@ ADAM_READ_slave = Slave(
                         port_topics=port_Topics(
                                 sub_topics=[],
                                 pub_topics=[
-                                     'SMC_0_PV', 'SMC_1_PV', 'ADAM_READ_PV2', 'ADAM_READ_PV3', 'ADAM_READ_PV4','ADAM_P_BR', 'ADAM_P_EVA', 'ADAM_P_ACC' # ADAM_READ_PV0 (SMC), ADAM_READ_PV1 (SMC), ADAM_READ_PV2, ADAM_READ_PV3, ADAM_READ_PV4(pump), ADAM_READ_PV5(Air_MFC), ADAM_READ_PV6(H2_MFC), ADAM_READ_PV7
+                                     'error_0','SMC_0_PV', 'SMC_1_PV', 'ADAM_READ_PV2', 'ADAM_READ_PV3', 'ADAM_READ_PV4','ADAM_P_BR', 'ADAM_P_EVA', 'ADAM_P_ACC' # ADAM_READ_PV0 (SMC), ADAM_READ_PV1 (SMC), ADAM_READ_PV2, ADAM_READ_PV3, ADAM_READ_PV4(pump), ADAM_READ_PV5(Air_MFC), ADAM_READ_PV6(H2_MFC), ADAM_READ_PV7
                                 ],
                                 err_topics=[
                                     'ADAM_READ_collect_err', 'ADAM_READ_analyze_err',
                                 ]
                                 ),
+                        timeout = 0.02,
                         comm_func=Modbus.Modbus_Comm,
                         analyze_func=Modbus.ADAM_READ_analyze
                         )
@@ -417,6 +458,7 @@ DFM_slave = Slave(
                                     'DFM_collect_err', 'DFM_analyze_err', 
                                 ]
                                 ),
+                timeout = 0.1,
                 # comm_func=Modbus.VOID,
                 analyze_func=Modbus.DFM_data_analyze
                 )
@@ -433,6 +475,7 @@ DFM_AOG_slave = Slave(
                                     'DFM_AOG_collect_err', 'DFM_AOG_analyze_err'
                                 ]
                                 ),
+                    timeout = 0.1,
                     # comm_func=Modbus.VOID,
                     analyze_func=Modbus.DFM_data_analyze
                     )
@@ -523,6 +566,7 @@ PWM01_slave = Slave(
                                     'PWM01_collect_err', 'PWM01_set_err', 'PWM01_analyze_err'
                                 ]
                                 ),
+                    timeout = 0.1,            
                     comm_func=Modbus.PWM_comm,
                     #analyze_func=Modbus.,
                     )
@@ -542,6 +586,7 @@ PWM02_slave = Slave(
                                     'PWM02_collect_err', 'PWM02_set_err', 'PWM02_analyze_err'
                                 ]
                                 ),
+                    timeout = 0.1,            
                     comm_func=Modbus.PWM_comm,
                     #analyze_func=Modbus.,
                     )
@@ -559,6 +604,7 @@ WatchDog_slave = Slave(
                                 err_topics=[
                                 ]
                                 ),
+                    timeout = 0.1,
                     # comm_func=Modbus.VOID,
                     # analyze_func=Modbus.VOID,
                     )
@@ -570,7 +616,7 @@ LambdaPID_slave = Slave(
                             sub_topics=[
                                 'LambdaPID_Kp', 'LambdaPID_Ki', 'LambdaPID_Kd', 'LambdaPID_MVmin', 'LambdaPID_MVmax',
                                 'LambdaPID_PV', 'LambdaPID_SP', 'LambdaPID_mode', 'LambdaPID_setting', 'LambdaPID_beta',
-                                'LambdaPID_tstep', 'LambdaPID_kick',
+                                'LambdaPID_tstep', 'LambdaPID_kick', 'LambdaPID_woke',
                             ],
                             pub_topics=[
                                 'LambdaPID_MV', 'LambdaPID_P', 'LambdaPID_I', 'LambdaPID_D'
@@ -594,7 +640,7 @@ CurrentPID_slave = Slave(
                             sub_topics=[
                                 'CurrentPID_Kp', 'CurrentPID_Ki', 'CurrentPID_Kd', 'CurrentPID_MVmin', 'CurrentPID_MVmax',
                                 'CurrentPID_PV', 'CurrentPID_SP', 'CurrentPID_mode', 'CurrentPID_setting', 'CurrentPID_beta',
-                                'CurrentPID_tstep', 'CurrentPID_kick',
+                                'CurrentPID_tstep', 'CurrentPID_kick', 'CurrentPID_woke',
                             ],
                             pub_topics=[
                                 'CurrentPID_MV', 'CurrentPID_P', 'CurrentPID_I', 'CurrentPID_D'
@@ -618,7 +664,7 @@ CatBedPID_slave = Slave(
                             sub_topics=[
                                 'CatBedPID_Kp', 'CatBedPID_Ki', 'CatBedPID_Kd', 'CatBedPID_MVmin',  'CatBedPID_MVmax', 
                                 'CatBedPID_PV', 'CatBedPID_SP', 'CatBedPID_mode', 'CatBedPID_setting', 'CatBedPID_beta',
-                                'CatBedPID_tstep', 'CatBedPID_kick'
+                                 'CatBedPID_tstep', 'CatBedPID_kick', 'CatBedPID_woke',
                             ],
                             pub_topics=[
                                 'CatBedPID_MV', 'CatBedPID_P', 'CatBedPID_I', 'CatBedPID_D'
@@ -642,7 +688,7 @@ PCBPID_slave = Slave(
                             sub_topics=[
                                 'PCBPID_Kp', 'PCBPID_Ki', 'PCBPID_Kd', 'PCBPID_MVmin',  'PCBPID_MVmax', 
                                 'PCBPID_PV', 'PCBPID_SP', 'PCBPID_mode', 'PCBPID_setting', 'PCBPID_beta',
-                                'PCBPID_tstep', 'PCBPID_kick'
+                                'PCBPID_tstep', 'PCBPID_kick', 'PCBPID_woke',
                             ],
                             pub_topics=[
                                 'PCBPID_MV', 'PCBPID_P', 'PCBPID_I', 'PCBPID_D'
@@ -666,7 +712,7 @@ PumpPID_slave = Slave(
                             sub_topics=[
                                 'PumpPID_Kp', 'PumpPID_Ki', 'PumpPID_Kd', 'PumpPID_MVmin',  'PumpPID_MVmax', 
                                 'PumpPID_PV', 'PumpPID_SP', 'PumpPID_mode', 'PumpPID_setting', 'PumpPID_beta',
-                                'PumpPID_step', 'PumpPID_kick'
+                                'PumpPID_tstep', 'PumpPID_kick', 'PumpPID_woke',
                             ],
                             pub_topics=[
                                 'PumpPID_MV', 'PumpPID_P', 'PumpPID_I', 'PumpPID_D'
@@ -683,20 +729,67 @@ PumpPID_slave = Slave(
 ## PumpP_PV > PumpP_SP => RF_fuel down => DirectAction=False
 PumpPID_slave.control_constructor()
 
+BurnerPID_slave = Slave(
+                        name='BurnerPID',
+                        idno=burnerPID_id, 
+                        port_topics=port_Topics(
+                            sub_topics=[
+                                # 'BurnerPID_Kp', 'BurnerPID_Ki', 'BurnerPID_Kd', 
+                                'BurnerPID_MVmin', 'BurnerPID_MVmax', 'BurnerPID_PV', 'BurnerPID_SP', 'BurnerPID_mode', 'BurnerPID_setting', 'BurnerPID_woke', 
+                                # 'BurnerPID_beta', 'BurnerPID_tstep', 'BurnerPID_kick'
+                            ],
+                            pub_topics=[
+                                'BurnerPID_MV', 'BurnerPID_P', 'BurnerPID_I', 'BurnerPID_D'
+                            ],
+                            err_topics=[
+                                'BurnerPID_collect_err', 'BurnerPID_set_err', 'BurnerPID_analyze_err'
+                            ]
+                            ),
+                        #comm_func=Modbus.,
+                        #analyze_func=Modbus.,
+                        control_func=Modbus.control_fixed,
+                        )
+# CV_06: burner temperture; MV: PCB SP
+## burner_PV > burner_SP => PCB down => DirectAction=False
+# BurnerPID_slave.control_constructor()
+BurnerPID_slave.control_constructor_fixed(Kp=0.0003, Ki=0.000003, Kd=0.001, beta=0.5, kick=4, tstep=5, MVmax=0.5, MVmin=0.15, SP_range=0, SP_increment=3)
+
+EVAPID_slave = Slave(
+                        name='EVAPID',
+                        idno=evapid_id, 
+                        port_topics=port_Topics(
+                            sub_topics=[
+                                # 'EVAPID_Kp', 'EVAPID_Ki', 'EVAPID_Kd', 
+                                'EVAPID_MVmin',  'EVAPID_MVmax', 'EVAPID_PV', 'EVAPID_SP', 'EVAPID_mode', 'EVAPID_setting', 'EVAPID_woke',
+                                # 'EVAPID_beta', 'EVAPID_tstep', 'EVAPID_kick'
+                            ],
+                            pub_topics=[
+                                'EVAPID_MV', 'EVAPID_P', 'EVAPID_I', 'EVAPID_D'
+                            ],
+                            err_topics=[
+                                'EVAPID_collect_err', 'EVAPID_set_err', 'EVAPID_analyze_err'
+                            ]
+                            ),
+                        #comm_func=Modbus.,
+                        #analyze_func=Modbus.,
+                        control_func=Modbus.control_fixed,
+                        )
+
+EVAPID_slave.control_constructor_fixed(Kp=1, Ki=0.3, Kd=1, beta=1, kick=1, tstep=1, MVmax=100, MVmin=80, SP_range=0, SP_increment=3)
 
 print('Slaves are all set')
 
 #-----Port setting----------------------------------------------------------------
-# MFC_port = device_port(
-#                         Air_MFC_slave,
-#                         H2_MFC_slave,
-#                         name='MFC_port',
-#                         port=serial.Serial(port=MFC_port_path,
-#                                             baudrate=19200, 
-#                                             bytesize=8, 
-#                                             stopbits=1, 
-#                                             parity='N'),
-#                         )
+MFC_port = device_port(
+                        Air_MFC_slave,
+                        # H2_MFC_slave,
+                        name='MFC_port',
+                        port=serial.Serial(port=MFC_port_path,
+                                            baudrate=57600, 
+                                            bytesize=8, 
+                                            stopbits=1, 
+                                            parity='N'),
+                        )
 
 Scale_port = device_port(Scale_slave,
                         name='Scale_port',
@@ -724,9 +817,10 @@ Setup_port = device_port(
                         # ADAM_TC_slave,
                         ADAM_READ_slave,
                         ADAM_SET_slave,
+                        ADAM_TC_02_slave,
                         name='Setup_port',
                         port=serial.Serial(port=Setup_port_path,
-                                            baudrate=9600, 
+                                            baudrate=57600, 
                                             bytesize=8, 
                                             stopbits=1, 
                                             parity='N'),
@@ -749,11 +843,11 @@ WatchDog_port = device_port(WatchDog_slave,
                         )
 
 PID_port = device_port(
-                    # LambdaPID_slave,
-                    # CurrentPID_slave,
-                    # PumpPID_slave,
-                    # PCBPID_slave,
-                    # CatBedPID_slave,
+                    LambdaPID_slave,
+                    CurrentPID_slave,
+                    PumpPID_slave,
+                    PCBPID_slave,
+                    CatBedPID_slave,
                     name='PID_port',
                     port='PID',
                     )

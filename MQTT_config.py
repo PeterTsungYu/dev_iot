@@ -24,7 +24,7 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
         client.subscribe("NodeRed", qos=0)
         # client.subscribe("MFC_Set", qos=0)
         client.subscribe("ADDA_Set", qos=0)
-        # client.subscribe("PID_Set", qos=0)
+        client.subscribe("PID_Set", qos=0)
         client.subscribe("PWM_Set", qos=0)
         client.subscribe("Relay_Set", qos=0)
         #client.subscribe([(u,0) for i in config.lst_ports for u in i.sub_topics])
@@ -62,10 +62,10 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
                 elif (msg.topic == "Relay_Set"):
                     print(f'{hostname} Receive topic: Relay_Set')
                     port = config.GPIO_port        
-                # elif (msg.topic == 'PID_Set'):
-                #     print(f'{hostname} Receive topic: PID_Set')
-                #     # print(msg.payload)
-                #     port = config.PID_port
+                elif (msg.topic == 'PID_Set'):
+                    print(f'{hostname} Receive topic: PID_Set')
+                    # print(msg.payload)
+                    port = config.PID_port
                 for key, value in resp.items():
                     if port.sub_values.get(key) != None:
                         if port.sub_values[key].value != float(value):
@@ -98,7 +98,7 @@ def multi_pub():
     client_mqtt.loop_start()
     while not params.kb_event.is_set():
         # print(time.time())
-        time.sleep(params.comm_time)
+        time.sleep(params.mqtt_comm_time)
         for device_port in config.lst_ports:
             #print(device_port.name)
             for _slave in device_port.slaves:
@@ -118,6 +118,7 @@ def multi_pub():
             client_mqtt.publish(topic='DB_name', payload=config.db_time, qos=0, retain=False)
         elif config.db_connection == False:
             client_mqtt.publish(topic='DB_name', payload='', qos=0, retain=False)
+        print("Successfully MQTT comm")
     client_mqtt.loop_stop()
     client_mqtt.disconnect()
     print("close connection to MQTT broker")
