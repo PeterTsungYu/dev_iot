@@ -397,7 +397,7 @@ ADAM_SET_slave = Slave(
                                     'ADAM_SET_collect_err', 'ADAM_SET_set_err', 'ADAM_SET_analyze_err',
                                 ]
                                 ),
-                        timeout = 0.02,
+                        timeout = 0.018,
                         comm_func=Modbus.Modbus_Comm,
                         analyze_func=Modbus.ADAM_SET_analyze
                     )
@@ -412,13 +412,13 @@ ADAM_READ_slave = Slave(
                         port_topics=port_Topics(
                                 sub_topics=[],
                                 pub_topics=[
-                                     'error_0','SMC_0_PV', 'SMC_1_PV', 'ADAM_READ_PV2', 'ADAM_READ_PV3', 'ADAM_READ_PV4','ADAM_P_BR', 'ADAM_P_EVA', 'ADAM_P_ACC' # ADAM_READ_PV0 (SMC), ADAM_READ_PV1 (SMC), ADAM_READ_PV2, ADAM_READ_PV3, ADAM_READ_PV4(pump), ADAM_READ_PV5(Air_MFC), ADAM_READ_PV6(H2_MFC), ADAM_READ_PV7
+                                    'SMC_0_PV', 'SMC_1_PV', 'ADAM_READ_PV2', 'ADAM_READ_PV3', 'ADAM_READ_PV4','ADAM_P_BR', 'ADAM_P_EVA', 'ADAM_P_ACC' # ADAM_READ_PV0 (SMC), ADAM_READ_PV1 (SMC), ADAM_READ_PV2, ADAM_READ_PV3, ADAM_READ_PV4(pump), ADAM_READ_PV5(Air_MFC), ADAM_READ_PV6(H2_MFC), ADAM_READ_PV7
                                 ],
                                 err_topics=[
                                     'ADAM_READ_collect_err', 'ADAM_READ_analyze_err',
                                 ]
                                 ),
-                        timeout = 0.1,
+                        timeout = 0.018,
                         comm_func=Modbus.Modbus_Comm,
                         analyze_func=Modbus.ADAM_READ_analyze
                         )
@@ -784,10 +784,10 @@ Setup_port = device_port(
                         # Header_EVA_SET_slave,
                         # ADAM_TC_slave,
                         ADAM_READ_slave,
-                        # ADAM_SET_slave,
+                        ADAM_SET_slave,
                         name='Setup_port',
                         port=serial.Serial(port=Setup_port_path,
-                                            baudrate=57600, 
+                                            baudrate=115200, 
                                             bytesize=8, 
                                             stopbits=1, 
                                             parity='N'),
@@ -824,7 +824,7 @@ lst_ports = [
             # Scale_port, 
             # RS232_port, 
             Setup_port,
-            # GPIO_port,
+            GPIO_port,
             # WatchDog_port,
             # PID_port
             ]
