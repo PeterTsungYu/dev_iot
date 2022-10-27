@@ -15,17 +15,17 @@ import params
 
 #------------------------------Logger---------------------------------
 logger = logging.getLogger()
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter(
 	'[%(levelname)s %(asctime)s %(module)s:%(lineno)d] %(message)s',
 	datefmt='%Y%m%d %H:%M:%S')
 
 ch = logging.StreamHandler()
-ch.setLevel(logging.ERROR)
+ch.setLevel(logging.DEBUG)
 ch.setFormatter(formatter)
 
 fh = logging.FileHandler(filename='platform.log', mode='w')
-fh.setLevel(logging.ERROR)
+fh.setLevel(logging.DEBUG)
 fh.setFormatter(formatter)
 
 logger.addHandler(ch)
@@ -214,11 +214,11 @@ def Modbus_Comm(start, device_port, slave):
     try: # try to collect
         recur = False
         collect_err[1] += 1
-        #logging.error(slave.r_rtu)
-        # logging.debug(bytes.fromhex(slave.r_rtu))
+        logging.error(slave.r_rtu)
+        logging.debug(bytes.fromhex(slave.r_rtu))
         port.write(bytes.fromhex(slave.r_rtu)) #hex to binary(byte) 
         time.sleep(slave.timeout)
-        #logging.debug(port.inWaiting())
+        logging.debug(port.inWaiting())
         _data_len = port.inWaiting()
         if _data_len >= slave.r_wait_len: 
             readings = port.read(_data_len).hex() # after reading, the buffer will be clean        

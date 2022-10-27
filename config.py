@@ -58,7 +58,7 @@ GPIO_PWM_2              = 6 #GPIO 6 (PWM1)    # SR
 GPIO_TTL                = 5
 GPIO_MOS                = 21
 #-----Cls----------------------------------------------------------------
-def tohex(value):
+def tohex_pad4(value):
     value = int(value)
     hex_value = hex(value)[2:]
     add_zeros = 4 - len(hex_value)
@@ -255,27 +255,6 @@ ADAM_TC_slave = Slave(
 ADAM_TC_slave.read_rtu('0000', '0008', wait_len=21)
 ADAM_TC_slave.w_wait_len = 8
 
-
-ADAM_TC_02_slave = Slave(
-                    name = 'ADAM_TC_02',
-                    idno=ADAM_TC_02_id,
-                    port_topics=port_Topics(sub_topics=[
-                                            ],
-                                            pub_topics=[
-                                                'EVA_out', 'EVA_inside', 'TC_02_2', 'TC_02_3',
-                                                'TC_02_4', 'TC_02_5', 'TC_02_6', 'TC_02_7', 
-                                            ],
-                                            err_topics=[
-                                                'ADAM_TC_02_collect_err', 'ADAM_TC_02_analyze_err',
-                                            ]
-                                            ),
-                    timeout = 0.02,
-                    comm_func=Modbus.Modbus_Comm,
-                    analyze_func=Modbus.ADAM_TC_analyze
-                    )
-ADAM_TC_02_slave.read_rtu('0000', '0008', wait_len=21)
-ADAM_TC_02_slave.w_wait_len = 8
-
 # GA slave
 GA_slave = Slave(
                 name = 'GA',
@@ -439,7 +418,7 @@ ADAM_READ_slave = Slave(
                                     'ADAM_READ_collect_err', 'ADAM_READ_analyze_err',
                                 ]
                                 ),
-                        timeout = 0.02,
+                        timeout = 0.1,
                         comm_func=Modbus.Modbus_Comm,
                         analyze_func=Modbus.ADAM_READ_analyze
                         )
@@ -780,17 +759,6 @@ EVAPID_slave.control_constructor_fixed(Kp=1, Ki=0.3, Kd=1, beta=1, kick=1, tstep
 print('Slaves are all set')
 
 #-----Port setting----------------------------------------------------------------
-MFC_port = device_port(
-                        Air_MFC_slave,
-                        # H2_MFC_slave,
-                        name='MFC_port',
-                        port=serial.Serial(port=MFC_port_path,
-                                            baudrate=57600, 
-                                            bytesize=8, 
-                                            stopbits=1, 
-                                            parity='N'),
-                        )
-
 Scale_port = device_port(Scale_slave,
                         name='Scale_port',
                         port=serial.Serial(port=Scale_port_path,
@@ -816,8 +784,7 @@ Setup_port = device_port(
                         # Header_EVA_SET_slave,
                         # ADAM_TC_slave,
                         ADAM_READ_slave,
-                        ADAM_SET_slave,
-                        ADAM_TC_02_slave,
+                        # ADAM_SET_slave,
                         name='Setup_port',
                         port=serial.Serial(port=Setup_port_path,
                                             baudrate=57600, 
@@ -854,10 +821,10 @@ PID_port = device_port(
 
 lst_ports = [
             # MFC_port,
-            Scale_port, 
+            # Scale_port, 
             # RS232_port, 
             Setup_port,
-            GPIO_port,
+            # GPIO_port,
             # WatchDog_port,
             # PID_port
             ]
