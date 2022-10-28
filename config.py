@@ -234,150 +234,150 @@ class Slave: # Create Slave data store
 #-------------------------RTU & Slave--------------------------------------
 # ADAM_TC
 # RTU func code 03, PV value site starts at '0000', data_len is 8 ('0008')
-ADAM_TC_slave = Slave(
-                    name = 'ADAM_TC',
-                    idno=ADAM_TC_id,
-                    port_topics=port_Topics(sub_topics=[
-                                            ],
-                                            pub_topics=[
-                                                'BR', 'SR_front', 'SR_mid', 'SR_end', 
-                                                'flue_gas', 'RAD_in', 'RAD_out', 'TC_7'
-                                                'BN_rate', 'SR_rate',
-                                            ],
-                                            err_topics=[
-                                                'ADAM_TC_collect_err', 'ADAM_TC_analyze_err',
-                                            ]
-                                            ),
-                    timeout = 0.02,
-                    comm_func=Modbus.Modbus_Comm,
-                    analyze_func=Modbus.ADAM_TC_analyze
-                    )
-ADAM_TC_slave.read_rtu('0000', '0008', wait_len=21)
-ADAM_TC_slave.w_wait_len = 8
+# ADAM_TC_slave = Slave(
+#                     name = 'ADAM_TC',
+#                     idno=ADAM_TC_id,
+#                     port_topics=port_Topics(sub_topics=[
+#                                             ],
+#                                             pub_topics=[
+#                                                 'BR', 'SR_front', 'SR_mid', 'SR_end', 
+#                                                 'flue_gas', 'RAD_in', 'RAD_out', 'TC_7'
+#                                                 'BN_rate', 'SR_rate',
+#                                             ],
+#                                             err_topics=[
+#                                                 'ADAM_TC_collect_err', 'ADAM_TC_analyze_err',
+#                                             ]
+#                                             ),
+#                     timeout = 0.02,
+#                     comm_func=Modbus.Modbus_Comm,
+#                     analyze_func=Modbus.ADAM_TC_analyze
+#                     )
+# ADAM_TC_slave.read_rtu('0000', '0008', wait_len=21)
+# ADAM_TC_slave.w_wait_len = 8
 
-# GA slave
-GA_slave = Slave(
-                name = 'GA',
-                idno=GA_id,
-                port_topics=port_Topics(sub_topics=[],
-                                        pub_topics=[
-                                            'GA_CO', 'GA_CO2', 'GA_CH4',
-                                            'GA_H2', 'GA_N2', 'GA_HEAT',
-                                            'H2','CO2','CO','MeOH','H2O'
-                                        ],
-                                        err_topics=[
-                                            'GA_collect_err', 'GA_analyze_err',
-                                        ]
-                                        ),
-                timeout = 0.1,
-                comm_func=Modbus.Modbus_Comm,
-                analyze_func=Modbus.GA_data_analyze
-                )
-GA_slave.read_rtu('11 01 60 8E', wait_len=31)
+# # GA slave
+# GA_slave = Slave(
+#                 name = 'GA',
+#                 idno=GA_id,
+#                 port_topics=port_Topics(sub_topics=[],
+#                                         pub_topics=[
+#                                             'GA_CO', 'GA_CO2', 'GA_CH4',
+#                                             'GA_H2', 'GA_N2', 'GA_HEAT',
+#                                             'H2','CO2','CO','MeOH','H2O'
+#                                         ],
+#                                         err_topics=[
+#                                             'GA_collect_err', 'GA_analyze_err',
+#                                         ]
+#                                         ),
+#                 timeout = 0.1,
+#                 comm_func=Modbus.Modbus_Comm,
+#                 analyze_func=Modbus.GA_data_analyze
+#                 )
+# GA_slave.read_rtu('11 01 60 8E', wait_len=31)
 
 # Scale slave
-Scale_slave = Slave(
-                    name = 'Scale',
-                    idno=Scale_id,
-                    port_topics=port_Topics(sub_topics=[],
-                                            pub_topics=[
-                                                '10_Scale', '60_Scale'
-                                            ],
-                                            err_topics=[
-                                                'Scale_collect_err', 'Scale_analyze_err',
-                                            ]
-                                            ),
-                    timeout = 0.1,
-                    comm_func=Modbus.Scale_data_collect,
-                    analyze_func=Modbus.Scale_data_analyze
-                    )
-Scale_slave.read_rtu(wait_len=0)
+# Scale_slave = Slave(
+#                     name = 'Scale',
+#                     idno=Scale_id,
+#                     port_topics=port_Topics(sub_topics=[],
+#                                             pub_topics=[
+#                                                 '10_Scale', '60_Scale'
+#                                             ],
+#                                             err_topics=[
+#                                                 'Scale_collect_err', 'Scale_analyze_err',
+#                                             ]
+#                                             ),
+#                     timeout = 0.1,
+#                     comm_func=Modbus.Scale_data_collect,
+#                     analyze_func=Modbus.Scale_data_analyze
+#                     )
+# Scale_slave.read_rtu(wait_len=0)
 
-# TCHeader Rreading, RTU func code 03, PV value site at '008A', data_len is 1 ('0001')
-# TCHeader Writing, RTU func code 06, SV value site at '0000'
-# r_wait_len=7,
-# w_wait_len=8,
-Header_EVA_slave = Slave(
-                        name = 'Header_EVA',
-                        idno=Header_EVA_id,
-                        port_topics=port_Topics(
-                                sub_topics=[
-                                ],
-                                pub_topics=[
-                                    'Header_EVA_PV', # Header EVA(Header_EVA_PV)
-                                ],
-                                err_topics=[
-                                    'Header_EVA_collect_err', 'Header_EVA_set_err', 'Header_EVA_analyze_err',
-                                ]
-                                ),
-                        timeout = 0.02,
-                        comm_func=Modbus.Modbus_Comm,
-                        analyze_func=Modbus.TCHeader_analyze
-                        )
-Header_EVA_slave.read_rtu('008A', '0001', wait_len=7)
-Header_EVA_slave.w_wait_len = 8
+# # TCHeader Rreading, RTU func code 03, PV value site at '008A', data_len is 1 ('0001')
+# # TCHeader Writing, RTU func code 06, SV value site at '0000'
+# # r_wait_len=7,
+# # w_wait_len=8,
+# Header_EVA_slave = Slave(
+#                         name = 'Header_EVA',
+#                         idno=Header_EVA_id,
+#                         port_topics=port_Topics(
+#                                 sub_topics=[
+#                                 ],
+#                                 pub_topics=[
+#                                     'Header_EVA_PV', # Header EVA(Header_EVA_PV)
+#                                 ],
+#                                 err_topics=[
+#                                     'Header_EVA_collect_err', 'Header_EVA_set_err', 'Header_EVA_analyze_err',
+#                                 ]
+#                                 ),
+#                         timeout = 0.02,
+#                         comm_func=Modbus.Modbus_Comm,
+#                         analyze_func=Modbus.TCHeader_analyze
+#                         )
+# Header_EVA_slave.read_rtu('008A', '0001', wait_len=7)
+# Header_EVA_slave.w_wait_len = 8
 
-Header_EVA_SET_slave = Slave(
-                        name = 'Header_EVA_SET',
-                        idno=Header_EVA_id,
-                        port_topics=port_Topics(
-                                sub_topics=[
-                                    'Header_EVA_SV', 
-                                ],
-                                pub_topics=[
-                                    'Header_EVA_SET_PV'
-                                ],
-                                err_topics=[
-                                    'Header_EVA_SET_collect_err', 'Header_EVA_SET_set_err', 'Header_EVA_SET_analyze_err',
-                                ]
-                                ),
-                        timeout = 0.02,
-                        comm_func=Modbus.Modbus_Comm,
-                        analyze_func=Modbus.TCHeader_analyze
-                        )
-Header_EVA_SET_slave.read_rtu('0000', '0001', wait_len=7)
-Header_EVA_SET_slave.w_wait_len = 8
+# Header_EVA_SET_slave = Slave(
+#                         name = 'Header_EVA_SET',
+#                         idno=Header_EVA_id,
+#                         port_topics=port_Topics(
+#                                 sub_topics=[
+#                                     'Header_EVA_SV', 
+#                                 ],
+#                                 pub_topics=[
+#                                     'Header_EVA_SET_PV'
+#                                 ],
+#                                 err_topics=[
+#                                     'Header_EVA_SET_collect_err', 'Header_EVA_SET_set_err', 'Header_EVA_SET_analyze_err',
+#                                 ]
+#                                 ),
+#                         timeout = 0.02,
+#                         comm_func=Modbus.Modbus_Comm,
+#                         analyze_func=Modbus.TCHeader_analyze
+#                         )
+# Header_EVA_SET_slave.read_rtu('0000', '0001', wait_len=7)
+# Header_EVA_SET_slave.w_wait_len = 8
 
-Header_BR_slave = Slave(
-                        name='Header_BR',
-                        idno=Header_BR_id, 
-                        port_topics=port_Topics(
-                                sub_topics=[
-                                ],
-                                pub_topics=[
-                                    'Header_BR_PV', # Header BR(Header_BR_PV)
-                                ],
-                                err_topics=[
-                                    'Header_BR_collect_err', 'Header_BR_set_err', 'Header_BR_analyze_err',
-                                ]
-                                ),
-                        timeout = 0.02,
-                        comm_func=Modbus.Modbus_Comm,
-                        analyze_func=Modbus.TCHeader_analyze
-                        )
-Header_BR_slave.read_rtu('008A', '0001', wait_len=7)
-Header_BR_slave.w_wait_len = 8
+# Header_BR_slave = Slave(
+#                         name='Header_BR',
+#                         idno=Header_BR_id, 
+#                         port_topics=port_Topics(
+#                                 sub_topics=[
+#                                 ],
+#                                 pub_topics=[
+#                                     'Header_BR_PV', # Header BR(Header_BR_PV)
+#                                 ],
+#                                 err_topics=[
+#                                     'Header_BR_collect_err', 'Header_BR_set_err', 'Header_BR_analyze_err',
+#                                 ]
+#                                 ),
+#                         timeout = 0.02,
+#                         comm_func=Modbus.Modbus_Comm,
+#                         analyze_func=Modbus.TCHeader_analyze
+#                         )
+# Header_BR_slave.read_rtu('008A', '0001', wait_len=7)
+# Header_BR_slave.w_wait_len = 8
 
-Header_BR_SET_slave = Slave(
-                        name='Header_BR_SET',
-                        idno=Header_BR_id, 
-                        port_topics=port_Topics(
-                                sub_topics=[
-                                    'Header_BR_SV', # Header BR(Header_BR_SV)
-                                ],
-                                pub_topics=[
-                                    'Header_BR_SET_PV' # Header BR(Header_BR_PV)
-                                ],
-                                err_topics=[
-                                    'Header_BR_SET_collect_err', 'Header_BR_SET_set_err', 'Header_BR_SET_analyze_err',
-                                ]
-                                ),
-                        timeout = 0.02,
-                        comm_func=Modbus.Modbus_Comm,
-                        analyze_func=Modbus.TCHeader_analyze
-                        )
-Header_BR_SET_slave.read_rtu('0000', '0001', wait_len=7)
-Header_BR_SET_slave.w_wait_len = 8
+# Header_BR_SET_slave = Slave(
+#                         name='Header_BR_SET',
+#                         idno=Header_BR_id, 
+#                         port_topics=port_Topics(
+#                                 sub_topics=[
+#                                     'Header_BR_SV', # Header BR(Header_BR_SV)
+#                                 ],
+#                                 pub_topics=[
+#                                     'Header_BR_SET_PV' # Header BR(Header_BR_PV)
+#                                 ],
+#                                 err_topics=[
+#                                     'Header_BR_SET_collect_err', 'Header_BR_SET_set_err', 'Header_BR_SET_analyze_err',
+#                                 ]
+#                                 ),
+#                         timeout = 0.02,
+#                         comm_func=Modbus.Modbus_Comm,
+#                         analyze_func=Modbus.TCHeader_analyze
+#                         )
+# Header_BR_SET_slave.read_rtu('0000', '0001', wait_len=7)
+# Header_BR_SET_slave.w_wait_len = 8
 
 # ADAM_SET_slave, RTU func code 03, channel site at '0000-0003', data_len is 4 ('0004')
 ## ch00:+-10V, ch01:0-5V, ch02:0-5V, ch03:0-5V
@@ -397,7 +397,7 @@ ADAM_SET_slave = Slave(
                                     'ADAM_SET_collect_err', 'ADAM_SET_set_err', 'ADAM_SET_analyze_err',
                                 ]
                                 ),
-                        timeout = 0.018,
+                        timeout = 0.01,
                         comm_func=Modbus.Modbus_Comm,
                         analyze_func=Modbus.ADAM_SET_analyze
                     )
@@ -418,46 +418,46 @@ ADAM_READ_slave = Slave(
                                     'ADAM_READ_collect_err', 'ADAM_READ_analyze_err',
                                 ]
                                 ),
-                        timeout = 0.018,
+                        timeout = 0.01,
                         comm_func=Modbus.Modbus_Comm,
                         analyze_func=Modbus.ADAM_READ_analyze
                         )
 ADAM_READ_slave.read_rtu('0000', '0008', wait_len=21)
 
 # DFMs' slaves
-DFM_slave = Slave(
-                name='DFM',
-                idno=DFM_id,
-                port_topics=port_Topics(
-                                sub_topics=['DFM_RichGas_1min','current','Convertion'],
-                                pub_topics=[
-                                    '10_DFM_RichGas', '60_DFM_RichGas',
-                                ],
-                                err_topics=[
-                                    'DFM_collect_err', 'DFM_analyze_err', 
-                                ]
-                                ),
-                timeout = 0.1,
-                # comm_func=Modbus.VOID,
-                analyze_func=Modbus.DFM_data_analyze
-                )
+# DFM_slave = Slave(
+#                 name='DFM',
+#                 idno=DFM_id,
+#                 port_topics=port_Topics(
+#                                 sub_topics=['DFM_RichGas_1min','current','Convertion'],
+#                                 pub_topics=[
+#                                     '10_DFM_RichGas', '60_DFM_RichGas',
+#                                 ],
+#                                 err_topics=[
+#                                     'DFM_collect_err', 'DFM_analyze_err', 
+#                                 ]
+#                                 ),
+#                 timeout = 0.1,
+#                 # comm_func=Modbus.VOID,
+#                 analyze_func=Modbus.DFM_data_analyze
+#                 )
 
-DFM_AOG_slave = Slave(
-                    name='DFM_AOG',
-                    idno=DFM_AOG_id, 
-                    port_topics=port_Topics(
-                                sub_topics=['DFM_AOG_1min','Ratio'],
-                                pub_topics=[
-                                    '10_DFM_AOG', '60_DFM_AOG',
-                                ],
-                                err_topics=[
-                                    'DFM_AOG_collect_err', 'DFM_AOG_analyze_err'
-                                ]
-                                ),
-                    timeout = 0.1,
-                    # comm_func=Modbus.VOID,
-                    analyze_func=Modbus.DFM_data_analyze
-                    )
+# DFM_AOG_slave = Slave(
+#                     name='DFM_AOG',
+#                     idno=DFM_AOG_id, 
+#                     port_topics=port_Topics(
+#                                 sub_topics=['DFM_AOG_1min','Ratio'],
+#                                 pub_topics=[
+#                                     '10_DFM_AOG', '60_DFM_AOG',
+#                                 ],
+#                                 err_topics=[
+#                                     'DFM_AOG_collect_err', 'DFM_AOG_analyze_err'
+#                                 ]
+#                                 ),
+#                     timeout = 0.1,
+#                     # comm_func=Modbus.VOID,
+#                     analyze_func=Modbus.DFM_data_analyze
+#                     )
 
 # Air_MFC_slave = Slave(
 #                     name='Air_MFC',
@@ -759,14 +759,14 @@ EVAPID_slave.control_constructor_fixed(Kp=1, Ki=0.3, Kd=1, beta=1, kick=1, tstep
 print('Slaves are all set')
 
 #-----Port setting----------------------------------------------------------------
-Scale_port = device_port(Scale_slave,
-                        name='Scale_port',
-                        port=serial.Serial(port=Scale_port_path,
-                                            baudrate=9600, 
-                                            bytesize=8, 
-                                            stopbits=1, 
-                                            parity='N'),
-                        )
+# Scale_port = device_port(Scale_slave,
+#                         name='Scale_port',
+#                         port=serial.Serial(port=Scale_port_path,
+#                                             baudrate=9600, 
+#                                             bytesize=8, 
+#                                             stopbits=1, 
+#                                             parity='N'),
+#                         )
 
 # RS232_port = device_port(GA_slave,
 #                         name='RS232_port',
