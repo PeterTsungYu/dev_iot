@@ -46,6 +46,7 @@ pumppid_id    = '16'
 GA_id         = '17' # ReformerTP GA for monitoring gas conc. @ RS232_port_path
 burnerPID_id  = '18'
 evapid_id     = '19'
+BRnozzlePID_id = '20'
 #-----GPIO port setting----------------------------------------------------------------
 ## DFM
 # read High as 3.3V
@@ -276,22 +277,22 @@ class Slave: # Create Slave data store
 # GA_slave.read_rtu('11 01 60 8E', wait_len=31)
 
 # Scale slave
-# Scale_slave = Slave(
-#                     name = 'Scale',
-#                     idno=Scale_id,
-#                     port_topics=port_Topics(sub_topics=[],
-#                                             pub_topics=[
-#                                                 '10_Scale', '60_Scale'
-#                                             ],
-#                                             err_topics=[
-#                                                 'Scale_collect_err', 'Scale_analyze_err',
-#                                             ]
-#                                             ),
-#                     timeout = 0.1,
-#                     comm_func=Modbus.Scale_data_collect,
-#                     analyze_func=Modbus.Scale_data_analyze
-#                     )
-# Scale_slave.read_rtu(wait_len=0)
+Scale_slave = Slave(
+                    name = 'Scale',
+                    idno=Scale_id,
+                    port_topics=port_Topics(sub_topics=[],
+                                            pub_topics=[
+                                                '10_Scale', '60_Scale'
+                                            ],
+                                            err_topics=[
+                                                'Scale_collect_err', 'Scale_analyze_err',
+                                            ]
+                                            ),
+                    timeout = 1,
+                    comm_func=Modbus.Scale_data_collect,
+                    analyze_func=Modbus.Scale_data_analyze
+                    )
+Scale_slave.read_rtu(wait_len=0)
 
 # # TCHeader Rreading, RTU func code 03, PV value site at '008A', data_len is 1 ('0001')
 # # TCHeader Writing, RTU func code 06, SV value site at '0000'
@@ -756,17 +757,42 @@ EVAPID_slave = Slave(
 
 EVAPID_slave.control_constructor_fixed(Kp=1, Ki=0.3, Kd=1, beta=1, kick=1, tstep=1, MVmax=100, MVmin=80, SP_range=0, SP_increment=3)
 
+BRnozzlePID_slave = Slave(
+                        name='BRnozzlePID',
+                        idno=BRnozzlePID_id, 
+                        port_topics=port_Topics(
+                            sub_topics=[
+                                'BRnozzlePID_Kp', 'BRnozzlePID_Ki', 'BRnozzlePID_Kd', 
+                                'BRnozzlePID_MVmin', 'BRnozzlePID_MVmax', 'BRnozzlePID_PV', 'BRnozzlePID_SP', 'BRnozzlePID_mode', 'BRnozzlePID_setting', 'BRnozzlePID_woke', 'BRnozzlePID_SP_range','BRnozzlePID_SP_increment'
+                                'BRnozzlePID_beta', 'BRnozzlePID_tstep', 'BRnozzlePID_kick','BRnozzlePID_gamma'
+                            ],
+                            pub_topics=[
+                                'BRnozzlePID_MV', 'BRnozzlePID_P', 'BRnozzlePID_I', 'BRnozzlePID_D'
+                            ],
+                            err_topics=[
+                                'BRnozzlePID_collect_err', 'BRnozzlePID_set_err', 'BRnozzlePID_analyze_err'
+                            ]
+                            ),
+                        #comm_func=Modbus.,
+                        #analyze_func=Modbus.,
+                        control_func=Modbus.control,
+                        )
+# CV_06: burner temperture; MV: PCB SP
+## burner_PV > burner_SP => PCB down => DirectAction=False
+BRnozzlePID_slave.control_constructor()
+# BRnozzlePID_slave.control_constructor_fixed(Kp=0.0003, Ki=0.000003, Kd=0.001, beta=0.5, kick=4, tstep=5, MVmax=0.5, MVmin=0.15, SP_range=0, SP_increment=3)
+
 print('Slaves are all set')
 
 #-----Port setting----------------------------------------------------------------
-# Scale_port = device_port(Scale_slave,
-#                         name='Scale_port',
-#                         port=serial.Serial(port=Scale_port_path,
-#                                             baudrate=9600, 
-#                                             bytesize=8, 
-#                                             stopbits=1, 
-#                                             parity='N'),
-#                         )
+Scale_port = device_port(Scale_slave,
+                        name='Scale_port',
+                        port=serial.Serial(port=Scale_port_path,
+                                            baudrate=9600, 
+                                            bytesize=8, 
+                                            stopbits=1, 
+                                            parity='N'),
+                        )
 
 # RS232_port = device_port(GA_slave,
 #                         name='RS232_port',
@@ -810,21 +836,22 @@ WatchDog_port = device_port(WatchDog_slave,
                         )
 
 PID_port = device_port(
-                    LambdaPID_slave,
-                    CurrentPID_slave,
-                    PumpPID_slave,
-                    PCBPID_slave,
-                    CatBedPID_slave,
+                    # LambdaPID_slave,
+                    # CurrentPID_slave,
+                    # PumpPID_slave,
+                    # PCBPID_slave,
+                    # CatBedPID_slave,
+                    BRnozzlePID_slave,
                     name='PID_port',
                     port='PID',
                     )
 
 lst_ports = [
             # MFC_port,
-            # Scale_port, 
+            Scale_port, 
             # RS232_port, 
-            Setup_port,
-            GPIO_port,
+            # Setup_port,
+            # GPIO_port,
             # WatchDog_port,
             # PID_port
             ]

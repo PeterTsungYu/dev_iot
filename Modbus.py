@@ -15,17 +15,17 @@ import params
 
 #------------------------------Logger---------------------------------
 logger = logging.getLogger()
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter(
 	'[%(levelname)s %(asctime)s %(module)s:%(lineno)d] %(message)s',
 	datefmt='%Y%m%d %H:%M:%S')
 
 ch = logging.StreamHandler()
-ch.setLevel(logging.ERROR)
+ch.setLevel(logging.DEBUG)
 ch.setFormatter(formatter)
 
 fh = logging.FileHandler(filename='platform.log', mode='w')
-fh.setLevel(logging.ERROR)
+fh.setLevel(logging.DEBUG)
 fh.setFormatter(formatter)
 
 logger.addHandler(ch)
@@ -58,9 +58,12 @@ def analyze_decker(func):
         analyze_err = device_port.err_values[f'{slave.name}_analyze_err']
         slave.lst_readings.put(None)
         slave.time_readings.put(None)
+        # print(iter(slave.lst_readings.get, None))
         _lst_readings = list(iter(slave.lst_readings.get, None))
         _time_readings = list(iter(slave.time_readings.get, None))
         if slave.name in ['Scale']:
+            # print(_lst_readings)
+            # print(_time_readings)
             _size_lst = slave.size_lst_readings
             _size_time = slave.size_time_readings
             _size_lst['short_lst_readings'].append(_lst_readings)
@@ -153,7 +156,8 @@ def Scale_data_collect(start, device_port, slave):
             readings = port.read(port.inWaiting()).decode('utf-8')
             readings = [float(s) if s[0] != '-' else -float(s[1:]) for s in re.findall(r'[ \-][ .\d]{7}', readings)]
             slave.time_readings.put(time.time()-start)
-            slave.lst_readings.put(readings)
+            for i in readings:
+                slave.lst_readings.put(i)
             collect_err[2] += 1
             logging.debug(f'Read {readings} from slave_{slave.name}')
             port.reset_input_buffer() # reset the buffer after each reading process
@@ -650,6 +654,7 @@ def Scale_data_analyze(start, device_port, slave, **kwargs):
     for i in range(0, len(_lst_readings['short_lst_readings'])):
         _10_scale_lst.extend(_lst_readings['short_lst_readings'][i])
         _10_scale_time.extend(_time_readings['short_time_readings'][i])
+    # print(_10_scale_lst)
     for i in _10_scale_lst: 
         if -0.00001 < i < 0.00001:
             _10_scale_lst.remove(i)
