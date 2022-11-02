@@ -2,7 +2,6 @@
 
 #python packages
 import paho.mqtt.client as mqtt
-# import threading
 import multiprocessing
 import json
 import time
@@ -25,15 +24,11 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
         else:
             print(f"Failed to connect, return code %d\n", rc)
         
-        # Subscribing in on_connect() means that if we lose the connection and
-        # reconnect then subscriptions will be renewed.
         client.subscribe("Set_bit", qos=0)
         client.subscribe("NodeRed", qos=0)
         client.subscribe("MFC_Set", qos=0)
         client.subscribe("PID_Set", qos=0)
         client.subscribe("PWM_Set", qos=0)
-        #client.subscribe([(u,0) for i in config.lst_ports for u in i.sub_topics])
-        #client.subscribe([("Header_EVA_SV", 0), ("Header_BR_SV", 0)])
 
     # The callback for when a SUB message is received
     def on_message(client, userdata, msg):
@@ -49,10 +44,8 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
                             config.NodeRed[k] = v
                     else:
                         config.NodeRed[key] = value
-
                 # print(config.NodeRed)
             else:
-                # print(resp)
                 port = None
                 if (msg.topic == 'Set_bit'):
                     print(f'{hostname} Receive topic: Set_bit')
@@ -67,7 +60,6 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
                     port = config.GPIO_port
                 elif (msg.topic == 'PID_Set'):
                     print(f'{hostname} Receive topic: PID_Set')
-                    # print(resp)
                     if config.port_path_dict.get('PID_port'):
                         port = config.PID_port
                 if port:
@@ -83,10 +75,7 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
         print(mid)
 
     client = mqtt.Client(client_id=client_id, clean_session=True)
-    # client.username_pw_set(username, password)
     client.on_connect = on_connect
-    #client.subscribe([(u,0) for i in config.lst_ports for u in i.sub_topics])
-    #client.on_publish = on_publish
     client.on_message = on_message
     client.connect_async(hostname, port, keepalive)
     return client
@@ -96,20 +85,14 @@ def multi_pub():
     client_mqtt = connect_mqtt(client_id='client_mqtt' ,hostname='localhost', port=1883, keepalive=60,) 
     client_mqtt.loop_start()
     while not params.kb_event.is_set():
-        # if not params.ticker.wait(params.sample_time):
         time.sleep(params.comm_time)
         for device_port in config.lst_ports:
-            #print(device_port.name)
             for _slave in device_port.slaves:
                 payload = {}
-                #print(_slave.name)
                 for _topic in _slave.port_topics.pub_topics:
                     payload[_topic] = device_port.pub_values[_topic].value
                 payload = json.dumps(payload)
-                # print(f'pub_{payload}')
                 client_mqtt.publish(topic=_slave.name, payload=payload, qos=0, retain=False)
-                    #print(f"pub {_slave.name}:{payload} succeed from {client._client_id} >>> localhost")
-            # client.publish(topic='DFM_total', payload=config.GPIO_port.pub_values['DFM_RichGas'] + config.GPIO_port.pub_values['DFM_AOG'], qos=0, retain=False)
         if config.db_table == True:
             client_mqtt.publish(topic='DB_name', payload=config.db_time, qos=0, retain=False)
         elif config.db_table == False:
@@ -125,4 +108,3 @@ multi_pub_process = multiprocessing.Process(
     target=multi_pub,
     args=(),
     )
-# multi_pub.start()

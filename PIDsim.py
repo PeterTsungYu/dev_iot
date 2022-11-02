@@ -106,13 +106,9 @@ class PID:
     @DirectAction.setter
     def DirectAction(self,DirectAction):
         if DirectAction:
-            # self._DirectAction = True
-            # self._action = +1.0
             self._DirectAction = multiprocessing.Value('i', 1)
             self._action = multiprocessing.Value('i', 1)
         else:
-            # self._DirectAction = False
-            # self._action = -1.0
             self._DirectAction = multiprocessing.Value('i', 0)
             self._action = multiprocessing.Value('i', -1)
 
@@ -330,8 +326,8 @@ class PID:
         self.tstep = tstep
         self.PV = PV
         self.MV = MV
+        # Setpoint tracking
         if self.mode == 0:
-            # Setpoint tracking
             self.SP_stepping = PV
         self.errorP1 = self.errorP0
         self.errorP0 = self.beta*self.SP_stepping - self.PV # setpoint weighting

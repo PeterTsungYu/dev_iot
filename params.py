@@ -5,19 +5,15 @@ import signal
 #-------------------------Global var--------------------------------------
 time_out          = 0.1 # for collecting data
 sample_time       = 0.3 # for analyzing data
-# sample_time_DFM   = 1
 comm_time         = 1
 recur_try         = 1
 exempt_try        = 30
 exempt_threshold  = 10
 
-# count down events
-# ticker = threading.Event() # for analyzing data
 manager = multiprocessing.Manager()
 
 #-----------------Interrupt events------------------------------
 # Keyboard interrupt event to kill all the threads (Ctr + C)
-# kb_event = threading.Event()
 kb_event = multiprocessing.Event()
 def signal_handler(signum, frame):
     kb_event.clear()
