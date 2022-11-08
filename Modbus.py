@@ -761,7 +761,6 @@ def Percentage_calc(nodered):
         if i not in nodered.keys():
             per = (0,0,0,0,0)
             return per
-    print('here')
     Scale = nodered.get('60_Scale')
     DFM = nodered.get('DFM_RichGas_1min') + nodered.get('DFM_AOG_1min')
     GA_H2 = nodered.get('GA_H2')
@@ -779,9 +778,10 @@ def Percentage_calc(nodered):
     CO = GA_CO * DFM * P / 0.082 / T / 100
     CO2 = GA_CO2 * DFM * P / 0.082 / T / 100
     total = MeOH + H2O + H2 + CO + CO2
-    
-    # per = (MeOH / total, H2O / total, H2 / total, CO / total, CO2 / total)
-    per = {}
+    if total == 0:
+        per = (0,0,0,0,0)
+    else:    
+        per = (MeOH / total, H2O / total, H2 / total, CO / total, CO2 / total)
     return per
 
 def Current_calc(nodered):
