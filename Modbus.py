@@ -647,9 +647,9 @@ def control(device_port, slave):
     SP_range = _sub_values.get(f'{slave.name}_SP_range').value
     SP_increment = _sub_values.get(f'{slave.name}_SP_increment').value
 
-    if _sub_values.get(f'{slave.name}_SP_range') is None:
+    if SP_range is None:
         SP_range = 0
-    if _sub_values.get(f'{slave.name}_SP_increment') is None:
+    if SP_increment is None or SP_increment == 0:
         SP_increment = 3
     if kick is None or kick == 0:
         kick = 1
@@ -727,3 +727,70 @@ def control_fixed(device_port, slave):
         if device_port.sub_events[f'{slave.name}_woke'].is_set():
             device_port.sub_events[f'{slave.name}_woke'].clear()
             break
+
+#----------------------------------Theoretical calculation---------------------------------
+@kb_event
+def Theoretical(device_port, slave, nodered):
+    device_port.pub_values['Convertion_py'].value = Convertion_calc(nodered)
+    device_port.pub_values['Current_py'].value = Current_calc(nodered)
+    device_port.pub_values['Percentage_of_MeOH'].value = Percentage_calc(nodered)[0]
+    device_port.pub_values['Percentage_of_H2O'].value = Percentage_calc(nodered)[1]
+    device_port.pub_values['Percentage_of_H2'].value = Percentage_calc(nodered)[2]
+    device_port.pub_values['Percentage_of_CO'].value = Percentage_calc(nodered)[3]
+    device_port.pub_values['Percentage_of_CO2'].value = Percentage_calc(nodered)[4]
+
+    time.sleep(1)
+
+def Convertion_calc(nodered):
+    for i in ['60_Scale', 'DFM_RichGas_1min', 'DFM_AOG_1min', 'GA_H2', 'RAD_Out', 'ADAM_P_Out']:
+        if i not in nodered.keys():
+            return 0
+    Scale = nodered.get('60_Scale')
+    DFM = nodered.get('DFM_RichGas_1min') + nodered.get('DFM_AOG_1min')
+    H2 = nodered.get('GA_H2')
+    T = nodered.get('RAD_Out') + 273
+    P = nodered.get('ADAM_P_Out') / 1.01325 + 1
+    if Scale == 0 or DFM == 0 or H2 == 0:
+        conver = 0
+    else:
+        conver = ((H2 / 100) * DFM * P / 0.082 / T) / ((Scale * 0.543 / 32) * 0.99 * 2.97) * 100
+    return conver
+
+def Percentage_calc(nodered):
+    for i in ['60_Scale', 'DFM_RichGas_1min', 'DFM_AOG_1min', 'GA_H2', 'GA_CO', 'GA_CO2', 'RAD_Out', 'ADAM_P_Out', 'Convertion']:
+        if i not in nodered.keys():
+            per = (0,0,0,0,0)
+            return per
+    print('here')
+    Scale = nodered.get('60_Scale')
+    DFM = nodered.get('DFM_RichGas_1min') + nodered.get('DFM_AOG_1min')
+    GA_H2 = nodered.get('GA_H2')
+    GA_CO = nodered.get('GA_CO')
+    GA_CO2 = nodered.get('GA_CO2')
+    T = nodered.get('RAD_Out') + 273
+    P = nodered.get('ADAM_P_Out') / 1.01325 + 1
+    Convertion = nodered.get('Convertion')
+    if Convertion > 100:
+        Convertion = 100
+
+    MeOH = Scale * 0.543 / 32 * (100 - Convertion)
+    H2O = Scale * (1 - 0.543) / 18 - Scale * 0.543 / 32 * Convertion / 100
+    H2 = GA_H2 * DFM * P / 0.082 / T / 100
+    CO = GA_CO * DFM * P / 0.082 / T / 100
+    CO2 = GA_CO2 * DFM * P / 0.082 / T / 100
+    total = MeOH + H2O + H2 + CO + CO2
+    
+    # per = (MeOH / total, H2O / total, H2 / total, CO / total, CO2 / total)
+    per = {}
+    return per
+
+def Current_calc(nodered):
+    for i in ['DFM', 'GA']:
+        if i not in nodered.keys():
+            return 0
+    H2 = nodered.get('GA_H2')
+    DFM = nodered.get('DFM_RichGas_1min')
+
+    Current = H2 * DFM / 100 * 1000 / (6.959 / 22.386 * 24.47) / 120
+
+    return Current

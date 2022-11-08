@@ -34,7 +34,6 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
     def on_message(client, userdata, msg):
         #print(msg.topic+ ": " + str(msg.payload) + f">>> {client_id}")
         resp = json.loads(msg.payload.decode('utf-8'))
-        #print(resp)
         try:
             if (msg.topic == 'NodeRed'):
                 print(f'{hostname} Receive topic: NodeRed')
@@ -44,7 +43,6 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
                             config.NodeRed[k] = v
                     else:
                         config.NodeRed[key] = value
-                # print(config.NodeRed)
             else:
                 port = None
                 if (msg.topic == 'Set_bit'):
@@ -64,7 +62,6 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
                         port = config.PID_port
                 if port:
                     for key, value in resp.items():
-                        print(key, value)
                         if port.sub_values.get(key) != None:
                             if port.sub_values[key].value != float(value):
                                 port.sub_values[key].value = float(value)

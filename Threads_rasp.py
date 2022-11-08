@@ -61,6 +61,12 @@ try:
 
     MQTT_config.multi_pub_process.start()
     Mariadb_config.multi_insert_process.start()
+
+    Theoretical_calc_process = multiprocessing.Process(
+    name='Theoretical_calc',
+    target=Modbus.Theoretical,
+    args=(config.lst_ports[-1], config.lst_ports[-1].slaves,config.NodeRed),
+    ).start()
            
 except Exception as ex:
     print("Threading funcs error: " + str(ex))

@@ -343,5 +343,4 @@ class PID:
             self.MV = self.MV
         else:
             self.MV -= self.action*self.deltaMV
-        # print(self.name, self.MV, P, I, D, self.Kp, self.Ki, self.Kd, self.kick, self.beta, self.tstep)
         return self.MV, P, I, D

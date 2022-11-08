@@ -24,6 +24,7 @@ port_path_dict['Scale_port_path'] = '/dev/ttyUSB_Scale' # for monitoring Scale
 port_path_dict['RS232_port_path'] = '/dev/ttyUSB_RS232' # for monitoring GA
 port_path_dict['Setup_port_path'] = '/dev/ttyUSB_PC' # for controling (ADAM, TCHeader)
 port_path_dict['PID_port'] = 'PID_port'
+port_path_dict['Theoretical'] = 'Theoretical_port'
 
 ## device ID
 Header_EVA_id = '01' # ReformerTP EVA_Header @ Setup_port_path
@@ -44,6 +45,7 @@ pcbpid_id     = '15'
 pumppid_id    = '16'
 burnerPID_id  = '17'
 evapid_id     = '18'
+theoretical_id = '19'
 
 #-----GPIO port setting----------------------------------------------------------------
 ## DFM
@@ -147,7 +149,6 @@ class device_port:
                     target=slave.kwargs['control_func'],
                     args=(self, slave,)
                 ).start()
-
 
 class port_Topics:
     def __init__(self, sub_topics, pub_topics, err_topics):
@@ -643,6 +644,24 @@ EVAPID_slave = Slave(
                         )
 
 EVAPID_slave.control_constructor_fixed(Kp=1, Ki=0.3, Kd=1, beta=1, kick=1, tstep=1, MVmax=100, MVmin=80, SP_range=0, SP_increment=3)
+
+Theoretical_slave = Slave(
+                        name='Theoretical',
+                        idno=theoretical_id, 
+                        port_topics=port_Topics(
+                            sub_topics=[
+                                ],
+                            pub_topics=[
+                                'Convertion_py', 'Current_py', 
+                                'Percentage_of_MeOH', 'Percentage_of_H2O', 'Percentage_of_H2', 'Percentage_of_CO', 'Percentage_of_CO2'
+                            ],
+                            err_topics=[
+                            ]
+                            ),
+                        #comm_func=Modbus.,
+                        #analyze_func=Modbus.,
+                        # calculate_func=Modbus.Theoretical,
+                        )
 print('Slaves are all set')
 
 #-----Port setting----------------------------------------------------------------
@@ -702,6 +721,12 @@ PID_port = device_port(
                     port='PID',
                     )
 
+Theoretical_port = device_port(
+                    Theoretical_slave,
+                    name='Theoretical_port',
+                    port='Theoretical',
+                    )
+
 
 lst_ports = [
             # MFC_port,
@@ -710,6 +735,7 @@ lst_ports = [
             Setup_port,
             GPIO_port,
             PID_port,
+            Theoretical_port,
             ]
 
 # NodeRed = {}
