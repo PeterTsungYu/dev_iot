@@ -64,7 +64,7 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
                     port = config.GPIO_port        
                 elif (msg.topic == 'PID_Set'):
                     print(f'{hostname} Receive topic: PID_Set')
-                    # print(msg.payload)
+                    print(msg.payload)
                     port = config.PID_port
                 for key, value in resp.items():
                     if port.sub_values.get(key) != None:

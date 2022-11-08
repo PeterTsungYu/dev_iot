@@ -325,11 +325,17 @@ class PID:
         self.errorD0 = self.gamma*self.SP_stepping - self.PV # setpoint weighting
         P = self.Kp*(self.errorP0 - self.errorP1)
         I = self.Ki*self.tstep*self.errorI0
+        print(self.Ki*self.tstep*self.errorI0)
         D = self.Kd*(self.errorD0 - 2*self.errorD1 + self.errorD2)/self.tstep
         self.deltaMV = P*self.kick_prop + I + D*self.kick_prop
+        # print(abs(self.SP_stepping - PV))
         if abs(self.SP_stepping - PV) <= self.SP_range:
             self.MV = self.MV
+            print(self.MV)
         else:
             self.MV -= self.action*self.deltaMV
-        # print(self.MV, P, I, D)
+        print(self.errorI0)
+        print(self.SP_stepping)
+        print('HERE')
+        print(self.deltaMV)
         return self.MV, P, I, D

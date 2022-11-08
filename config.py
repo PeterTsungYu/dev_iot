@@ -20,9 +20,10 @@ db_connection = False
 _port_path = '/dev/ttyUSB'
 # MFC_port_path = '/dev/ttyUSB_RS485' # for monitoring MFC (rasp-001_MFC branch)
 Scale_port_path = '/dev/ttyUSB_Scale' # for monitoring Scale
-RS232_port_path = '/dev/ttyUSB_RS232' # for monitoring GA
+# RS232_port_path = '/dev/ttyUSB_RS232' # for monitoring GA
 Setup_port_path = '/dev/ttyUSB_PC' # for controling (ADAM, TCHeader)
 PID_port = 'PID_port'
+Scale_2_port_path = '/dev/ttyUSB_Scale2'
 
 ## device ID
 Header_EVA_id = '01' # ReformerTP EVA_Header @ Setup_port_path
@@ -31,7 +32,7 @@ ADAM_SET_id   = '03' # ReformerTP ADAM_4024 for setting @ Setup_port_path
 ADAM_READ_id  = '04' # ReformerTP ADAM_4017+ for monitoring via oltage and current @ Setup_port_path
 ADAM_TC_id    = '05' # ReformerTP ADAM_4018+ for monitoring temp @ RS485_port_path
 Scale_id      = '06'
-DFM_id        = '07'
+DFM_id     = '07'
 DFM_AOG_id    = '08'
 WatchDog_id   = '09'
 Relay01_id    = '10' # control Relay for Lambda sensor and Glow Plug
@@ -47,6 +48,9 @@ GA_id         = '17' # ReformerTP GA for monitoring gas conc. @ RS232_port_path
 burnerPID_id  = '18'
 evapid_id     = '19'
 BRnozzlePID_id = '20'
+AccPressurePID_id = '21'
+EVAnozzlePID_id = '22'
+Scale_2_id = '23'
 #-----GPIO port setting----------------------------------------------------------------
 ## DFM
 # read High as 3.3V
@@ -176,7 +180,7 @@ class Slave: # Create Slave data store
         self.id = idno # id number of slave
         self.lst_readings = multiprocessing.Queue()
         self.time_readings = multiprocessing.Queue()
-        if self.name in ['ADAM_TC', 'ADAM_TC_02', 'Scale', 'DFM', 'DFM_AOG']:
+        if self.name in ['ADAM_TC', 'ADAM_TC_02', 'Scale','Scale_2', 'DFM', 'DFM_AOG']:
             self.size_lst_readings = {'short_lst_readings':params.manager.list(), 'long_lst_readings':params.manager.list()}
             self.size_time_readings = {'short_time_readings':params.manager.list(), 'long_time_readings':params.manager.list()}
 
@@ -293,6 +297,23 @@ Scale_slave = Slave(
                     analyze_func=Modbus.Scale_data_analyze
                     )
 Scale_slave.read_rtu(wait_len=0)
+
+Scale_2_slave = Slave(
+                    name = 'Scale_2',
+                    idno=Scale_2_id,
+                    port_topics=port_Topics(sub_topics=[],
+                                            pub_topics=[
+                                                '10_Scale_2', '60_Scale_2'
+                                            ],
+                                            err_topics=[
+                                                'Scale_2_collect_err', 'Scale_2_analyze_err',
+                                            ]
+                                            ),
+                    timeout = 1,
+                    comm_func=Modbus.Scale_data_collect,
+                    analyze_func=Modbus.Scale_data_analyze
+                    )
+Scale_2_slave.read_rtu(wait_len=0)
 
 # # TCHeader Rreading, RTU func code 03, PV value site at '008A', data_len is 1 ('0001')
 # # TCHeader Writing, RTU func code 06, SV value site at '0000'
@@ -763,8 +784,8 @@ BRnozzlePID_slave = Slave(
                         port_topics=port_Topics(
                             sub_topics=[
                                 'BRnozzlePID_Kp', 'BRnozzlePID_Ki', 'BRnozzlePID_Kd', 
-                                'BRnozzlePID_MVmin', 'BRnozzlePID_MVmax', 'BRnozzlePID_PV', 'BRnozzlePID_SP', 'BRnozzlePID_mode', 'BRnozzlePID_setting', 'BRnozzlePID_woke', 'BRnozzlePID_SP_range','BRnozzlePID_SP_increment'
-                                'BRnozzlePID_beta', 'BRnozzlePID_tstep', 'BRnozzlePID_kick','BRnozzlePID_gamma'
+                                'BRnozzlePID_MVmin', 'BRnozzlePID_MVmax', 'BRnozzlePID_PV', 'BRnozzlePID_SP', 'BRnozzlePID_mode', 'BRnozzlePID_setting', 'BRnozzlePID_woke', 'BRnozzlePID_SP_range','BRnozzlePID_SP_increment',
+                                'BRnozzlePID_beta', 'BRnozzlePID_tstep', 'BRnozzlePID_kick','BRnozzlePID_gamma',
                             ],
                             pub_topics=[
                                 'BRnozzlePID_MV', 'BRnozzlePID_P', 'BRnozzlePID_I', 'BRnozzlePID_D'
@@ -782,6 +803,56 @@ BRnozzlePID_slave = Slave(
 BRnozzlePID_slave.control_constructor()
 # BRnozzlePID_slave.control_constructor_fixed(Kp=0.0003, Ki=0.000003, Kd=0.001, beta=0.5, kick=4, tstep=5, MVmax=0.5, MVmin=0.15, SP_range=0, SP_increment=3)
 
+EVAnozzlePID_slave = Slave(
+                        name='EVAnozzlePID',
+                        idno=EVAnozzlePID_id, 
+                        port_topics=port_Topics(
+                            sub_topics=[
+                                'EVAnozzlePID_Kp', 'EVAnozzlePID_Ki', 'EVAnozzlePID_Kd', 
+                                'EVAnozzlePID_MVmin', 'EVAnozzlePID_MVmax', 'EVAnozzlePID_PV', 'EVAnozzlePID_SP', 'EVAnozzlePID_mode', 'EVAnozzlePID_setting', 'EVAnozzlePID_woke', 'EVAnozzlePID_SP_range','EVAnozzlePID_SP_increment',
+                                'EVAnozzlePID_beta', 'EVAnozzlePID_tstep', 'EVAnozzlePID_kick','EVAnozzlePID_gamma',
+                            ],
+                            pub_topics=[
+                                'EVAnozzlePID_MV', 'EVAnozzlePID_P', 'EVAnozzlePID_I', 'EVAnozzlePID_D'
+                            ],
+                            err_topics=[
+                                'EVAnozzlePID_collect_err', 'EVAnozzlePID_set_err', 'EVAnozzlePID_analyze_err'
+                            ]
+                            ),
+                        #comm_func=Modbus.,
+                        #analyze_func=Modbus.,
+                        control_func=Modbus.control,
+                        )
+# CV_06: burner temperture; MV: PCB SP
+## burner_PV > burner_SP => PCB down => DirectAction=False
+EVAnozzlePID_slave.control_constructor()
+# BRnozzlePID_slave.control_constructor_fixed(Kp=0.0003, Ki=0.000003, Kd=0.001, beta=0.5, kick=4, tstep=5, MVmax=0.5, MVmin=0.15, SP_range=0, SP_increment=3)
+
+AccPressurePID_slave = Slave(
+                        name='AccPressurePID',
+                        idno=AccPressurePID_id, 
+                        port_topics=port_Topics(
+                            sub_topics=[
+                                'AccPressurePID_Kp', 'AccPressurePID_Ki', 'AccPressurePID_Kd', 
+                                'AccPressurePID_MVmin', 'AccPressurePID_MVmax', 'AccPressurePID_PV', 'AccPressurePID_SP', 'AccPressurePID_mode', 'AccPressurePID_setting', 'AccPressurePID_woke', 'AccPressurePID_SP_range','AccPressurePID_SP_increment',
+                                'AccPressurePID_beta', 'AccPressurePID_tstep', 'AccPressurePID_kick','AccPressurePID_gamma',
+                            ],
+                            pub_topics=[
+                                'AccPressurePID_MV', 'AccPressurePID_P', 'AccPressurePID_I', 'AccPressurePID_D'
+                            ],
+                            err_topics=[
+                                'AccPressurePID_collect_err', 'AccPressurePID_set_err', 'AccPressurePID_analyze_err'
+                            ]
+                            ),
+                        #comm_func=Modbus.,
+                        #analyze_func=Modbus.,
+                        control_func=Modbus.control,
+                        )
+# CV_06: burner temperture; MV: PCB SP
+## burner_PV > burner_SP => PCB down => DirectAction=False
+AccPressurePID_slave.control_constructor()
+# AccPressurePID_slave.control_constructor_fixed(Kp=0.0003, Ki=0.000003, Kd=0.001, beta=0.5, kick=4, tstep=5, MVmax=0.5, MVmin=0.15, SP_range=0, SP_increment=3)
+
 print('Slaves are all set')
 
 #-----Port setting----------------------------------------------------------------
@@ -793,16 +864,16 @@ Scale_port = device_port(Scale_slave,
                                             stopbits=1, 
                                             parity='N'),
                         )
+Scale_2_port = device_port(Scale_2_slave,
+                        name='Scale_2_port',
+                        port=serial.Serial(port=Scale_2_port_path,
+                                            baudrate=9600, 
+                                            bytesize=8, 
+                                            stopbits=1, 
+                                            parity='N'),
+                        )                        
 
-# RS232_port = device_port(GA_slave,
-#                         name='RS232_port',
-#                         port=serial.Serial(port=RS232_port_path,
-#                                             baudrate=9600, 
-#                                             bytesize=8, 
-#                                             stopbits=1, 
-#                                             parity='N'),
-#                         )
-# somehow the headers are affecting ADAMs
+
 Setup_port = device_port(
                         # Header_BR_slave,
                         # Header_BR_SET_slave,
@@ -842,18 +913,21 @@ PID_port = device_port(
                     # PCBPID_slave,
                     # CatBedPID_slave,
                     BRnozzlePID_slave,
+                    EVAnozzlePID_slave,
+                    AccPressurePID_slave,
                     name='PID_port',
                     port='PID',
                     )
 
 lst_ports = [
             # MFC_port,
-            Scale_port, 
+            Scale_port,
+            Scale_2_port, 
             # RS232_port, 
-            # Setup_port,
-            # GPIO_port,
+            Setup_port,
+            GPIO_port,
             # WatchDog_port,
-            # PID_port
+            PID_port
             ]
 
 NodeRed = params.manager.dict()

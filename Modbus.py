@@ -15,17 +15,17 @@ import params
 
 #------------------------------Logger---------------------------------
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.ERROR)
 formatter = logging.Formatter(
 	'[%(levelname)s %(asctime)s %(module)s:%(lineno)d] %(message)s',
 	datefmt='%Y%m%d %H:%M:%S')
 
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+ch.setLevel(logging.ERROR)
 ch.setFormatter(formatter)
 
 fh = logging.FileHandler(filename='platform.log', mode='w')
-fh.setLevel(logging.DEBUG)
+fh.setLevel(logging.ERROR)
 fh.setFormatter(formatter)
 
 logger.addHandler(ch)
@@ -79,6 +79,24 @@ def analyze_decker(func):
             _lst_readings = _size_lst
             _time_readings = _size_time
             cond = len(_lst_readings['short_lst_readings'])
+        elif slave.name in ['Scale_2']:
+            # print(_lst_readings)
+            # print(_time_readings)
+            _size_lst = slave.size_lst_readings
+            _size_time = slave.size_time_readings
+            _size_lst['short_lst_readings'].append(_lst_readings)
+            _size_lst['long_lst_readings'].append(_lst_readings)
+            _size_time['short_time_readings'].append(_time_readings)
+            _size_time['long_time_readings'].append(_time_readings)
+            if len(_size_lst['short_lst_readings']) > 10: # aggregate lists for 10s in a list
+                _size_lst['short_lst_readings'] = params.manager.list(_size_lst['short_lst_readings'][-10:])
+                _size_time['short_time_readings'] = params.manager.list(_size_time['short_time_readings'][-10:])
+            if len(_size_lst['long_lst_readings']) > 60: # aggregate lists for 60s in a list
+                _size_lst['long_lst_readings'] = params.manager.list(_size_lst['long_lst_readings'][-60:])
+                _size_time['long_time_readings'] = params.manager.list(_size_time['long_time_readings'][-60:])
+            _lst_readings = _size_lst
+            _time_readings = _size_time
+            cond = len(_lst_readings['short_lst_readings'])    
         elif 'ADAM_TC' in slave.name:
             _size_lst = slave.size_lst_readings
             _size_time = slave.size_time_readings
@@ -647,40 +665,68 @@ def Scale_data_analyze(start, device_port, slave, **kwargs):
     _lst_readings = kwargs.get('_lst_readings')
     _time_readings = kwargs.get('_time_readings')
     _10_scale_lst = []
+    _10_Scale_2_lst = []
     _10_scale_time = []
+    _10_Scale_2_time = []
     # print(_lst_readings['short_lst_readings'])
     # print(_time_readings['short_time_readings'])
     assert len(_lst_readings['short_lst_readings']) == len(_time_readings['short_time_readings'])
     for i in range(0, len(_lst_readings['short_lst_readings'])):
         _10_scale_lst.extend(_lst_readings['short_lst_readings'][i])
+        _10_Scale_2_lst.extend(_lst_readings['short_lst_readings'][i])
         _10_scale_time.extend(_time_readings['short_time_readings'][i])
+        _10_Scale_2_time.extend(_time_readings['short_time_readings'][i])
     # print(_10_scale_lst)
     for i in _10_scale_lst: 
         if -0.00001 < i < 0.00001:
             _10_scale_lst.remove(i)
             _10_scale_time.remove(i)
     if _10_scale_lst:
-        _10_scale = (_10_scale_lst[0] - _10_scale_lst[-1]) / (_10_scale_time[-1] - _10_scale_time[0]) * 1000 * 10
+        _10_scale = abs((_10_scale_lst[0] - _10_scale_lst[-1]) / (_10_scale_time[-1] - _10_scale_time[0]) * 1000 * 10)
     else:
         _10_scale = 0
-    # print(_10_scale)
-    
+    for i in _10_Scale_2_lst:
+        if -0.00001< i < 0.00001:
+            _10_Scale_2_lst.remove(i)
+            _10_Scale_2_time.remove(i)    
+    if _10_Scale_2_lst:
+        _10_Scale_2 = abs((_10_Scale_2_lst[0] - _10_Scale_2_lst[-1]) / (_10_Scale_2_time[-1] - _10_Scale_2_time[0]) * 1000 * 10)
+    else:
+        _10_Scale_2 = 0  
+
+    print('here pig1')
+    print(_10_Scale_2_lst)
+    print('here pig2')
+    print(_10_scale_lst)
     _60_scale_lst = []
+    _60_Scale_2_lst = []
     _60_scale_time = []
+    _60_Scale_2_time = []   
     assert len(_lst_readings['long_lst_readings']) == len(_time_readings['long_time_readings'])
     for i in range(0, len(_lst_readings['long_lst_readings'])):
         _60_scale_lst.extend(_lst_readings['long_lst_readings'][i])
+        _60_Scale_2_lst.extend(_lst_readings['long_lst_readings'][i])
         _60_scale_time.extend(_time_readings['long_time_readings'][i])
+        _60_Scale_2_time.extend(_time_readings['long_time_readings'][i])
     for i in _60_scale_lst: 
         if -0.00001 < i < 0.00001:
             _60_scale_lst.remove(i)
             _60_scale_time.remove(i)
     if _60_scale_lst:
-        _60_scale = (_60_scale_lst[0] - _60_scale_lst[-1]) / (_60_scale_time[-1] - _60_scale_time[0]) * 1000 * 60
+        _60_scale = abs((_60_scale_lst[0] - _60_scale_lst[-1]) / (_60_scale_time[-1] - _60_scale_time[0]) * 1000 * 60)
     else:
         _60_scale = 0
-        
+    for i in _60_Scale_2_lst: 
+        if -0.00001 < i < 0.00001:
+            _60_Scale_2_lst.remove(i)
+            _60_Scale_2_time.remove(i)    
+    if _60_Scale_2_lst:
+        _60_Scale_2 = abs((_60_Scale_2_lst[0] - _60_Scale_2_lst[-1]) / (_60_Scale_2_time[-1] - _60_Scale_2_time[0]) * 1000 * 60)
+    else:
+        _60_Scale_2 = 0
+
     _readings = tuple([round(_sampling_time,2), round(_10_scale, 2), round(_60_scale, 2)])
+    _readings = tuple([round(_sampling_time,2), round(_10_Scale_2, 2), round(_60_Scale_2, 2)])
     return _readings
 
 
@@ -770,9 +816,9 @@ def control(device_port, slave):
     SP_range = _sub_values.get(f'{slave.name}_SP_range').value
     SP_increment = _sub_values.get(f'{slave.name}_SP_increment').value
 
-    if _sub_values.get(f'{slave.name}_SP_range') is None:
+    if SP_range is None:
         SP_range = 0
-    if _sub_values.get(f'{slave.name}_SP_increment') is None:
+    if SP_increment is None or SP_increment == 0:
         SP_increment = 3
     if kick is None or kick == 0:
         kick = 1
@@ -783,11 +829,11 @@ def control(device_port, slave):
 
     # update manipulated variable
     # print('here')
-    # print(slave.controller.Kp, slave.controller.Ki, slave.controller.Kd, slave.controller.mode)
-    # print(slave.name, SP, PV, MV) 
+    print(slave.controller.Kp, slave.controller.Ki, slave.controller.Kd, slave.controller.mode)
+    print(slave.name, SP, PV, MV) 
     try:
         updates = slave.controller.update(tstep, SP, PV, MV, kick)
-        #print(updates)
+        # print(updates)
         for idx, topic in enumerate(slave.port_topics.pub_topics):    
             device_port.pub_values[topic].value = updates[idx]
     except Exception as e:
