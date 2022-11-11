@@ -293,7 +293,7 @@ class PID:
         self._tstep = multiprocessing.Value('d', tstep)
 
 
-    def update_paramater(self, Kp=0, Ki=0, Kd=0, beta=0, kick=1, tstep=1, MVmax=0, MVmin=0, SP_range=0, SP_increment=3, gamma=0, DirectAction=0, mode=0, ):
+    def update_paramater(self, Kp=0, Ki=0, Kd=0, beta=0, gamma=0, kick=1, tstep=1, MVmax=0, MVmin=0, SP_range=0, SP_increment=3, DirectAction=0, mode=0,):
         self.Kp = Kp
         self.Ki = Ki
         self.Kd = Kd
