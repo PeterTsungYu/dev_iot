@@ -29,6 +29,7 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
         client.subscribe("MFC_Set", qos=0)
         client.subscribe("PID_Set", qos=0)
         client.subscribe("PWM_Set", qos=0)
+        client.subscribe("NodeRed_Subber", qos=0)
 
     # The callback for when a SUB message is received
     def on_message(client, userdata, msg):
@@ -43,6 +44,14 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
                             config.NodeRed[k] = v
                     else:
                         config.NodeRed[key] = value
+            elif (msg.topic == 'NodeRed_Subber'):
+                print(f'{hostname} Receive topic: NodeRed_Subber')
+                for key, value in resp.items():
+                    if type(value) == dict:
+                        for k, v in resp[key].items():
+                            config.NodeRed[k] = v
+                    else:
+                        config.NodeRed[key] = value          
             else:
                 port = None
                 if (msg.topic == 'Set_bit'):
@@ -66,6 +75,7 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
                             if port.sub_values[key].value != float(value):
                                 port.sub_values[key].value = float(value)
                                 port.sub_events[key].set()
+            # print(config.NodeRed)                      
         except Exception as e:
             print(f"Error mqtt on_message: {e}")
     def on_publish(client, userdata, mid):

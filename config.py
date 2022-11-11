@@ -46,6 +46,11 @@ pumppid_id    = '16'
 burnerPID_id  = '17'
 evapid_id     = '18'
 theoretical_id = '19'
+ADAM_SET_Subber_id   = '20'
+Pressure_READ_id  = '21'
+BRnozzlePID_id = '22'
+AccPressurePID_id = '23'
+EVAnozzlePID_id = '24'
 
 #-----GPIO port setting----------------------------------------------------------------
 ## DFM
@@ -54,6 +59,7 @@ channel_DFM     = 24
 channel_DFM_AOG = 23
 GPIO_PWM_1      = 26 #GPIO 26 (PWM)
 GPIO_EVA_PWM    = 18
+GPIO_PWM_2      = 6
 #-----Cls----------------------------------------------------------------
 # def tohex(value):
 def tohex_pad4(value):
@@ -388,6 +394,47 @@ ADAM_READ_slave = Slave(
                         )
 ADAM_READ_slave.read_rtu('0000', '0008', wait_len=21)
 
+ADAM_SET_Subber_slave = Slave(
+                        name='ADAM_SET_Subber',
+                        idno=ADAM_SET_Subber_id,
+                        port_topics=port_Topics(
+                                sub_topics=[
+                                    'TOM_SET_SV', 'SOL_1_SET_SV', 'KNF_SET_SV', 'SOL_2_SET_SV' # PCB(ADAM_SET_SV0), Pump(ADAM_SET_SV1), Air_MFC(ADAM_SET_SV2), H2_MFC(ADAM_SET_SV3)
+                                ],
+                                pub_topics=[
+                                    'TOM_SET_PV', 'SOL_1_SET_PV', 'KNF_SET_PV', 'SOL_2_SET_PV', # PCB(ADAM_SET_PV0), Pump(ADAM_SET_PV1), Air_MFC(ADAM_SET_PV2), H2_MFC(ADAM_SET_PV3)
+                                ],
+                                err_topics=[
+                                    'ADAM_SET_Subber_collect_err', 'ADAM_SET_Subber_set_err', 'ADAM_SET_Subber_analyze_err',
+                                ]
+                                ),
+                        # timeout = 0.01,
+                        # comm_func=Modbus.Modbus_Comm,
+                        # analyze_func=Modbus.ADAM_SET_analyze
+                    )
+ADAM_SET_Subber_slave.read_rtu('0000', '0004', wait_len=13)
+ADAM_SET_Subber_slave.w_wait_len = 8
+
+# Pressure_READ_slave, RTU func code 03, channel site at '0000-0008', data_len is 8 ('0008')
+## ch00:4-20mA, ch01:0-5V, ch04:0-5V, ch05:0-5V, ch06:0-5V
+Pressure_READ_slave = Slave(
+                        name='Pressure_READ',
+                        idno=Pressure_READ_id,
+                        port_topics=port_Topics(
+                                sub_topics=[],
+                                pub_topics=[
+                                    'Subber_READ_PV0', 'Subber_READ_PV1', 'Subber_READ_PV2', 'Subber_READ_PV3', 'Subber_READ_PV4',
+                                    'Subber_P_BR', 'Subber_P_EVA', 'Subber_P_ACC' # Pressure_READ_PV0 (SMC), Pressure_READ_PV1 (SMC), Pressure_READ_PV2, Pressure_READ_PV3, Pressure_READ_PV4(pump), Pressure_READ_PV5(Air_MFC), Pressure_READ_PV6(H2_MFC), Pressure_READ_PV7
+                                ],
+                                err_topics=[
+                                    'Pressure_READ_collect_err', 'Pressure_READ_analyze_err',
+                                ]
+                                ),
+                        # timeout = 0.01,
+                        # comm_func=Modbus.Modbus_Comm,
+                        # analyze_func=Modbus.ADAM_READ_analyze
+                        )
+Pressure_READ_slave.read_rtu('0000', '0008', wait_len=21)
 # DFMs' slaves
 DFM_slave = Slave(
                 name='DFM',
@@ -461,23 +508,44 @@ H2_MFC_slave = Slave(
 H2_MFC_slave.read_rtu(f'\r{H2_MFC_id}\r\r', wait_len=49)
 H2_MFC_slave.w_wait_len = 49
 
-# PWM01_slave = Slave(
-#                     name='PWM01',
-#                     idno=GPIO_PWM_1, #GPIO
-#                     port_topics=port_Topics(
-#                                 sub_topics=[
-#                                     'PWM01_open_SV', 'PWM01_f_SV', 'PWM01_duty_SV'
-#                                 ],
-#                                 pub_topics=[
-#                                 ],
-#                                 err_topics=[
-#                                     'PWM01_collect_err', 'PWM01_set_err', 'PWM01_analyze_err'
-#                                 ]
-#                                 ),
-#                     comm_func=Modbus.PWM_comm,
-#                     #analyze_func=Modbus.,
-#                     )
-# PWM01_slave.PWM_instance('software')
+PWM01_slave = Slave(
+                    name='PWM01',
+                    idno=GPIO_PWM_1, #GPIO
+                    port_topics=port_Topics(
+                                sub_topics=[
+                                    'PWM01_open_SV', 'PWM01_f_SV', 'PWM01_duty_SV'
+                                ],
+                                pub_topics=[
+                                ],
+                                err_topics=[
+                                    'PWM01_collect_err', 'PWM01_set_err', 'PWM01_analyze_err'
+                                ]
+                                ),
+                    # timeout = 0.1,            
+                    # comm_func=Modbus.PWM_comm,
+                    #analyze_func=Modbus.,
+                    )
+PWM01_slave.PWM_instance('software')
+
+
+PWM02_slave = Slave(
+                    name='PWM02',
+                    idno=GPIO_PWM_2, #GPIO
+                    port_topics=port_Topics(
+                                sub_topics=[
+                                    'PWM02_open_SV', 'PWM02_f_SV', 'PWM02_duty_SV'
+                                ],
+                                pub_topics=[
+                                ],
+                                err_topics=[
+                                    'PWM02_collect_err', 'PWM02_set_err', 'PWM02_analyze_err'
+                                ]
+                                ),
+                    # timeout = 0.1,            
+                    # comm_func=Modbus.PWM_comm,
+                    #analyze_func=Modbus.,
+                    )
+PWM02_slave.PWM_instance('software')
 
 EVA_PWM_slave = Slave(
                     name='EVA_PWM',
@@ -645,6 +713,81 @@ EVAPID_slave = Slave(
 
 EVAPID_slave.control_constructor_fixed(Kp=1, Ki=0.3, Kd=1, beta=1, kick=1, tstep=1, MVmax=100, MVmin=80, SP_range=0, SP_increment=3)
 
+BRnozzlePID_slave = Slave(
+                        name='BRnozzlePID',
+                        idno=BRnozzlePID_id, 
+                        port_topics=port_Topics(
+                            sub_topics=[
+                                'BRnozzlePID_Kp', 'BRnozzlePID_Ki', 'BRnozzlePID_Kd', 
+                                'BRnozzlePID_MVmin', 'BRnozzlePID_MVmax', 'BRnozzlePID_PV', 'BRnozzlePID_SP', 'BRnozzlePID_mode', 'BRnozzlePID_setting', 'BRnozzlePID_woke', 'BRnozzlePID_SP_range','BRnozzlePID_SP_increment',
+                                'BRnozzlePID_beta', 'BRnozzlePID_tstep', 'BRnozzlePID_kick','BRnozzlePID_gamma',
+                            ],
+                            pub_topics=[
+                                'BRnozzlePID_MV', 'BRnozzlePID_P', 'BRnozzlePID_I', 'BRnozzlePID_D'
+                            ],
+                            err_topics=[
+                                'BRnozzlePID_collect_err', 'BRnozzlePID_set_err', 'BRnozzlePID_analyze_err'
+                            ]
+                            ),
+                        #comm_func=Modbus.,
+                        #analyze_func=Modbus.,
+                        # control_func=Modbus.control,
+                        )
+# CV_06: burner temperture; MV: PCB SP
+## burner_PV > burner_SP => PCB down => DirectAction=False
+BRnozzlePID_slave.control_constructor()
+# BRnozzlePID_slave.control_constructor_fixed(Kp=0.0003, Ki=0.000003, Kd=0.001, beta=0.5, kick=4, tstep=5, MVmax=0.5, MVmin=0.15, SP_range=0, SP_increment=3)
+
+EVAnozzlePID_slave = Slave(
+                        name='EVAnozzlePID',
+                        idno=EVAnozzlePID_id, 
+                        port_topics=port_Topics(
+                            sub_topics=[
+                                'EVAnozzlePID_Kp', 'EVAnozzlePID_Ki', 'EVAnozzlePID_Kd', 
+                                'EVAnozzlePID_MVmin', 'EVAnozzlePID_MVmax', 'EVAnozzlePID_PV', 'EVAnozzlePID_SP', 'EVAnozzlePID_mode', 'EVAnozzlePID_setting', 'EVAnozzlePID_woke', 'EVAnozzlePID_SP_range','EVAnozzlePID_SP_increment',
+                                'EVAnozzlePID_beta', 'EVAnozzlePID_tstep', 'EVAnozzlePID_kick','EVAnozzlePID_gamma',
+                            ],
+                            pub_topics=[
+                                'EVAnozzlePID_MV', 'EVAnozzlePID_P', 'EVAnozzlePID_I', 'EVAnozzlePID_D'
+                            ],
+                            err_topics=[
+                                'EVAnozzlePID_collect_err', 'EVAnozzlePID_set_err', 'EVAnozzlePID_analyze_err'
+                            ]
+                            ),
+                        #comm_func=Modbus.,
+                        #analyze_func=Modbus.,
+                        # control_func=Modbus.control,
+                        )
+# CV_06: burner temperture; MV: PCB SP
+## burner_PV > burner_SP => PCB down => DirectAction=False
+EVAnozzlePID_slave.control_constructor()
+# BRnozzlePID_slave.control_constructor_fixed(Kp=0.0003, Ki=0.000003, Kd=0.001, beta=0.5, kick=4, tstep=5, MVmax=0.5, MVmin=0.15, SP_range=0, SP_increment=3)
+
+AccPressurePID_slave = Slave(
+                        name='AccPressurePID',
+                        idno=AccPressurePID_id, 
+                        port_topics=port_Topics(
+                            sub_topics=[
+                                'AccPressurePID_Kp', 'AccPressurePID_Ki', 'AccPressurePID_Kd', 
+                                'AccPressurePID_MVmin', 'AccPressurePID_MVmax', 'AccPressurePID_PV', 'AccPressurePID_SP', 'AccPressurePID_mode', 'AccPressurePID_setting', 'AccPressurePID_woke', 'AccPressurePID_SP_range','AccPressurePID_SP_increment',
+                                'AccPressurePID_beta', 'AccPressurePID_tstep', 'AccPressurePID_kick','AccPressurePID_gamma',
+                            ],
+                            pub_topics=[
+                                'AccPressurePID_MV', 'AccPressurePID_P', 'AccPressurePID_I', 'AccPressurePID_D'
+                            ],
+                            err_topics=[
+                                'AccPressurePID_collect_err', 'AccPressurePID_set_err', 'AccPressurePID_analyze_err'
+                            ]
+                            ),
+                        #comm_func=Modbus.,
+                        #analyze_func=Modbus.,
+                        # control_func=Modbus.control,
+                        )
+# CV_06: burner temperture; MV: PCB SP
+## burner_PV > burner_SP => PCB down => DirectAction=False
+AccPressurePID_slave.control_constructor()
+# AccPressurePID_slave.control_constructor_fixed(Kp=0.0003, Ki=0.000003, Kd=0.001, beta=0.5, kick=4, tstep=5, MVmax=0.5, MVmin=0.15, SP_range=0, SP_increment=3)
+
 Theoretical_slave = Slave(
                         name='Theoretical',
                         idno=theoretical_id, 
@@ -727,6 +870,18 @@ Theoretical_port = device_port(
                     port='Theoretical',
                     )
 
+Subber_port = device_port(
+                BRnozzlePID_slave,
+                EVAnozzlePID_slave,
+                AccPressurePID_slave,
+                Pressure_READ_slave,
+                PWM01_slave,
+                PWM02_slave,
+                ADAM_SET_Subber_slave,
+                name='Subber_port',
+                port='Subber',
+                )
+
 
 lst_ports = [
             # MFC_port,
@@ -735,6 +890,7 @@ lst_ports = [
             Setup_port,
             GPIO_port,
             PID_port,
+            Subber_port,
             Theoretical_port,
             ]
 
