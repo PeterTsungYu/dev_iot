@@ -30,6 +30,7 @@ def connect_mqtt(client_id, hostname='localhost', port=1883, keepalive=60,):
         client.subscribe("PID_Set", qos=0)
         client.subscribe("PWM_Set", qos=0)
         client.subscribe("NodeRed_Subber", qos=0)
+        client.subscribe("Backup", qos=0)
 
     # The callback for when a SUB message is received
     def on_message(client, userdata, msg):
@@ -94,12 +95,13 @@ def multi_pub():
     while not params.kb_event.is_set():
         time.sleep(params.comm_time)
         for device_port in config.lst_ports:
-            for _slave in device_port.slaves:
-                payload = {}
-                for _topic in _slave.port_topics.pub_topics:
-                    payload[_topic] = device_port.pub_values[_topic].value
-                payload = json.dumps(payload)
-                client_mqtt.publish(topic=_slave.name, payload=payload, qos=0, retain=False)
+            if device_port.name not in ['Subber_port']:
+                for _slave in device_port.slaves:
+                    payload = {}
+                    for _topic in _slave.port_topics.pub_topics:
+                        payload[_topic] = device_port.pub_values[_topic].value
+                    payload = json.dumps(payload)
+                    client_mqtt.publish(topic=_slave.name, payload=payload, qos=0, retain=False)
         if config.db_table == True:
             client_mqtt.publish(topic='DB_name', payload=config.db_time, qos=0, retain=False)
         elif config.db_table == False:

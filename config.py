@@ -408,8 +408,8 @@ ADAM_SET_Subber_slave = Slave(
                         # comm_func=Modbus.Modbus_Comm,
                         # analyze_func=Modbus.ADAM_SET_analyze
                     )
-ADAM_SET_Subber_slave.read_rtu('0000', '0004', wait_len=13)
-ADAM_SET_Subber_slave.w_wait_len = 8
+# ADAM_SET_Subber_slave.read_rtu('0000', '0004', wait_len=13)
+# ADAM_SET_Subber_slave.w_wait_len = 8
 
 # Pressure_READ_slave, RTU func code 03, channel site at '0000-0008', data_len is 8 ('0008')
 ## ch00:4-20mA, ch01:0-5V, ch04:0-5V, ch05:0-5V, ch06:0-5V
@@ -430,7 +430,7 @@ Pressure_READ_slave = Slave(
                         # comm_func=Modbus.Modbus_Comm,
                         # analyze_func=Modbus.ADAM_READ_analyze
                         )
-Pressure_READ_slave.read_rtu('0000', '0008', wait_len=21)
+# Pressure_READ_slave.read_rtu('0000', '0008', wait_len=21)
 # DFMs' slaves
 DFM_slave = Slave(
                 name='DFM',
@@ -566,11 +566,8 @@ LambdaPID_slave = Slave(
                         idno=lambdapid_id, 
                         port_topics=port_Topics(
                             sub_topics=[
-                                # 'LambdaPID_Kp', 'LambdaPID_Ki', 'LambdaPID_Kd', 
-                                'LambdaPID_MVmin', 'LambdaPID_MVmax', 'LambdaPID_PV', 'LambdaPID_SP', 'LambdaPID_mode',
-                                'LambdaPID_setting', 'LambdaPID_woke',
-                                # 'LambdaPID_SP_range', 'LambdaPID_SP_increment', 'LambdaPID_gamma'
-                                # 'LambdaPID_beta','LambdaPID_tstep', 'LambdaPID_kick',
+                                # 'LambdaPID_Kp', 'LambdaPID_Ki', 'LambdaPID_Kd', 'LambdaPID_SP_range', 'LambdaPID_SP_increment', 'LambdaPID_gamma', 'LambdaPID_beta','LambdaPID_tstep', 'LambdaPID_kick',
+                                'LambdaPID_MVmin', 'LambdaPID_MVmax', 'LambdaPID_PV', 'LambdaPID_SP', 'LambdaPID_mode', 'LambdaPID_setting', 'LambdaPID_woke',
                             ],
                             pub_topics=[
                                 'LambdaPID_MV', 'LambdaPID_P', 'LambdaPID_I', 'LambdaPID_D'
@@ -590,9 +587,8 @@ CurrentPID_slave = Slave(
                         idno=currentpid_id, 
                         port_topics=port_Topics(
                             sub_topics=[
-                                # 'CurrentPID_Kp', 'CurrentPID_Ki', 'CurrentPID_Kd', 
+                                # 'CurrentPID_Kp', 'CurrentPID_Ki', 'CurrentPID_Kd', 'CurrentPID_beta', 'CurrentPID_tstep', 'CurrentPID_kick', 'CurrentPID_SP_range', 'CurrentPID_SP_increment', 'CurrentPID_gamma',
                                 'CurrentPID_MVmin', 'CurrentPID_MVmax', 'CurrentPID_PV', 'CurrentPID_SP', 'CurrentPID_mode','CurrentPID_setting', 'CurrentPID_woke',
-                                # 'CurrentPID_beta', 'CurrentPID_tstep', 'CurrentPID_kick', 'CurrentPID_SP_range', 'CurrentPID_SP_increment', 'CurrentPID_gamma'
                             ],
                             pub_topics=[
                                 'CurrentPID_MV', 'CurrentPID_P', 'CurrentPID_I', 'CurrentPID_D'
@@ -629,16 +625,15 @@ CatBedPID_slave = Slave(
                         control_func=Modbus.control,
                         )
 CatBedPID_slave.control_constructor()
-# (Kp=1, Ki=0.003, Kd=0.9, beta=1, gamma=0, kick=6, tstep=15, MVmax=750, MVmin=400, SP_range=0, SP_increment=10)
+# (Kp=1, Ki=0.003, Kd=0.9, beta=1, gamma=0, kick=5, tstep=10, MVmax=750, MVmin=400, SP_range=0, SP_increment=2)
 
 PCBPID_slave = Slave(
                         name='PCBPID',
                         idno=pcbpid_id, 
                         port_topics=port_Topics(
                             sub_topics=[
-                                # 'PCBPID_Kp', 'PCBPID_Ki', 'PCBPID_Kd', 
+                                'PCBPID_Kp', 'PCBPID_Ki', 'PCBPID_Kd', 'PCBPID_beta', 'PCBPID_tstep', 'PCBPID_kick', 'PCBPID_SP_range', 'PCBPID_SP_increment', 'PCBPID_gamma',
                                 'PCBPID_MVmin',  'PCBPID_MVmax', 'PCBPID_PV', 'PCBPID_SP', 'PCBPID_mode', 'PCBPID_setting', 'PCBPID_woke',
-                                # 'PCBPID_beta', 'PCBPID_tstep', 'PCBPID_kick', 'PCBPID_SP_range', 'PCBPID_SP_increment', 'PCBPID_gamma'
                             ],
                             pub_topics=[
                                 'PCBPID_MV', 'PCBPID_P', 'PCBPID_I', 'PCBPID_D'
@@ -658,9 +653,8 @@ BurnerPID_slave = Slave(
                         idno=burnerPID_id, 
                         port_topics=port_Topics(
                             sub_topics=[
-                                # 'BurnerPID_Kp', 'BurnerPID_Ki', 'BurnerPID_Kd', 
+                                'BurnerPID_Kp', 'BurnerPID_Ki', 'BurnerPID_Kd', 'BurnerPID_beta', 'BurnerPID_tstep', 'BurnerPID_kick', 'BurnerPID_SP_range', 'BurnerPID_SP_increment', 'BurnerPID_gamma'
                                 'BurnerPID_MVmin', 'BurnerPID_MVmax', 'BurnerPID_PV', 'BurnerPID_SP', 'BurnerPID_mode', 'BurnerPID_setting', 'BurnerPID_woke', 
-                                # 'BurnerPID_beta', 'BurnerPID_tstep', 'BurnerPID_kick', 'BurnerPID_SP_range', 'BurnerPID_SP_increment', 'BurnerPID_gamma'
                             ],
                             pub_topics=[
                                 'BurnerPID_MV', 'BurnerPID_P', 'BurnerPID_I', 'BurnerPID_D'
@@ -680,9 +674,8 @@ EVAPID_slave = Slave(
                         idno=evapid_id, 
                         port_topics=port_Topics(
                             sub_topics=[
-                                # 'EVAPID_Kp', 'EVAPID_Ki', 'EVAPID_Kd', 
+                                # 'EVAPID_Kp', 'EVAPID_Ki', 'EVAPID_Kd',  'EVAPID_beta', 'EVAPID_tstep', 'EVAPID_kick', 'EVArPID_SP_range', 'EVAPID_SP_increment', 'EVAPID_gamma',
                                 'EVAPID_MVmin',  'EVAPID_MVmax', 'EVAPID_PV', 'EVAPID_SP', 'EVAPID_mode', 'EVAPID_setting', 'EVAPID_woke',
-                                # 'EVAPID_beta', 'EVAPID_tstep', 'EVAPID_kick', 'EVArPID_SP_range', 'EVAPID_SP_increment', 'EVAPID_gamma'
                             ],
                             pub_topics=[
                                 'EVAPID_MV', 'EVAPID_P', 'EVAPID_I', 'EVAPID_D'

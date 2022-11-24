@@ -695,7 +695,7 @@ def Convertion_calc(nodered):
     if Scale == 0 or DFM == 0 or H2 == 0:
         conver = 0
     else:
-        conver = ((H2 / 100) * DFM * P / 0.082 / T) / ((Scale * 0.543 / 32) * 0.99 * 2.97) * 100
+        conver = round(((H2 / 100) * DFM * P / 0.082 / T) / ((Scale * 0.543 / 32) * 0.99 * 2.97) * 100,2)
     return conver
 
 def Percentage_calc(nodered):
@@ -714,25 +714,25 @@ def Percentage_calc(nodered):
     if Convertion > 100:
         Convertion = 100
 
-    MeOH = Scale * 0.543 / 32 * (100 - Convertion)
+    MeOH = Scale * 0.543 / 32 * (100 - Convertion) / 100
     H2O = Scale * (1 - 0.543) / 18 - Scale * 0.543 / 32 * Convertion / 100
-    H2 = GA_H2 * DFM * P / 0.082 / T / 100
-    CO = GA_CO * DFM * P / 0.082 / T / 100
-    CO2 = GA_CO2 * DFM * P / 0.082 / T / 100
+    H2 = GA_H2 * DFM * P / 0.082 / T
+    CO = GA_CO * DFM * P / 0.082 / T 
+    CO2 = GA_CO2 * DFM * P / 0.082 / T
     total = MeOH + H2O + H2 + CO + CO2
     if total == 0:
         per = (0,0,0,0,0)
     else:    
-        per = (MeOH / total, H2O / total, H2 / total, CO / total, CO2 / total)
+        per = (round(MeOH / total * 100,2), round(H2O / total * 100,2), round(H2 / total * 100,2), round(CO / total * 100,2), round(CO2 / total * 100,2))
     return per
 
 def Current_calc(nodered):
-    for i in ['DFM', 'GA']:
+    for i in ['DFM_RichGas_1min', 'GA_H2']:
         if i not in nodered.keys():
             return 0
     H2 = nodered.get('GA_H2')
     DFM = nodered.get('DFM_RichGas_1min')
 
-    Current = H2 * DFM / 100 * 1000 / (6.959 / 22.386 * 24.47) / 120
+    Current = round(H2 * DFM / 100 * 1000 / (6.959 / 22.386 * 24.47) / 120,2)
 
     return Current
