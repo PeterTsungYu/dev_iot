@@ -55,7 +55,7 @@ EVAnozzlePID_id = '24'
 #-----GPIO port setting----------------------------------------------------------------
 ## DFM
 # read High as 3.3V
-channel_DFM     = 24
+channel_DFM     = 25 # 24->25, gpio24疑似毀損
 channel_DFM_AOG = 23
 GPIO_PWM_1      = 26 #GPIO 26 (PWM)
 GPIO_EVA_PWM    = 18
@@ -625,7 +625,7 @@ CatBedPID_slave = Slave(
                         control_func=Modbus.control,
                         )
 CatBedPID_slave.control_constructor()
-# (Kp=1, Ki=0.003, Kd=0.9, beta=1, gamma=0, kick=5, tstep=10, MVmax=750, MVmin=400, SP_range=0, SP_increment=2)
+# (Kp=1, Ki=0.004, Kd=0.9, beta=1, gamma=0, kick=5, tstep=10, MVmax=750, MVmin=400, SP_range=0, SP_increment=2)
 
 PCBPID_slave = Slave(
                         name='PCBPID',
@@ -646,7 +646,7 @@ PCBPID_slave = Slave(
                         #analyze_func=Modbus.,
                         control_func=Modbus.control,
                         )
-PCBPID_slave.control_constructor(Kp=5, Ki=2, Kd=5, beta=1, gamma=0, kick=1.5, tstep=1, MVmax=90, MVmin=0, SP_range=0, SP_increment=3)
+PCBPID_slave.control_constructor(Kp=5, Ki=0.4, Kd=5, beta=1, gamma=0, kick=1.5, tstep=5, MVmax=95, MVmin=0, SP_range=0, SP_increment=3)
 
 BurnerPID_slave = Slave(
                         name='BurnerPID',
@@ -667,7 +667,7 @@ BurnerPID_slave = Slave(
                         #analyze_func=Modbus.,
                         control_func=Modbus.control,
                         )
-BurnerPID_slave.control_constructor(Kp=0.0003, Ki=0.000003, Kd=0.001, beta=0.5, gamma=0, kick=4, tstep=5, MVmax=0.5, MVmin=0.15, SP_range=0, SP_increment=3)
+BurnerPID_slave.control_constructor(Kp=0.0007, Ki=0.000001, Kd=0.001, beta=0.5, gamma=0, kick=4, tstep=7, MVmax=0.5, MVmin=0.15, SP_range=0, SP_increment=3)
 
 EVAPID_slave = Slave(
                         name='EVAPID',

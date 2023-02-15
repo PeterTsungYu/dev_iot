@@ -92,10 +92,10 @@ def analyze_decker(func):
             _DFM_time = slave.size_time_readings
             _DFM_time['short_time_readings'].append(_time_readings)
             _DFM_time['long_time_readings'].append(_time_readings)
-            if len(_DFM_time['short_time_readings']) > 10: # aggregate lists for 10s in a list
-                _DFM_time['short_time_readings'] = params.manager.list(_DFM_time['short_time_readings'][-10:])
-            if len(_DFM_time['long_time_readings']) > 60: # aggregate lists for 60s in a list
-                _DFM_time['long_time_readings'] = params.manager.list(_DFM_time['long_time_readings'][-60:])
+            if len(_DFM_time['short_time_readings']) > 2: # aggregate lists for 10s in a list (大約5s 記錄一次DFM, 5*2 = 10s)
+                _DFM_time['short_time_readings'] = params.manager.list(_DFM_time['short_time_readings'][-2:])
+            if len(_DFM_time['long_time_readings']) > 12: # aggregate lists for 60s in a list (大約5s 記錄一次DFM, 5*12 = 60s)
+                _DFM_time['long_time_readings'] = params.manager.list(_DFM_time['long_time_readings'][-12:])
             _lst_readings = []
             _time_readings = _DFM_time
             cond = len(_DFM_time['short_time_readings'])
@@ -118,10 +118,10 @@ def analyze_decker(func):
                     device_port.pub_values[topic].value = _readings[ind]
                     ind += 1
                 analyze_err[2] += 1
-                logging.info(f"{slave.name}_analyze done: record {_readings}")
+                logging.critical(f"{slave.name}_analyze done: record {_readings}")
             else:
                 analyze_err[0] += 1
-                logging.warning(f"{slave.name}_analyze record nothing")
+                logging.critical(f"{slave.name}_analyze record nothing")
         except Exception as e:
             analyze_err[0] += 1
             logging.error(f"{slave.name}_analyze_err_{analyze_err} at {round((time.time()-start),2)}s: " + str(e))
@@ -482,17 +482,17 @@ def DFM_data_analyze(start, device_port, slave, **kwargs):
     _60_temp = []
     try:
         for i in range(len(_time_readings['short_time_readings'])):
+            # print(slave.name, _time_readings['short_time_readings'][i])
             _10_temp.extend(_time_readings['short_time_readings'][i])
             if len(_10_temp) <= 1:
                 _10_flow_lst.append(0)
             else:
                 _10_flow_lst.append(len(_10_temp) / (_10_temp[-1] - _10_temp[0]))
-
         _10_flow_rate = sum(_10_flow_lst) / len(_10_flow_lst)
         if slave.name == 'DFM':
-            _10_flow_rate = _10_flow_rate * 10 * 0.1 / 2
+            _10_flow_rate = _10_flow_rate * 10 * 0.1 / 2 # 2 FOR up and down edges
         elif slave.name == 'DFM_AOG':
-            _10_flow_rate = _10_flow_rate * 10 * 0.01 / 2
+            _10_flow_rate = _10_flow_rate * 10 * 0.01 / 2 # 2 FOR up and down edges
 
         for i in range(len(_time_readings['long_time_readings'])):
             _60_temp.extend(_time_readings['long_time_readings'][i])
@@ -503,11 +503,15 @@ def DFM_data_analyze(start, device_port, slave, **kwargs):
 
         _60_flow_rate = sum(_60_flow_lst) / len(_60_flow_lst)
         if slave.name == 'DFM':
-            _60_flow_rate = _60_flow_rate * 60 * 0.1 / 2
+            _60_flow_rate = _60_flow_rate * 60 * 0.1 / 2 # 2 FOR up and down edges
         elif slave.name == 'DFM_AOG':
-            _60_flow_rate = _60_flow_rate * 60 * 0.01 / 2
+            _60_flow_rate = _60_flow_rate * 60 * 0.01 / 2 # 2 FOR up and down edges
         _readings = tuple([_sampling_time, round(_10_flow_rate,2), round(_60_flow_rate,2)])
-    except:
+        
+        # print(slave.name, _60_flow_rate, _60_flow_lst)
+
+    except Exception as e:
+        logging.error(f'{e}')
         _readings = tuple([_sampling_time, 0, 0])
     return _readings
             
@@ -528,7 +532,7 @@ def Scale_data_analyze(start, device_port, slave, **kwargs):
         _10_scale_lst.extend(_10_temp_lst[i])
 
     for i in _10_scale_lst:
-        if -0.00001 < i < 0.00001:
+        if -0.00001 < i < 0 or 0 < i < 0.00001:
             _10_scale_lst.remove(i)
             _10_scale_time.remove(i)
     if _10_scale_lst:
@@ -546,7 +550,7 @@ def Scale_data_analyze(start, device_port, slave, **kwargs):
     for i in range(0, len(_60_temp_lst)):
         _60_scale_lst.extend(_60_temp_lst[i])
     for i in _60_scale_lst:
-        if -0.00001 < i < 0.00001:
+        if -0.00001 < i < 0 or 0 < i < 0.00001:
             _60_scale_lst.remove(i)
             _60_scale_time.remove(i)
     if _60_scale_lst:
