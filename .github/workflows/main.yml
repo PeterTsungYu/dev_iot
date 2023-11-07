@@ -13,7 +13,7 @@ jobs:
       - name: Deploy to Nginx Server
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ec2-54-169-239-109.ap-southeast-1.compute.amazonaws.com
+          host: 54.169.239.109
           username: ubuntu
           key: ${{ secrets.AWS_SSH }}
           port: 22
